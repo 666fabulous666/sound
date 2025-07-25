@@ -38,9 +38,9 @@ pub struct Note {
 #[derive(Deserialize, Clone)]
 pub enum Interval {
     /// (degree, number_of_steps, octave)
-    Tempered(i32, u32, i32),
-    /// (n rd steps, degree, steps, base, octave)
-    RDTempered(u32, i32, u32, Vec<i32>, i32),
+    Tempered(i32, i32),
+    /// (n rd steps, degree, base, octave)
+    RDTempered(u32, i32, Vec<i32>, i32),
 }
 
 impl Instrument {
@@ -63,7 +63,7 @@ impl Instrument {
                             Note {
                                 t: *time,
                                 d: *duration,
-                                f: Interval::Tempered(tmp, scale.0, scale.1),
+                                f: Interval::Tempered(tmp, scale.1),
                                 w: *wave_type,
                             }
                         })
@@ -104,12 +104,12 @@ impl Instrument {
 impl Note {
     pub fn draw(&self, notes: &[Note], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.f {
-            Interval::RDTempered(n, degree, steps, base, octave) => {
+            Interval::RDTempered(n, degree, base, octave) => {
                 let other_notes = notes
                     .iter()
                     .filter(|n| (n.t - self.t).abs() < n.d + self.d)
                     .filter_map(|n| {
-                        if let Interval::Tempered(d, _, _) = n.f {
+                        if let Interval::Tempered(d, _) = n.f {
                             Some(d)
                         } else {
                             None
@@ -123,9 +123,9 @@ impl Note {
                     let tmp = other_notes.choose(rng).unwrap();
                     (0..*n).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap())
                 };
-                degree %= *steps as i32;
+                degree %= 12;
                 Self {
-                    f: Interval::Tempered(degree, *steps, *octave),
+                    f: Interval::Tempered(degree, *octave),
                     ..(*self)
                 }
             }
@@ -143,9 +143,7 @@ impl Note {
 impl Interval {
     pub fn compute(self) -> f32 {
         match self {
-            Interval::Tempered(degree, steps, octave) => {
-                (degree as f32 / steps as f32 + octave as f32).exp2()
-            }
+            Interval::Tempered(degree, octave) => (degree as f32 / 12.0 + octave as f32).exp2(),
             _ => panic!(),
         }
     }

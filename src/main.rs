@@ -104,66 +104,6 @@ fn setup_audio_stream() -> (cpal::StreamConfig, f32, u16) {
     (config, sample_rate, channels)
 }
 
-fn play_notes(
-    items: Vec<Instrument>,
-    sample_rate: f32,
-    pitch: f32,
-    rng: &mut rand::prelude::ThreadRng,
-) {
-    let recorded_samples = Arc::new(Mutex::new(Vec::new()));
-    let host = cpal::default_host();
-    let device = host
-        .default_output_device()
-        .expect("Failed to get default output device");
-    let config = device.default_output_config().unwrap().config();
-
-    let err_fn = |err| eprintln!("An error occurred on the output audio stream: {}", err);
-
-    let sample_clock = Arc::new(Mutex::new(0f32));
-    let mut notes = Vec::<notes::Note>::new();
-    items.iter().for_each(|item| item.draw(&mut notes, rng));
-
-    let stream = device
-        .build_output_stream(
-            &config,
-            {
-                let sample_clock = sample_clock.clone();
-                let notes = notes.clone();
-                let recorded_samples_clone = recorded_samples.clone();
-                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    let mut clock = sample_clock.lock().unwrap();
-                    let mut buffer = recorded_samples_clone.lock().unwrap();
-                    for sample in data.iter_mut() {
-                        let elapsed = *clock / sample_rate;
-                        let mut value = 0.0;
-                        for note in notes.iter() {
-                            if (elapsed >= note.t) && (elapsed <= note.t + note.d) {
-                                let t = elapsed - note.t;
-                                value += generate_wave(
-                                    &note.w,
-                                    pitch * note.f.clone().compute(),
-                                    t,
-                                    note.d,
-                                );
-                            }
-                        }
-                        *sample = value;
-                        buffer.push(value);
-                        *clock += 1.0;
-                    }
-                }
-            },
-            err_fn,
-            None, // Specify latency as None
-        )
-        .unwrap();
-
-    stream.play().unwrap();
-
-    // Wait until the last note finishes
-    let total_duration = notes.iter().map(|n| n.t + n.d).fold(0.0, f32::max);
-    thread::sleep(Duration::from_secs_f32(total_duration * 0.5));
-}
 fn main() {
     let mut rng = rand::thread_rng();
     let freq0 = 440.0;
