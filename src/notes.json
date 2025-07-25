@@ -1,0 +1,83 @@
+
+[
+    {
+        "Sequence": {
+            "t_min": 0.0,
+            "t_max": 64.0,
+            "step": 4.0,
+            "skips": [3,4],
+            "f": {"RDTempered": [3, 0, 12, [-7, 0, 7], -3]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 0.0,
+            "t_max": 32.0,
+            "step": 2.0,
+            "skips": [4,5],
+            "f": {"RDTempered": [2, 0, 12, [0, 7], -2]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 32.0,
+            "t_max": 64.0,
+            "step": 1.0,
+            "skips": [3,4],
+            "f": {"RDTempered": [2, 0, 12, [0, 7], -2]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 0.0,
+            "t_max": 13.66667,
+            "step": 0.33333,
+            "skips": [3,8],
+            "f": {"RDTempered": [1, 0, 12, [-7, 0, 7], -1]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 14.33333,
+            "t_max": 16.0,
+            "step": 0.33333,
+            "skips": [4],
+            "f": {"RDTempered": [5, 0, 12, [-7, 0, 7], -1]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 16.0,
+            "t_max": 22.33333,
+            "step": 0.33333,
+            "skips": [2,3],
+            "f": {"RDTempered": [2, 0, 12, [-2, 0, 2], -1]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 23.0,
+            "t_max": 49.66667,
+            "step": 0.33333,
+            "skips": [3,8],
+            "f": {"RDTempered": [1, 0, 12, [-7, 0, 7], -1]},
+            "w": "Sine"
+        }
+    },
+    {
+        "Sequence": {
+            "t_min": 51.0,
+            "t_max": 63.66667,
+            "step": 0.66667,
+            "skips": [8,10],
+            "f": {"RDTempered": [2, 0, 12, [-2, 0, 2], -1]},
+            "w": "Sine"
+        }
+    }
+]

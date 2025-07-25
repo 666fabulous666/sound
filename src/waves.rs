@@ -1,0 +1,12 @@
+use serde::Deserialize;
+pub mod basics;
+
+#[derive(Deserialize, Clone, Copy)]
+pub enum WaveType {
+    Sine,
+    Square,
+    Triangle,
+    Sawtooth,
+    Custom1,
+    Custom2,
+}
