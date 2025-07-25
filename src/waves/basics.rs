@@ -1,7 +1,8 @@
 pub fn sine_wave(frequency: f32, time: f32) -> f32 {
-    let attack_slide = (frequency / 220.0).sqrt();
+    // let attack_slide = (frequency / 220.0).sqrt();
+    let attack_slide = (frequency / 220.0).sinh().min(2.0);
     let tt = time + attack_slide * (1.66 + 3.0 * time).powi(-10);
-    let tt = tt + 2.5e-4 * (128.0 * tt).sin();
+    // let tt = tt + 2.5e-4 * (128.0 * tt).sin();
     (2.0 * std::f32::consts::PI * frequency * tt).sin() / attack_slide
 }
 
