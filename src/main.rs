@@ -10,6 +10,63 @@ mod notes;
 mod waves;
 use waves::{basics::*, WaveType};
 
+use crossterm::event::{poll, read, Event, KeyCode};
+use std::io;
+
+fn wait_for_exit_signal() -> bool {
+    if poll(Duration::from_millis(100)).unwrap() {
+        if let Event::Key(event) = read().unwrap() {
+            return matches!(event.code, KeyCode::Char('q') | KeyCode::Esc);
+        }
+    }
+    false
+}
+fn save_to_wav(filename: &str, sample_rate: f32, samples: &[f32], channels: u16) {
+    let spec = hound::WavSpec {
+        channels,
+        sample_rate: sample_rate as u32,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let path = format!("../audio/{}.wav", filename);
+    let mut writer =
+        hound::WavWriter::create(format!("{path}"), spec).expect("Failed to create WAV file");
+
+    let max_amp = samples
+        .iter()
+        .copied()
+        .fold(0f32, |a, b| a.max(b.abs()))
+        .max(1e-6);
+
+    match channels {
+        1 => {
+            for &sample in samples {
+                let scaled = (sample / max_amp * i16::MAX as f32)
+                    .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                writer.write_sample(scaled).unwrap();
+            }
+        }
+        2 => {
+            for &sample in samples {
+                let scaled = (sample / max_amp * i16::MAX as f32)
+                    .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                writer.write_sample(scaled).unwrap();
+            }
+        }
+        _ => panic!("Only mono and stereo output are supported."),
+    }
+
+    writer.finalize().expect("Failed to finalize WAV file");
+
+    println!(
+        "✅ Saved '{}' — {:.2} sec, {} channels at {} Hz",
+        path,
+        samples.len() as f32 / sample_rate / channels as f32,
+        channels,
+        sample_rate
+    );
+}
 fn read_notes_from_json(path: &str) -> Vec<Instrument> {
     let file = File::open(path).expect("Failed to open JSON file");
     let reader = BufReader::new(file);
@@ -53,6 +110,7 @@ fn play_notes(
     pitch: f32,
     rng: &mut rand::prelude::ThreadRng,
 ) {
+    let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -71,8 +129,10 @@ fn play_notes(
             {
                 let sample_clock = sample_clock.clone();
                 let notes = notes.clone();
+                let recorded_samples_clone = recorded_samples.clone();
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                     let mut clock = sample_clock.lock().unwrap();
+                    let mut buffer = recorded_samples_clone.lock().unwrap();
                     for sample in data.iter_mut() {
                         let elapsed = *clock / sample_rate;
                         let mut value = 0.0;
@@ -81,7 +141,6 @@ fn play_notes(
                                 let t = elapsed - note.t;
                                 value += generate_wave(
                                     &note.w,
-                                    // note.frequency
                                     pitch * note.f.clone().compute(),
                                     t,
                                     note.d,
@@ -89,6 +148,7 @@ fn play_notes(
                             }
                         }
                         *sample = value;
+                        buffer.push(value);
                         *clock += 1.0;
                     }
                 }
@@ -104,13 +164,98 @@ fn play_notes(
     let total_duration = notes.iter().map(|n| n.t + n.d).fold(0.0, f32::max);
     thread::sleep(Duration::from_secs_f32(total_duration * 0.5));
 }
-
 fn main() {
-    let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
+    let mut rng = rand::thread_rng();
     let freq0 = 440.0;
+    let (_config, sample_rate, channels) = setup_audio_stream();
+
+    let mut all_recorded_samples = Vec::new();
     loop {
         let items = read_notes_from_json("notes.json");
-        let (_config, sample_rate, _channels) = setup_audio_stream();
-        play_notes(items, sample_rate, freq0, &mut rng);
+
+        let recorded_samples = Arc::new(Mutex::new(Vec::new()));
+        play_notes_with_recording(
+            items,
+            sample_rate,
+            freq0,
+            &mut rng,
+            recorded_samples.clone(),
+        );
+
+        {
+            let locked = recorded_samples.lock().unwrap();
+            all_recorded_samples.extend(locked.iter());
+        }
+
+        if wait_for_exit_signal() {
+            println!("Exiting. Please enter a filename:");
+            let mut name = String::new();
+            io::stdin().read_line(&mut name).unwrap();
+            let name = name.trim();
+            save_to_wav(name, sample_rate, &all_recorded_samples, channels);
+            break;
+        }
     }
+}
+fn play_notes_with_recording(
+    items: Vec<Instrument>,
+    sample_rate: f32,
+    pitch: f32,
+    rng: &mut rand::prelude::ThreadRng,
+    recorded_samples: Arc<Mutex<Vec<f32>>>,
+) {
+    let host = cpal::default_host();
+    let device = host
+        .default_output_device()
+        .expect("Failed to get default output device");
+    let config = device.default_output_config().unwrap().config();
+
+    let err_fn = |err| eprintln!("An error occurred on the output audio stream: {}", err);
+
+    let sample_clock = Arc::new(Mutex::new(0f32));
+    let mut notes = Vec::<notes::Note>::new();
+    items.iter().for_each(|item| item.draw(&mut notes, rng));
+
+    let stream = device
+        .build_output_stream(
+            &config,
+            {
+                let sample_clock = sample_clock.clone();
+                let notes = notes.clone();
+                let recorded_samples = recorded_samples.clone();
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    let mut clock = sample_clock.lock().unwrap();
+                    let mut buffer = recorded_samples.lock().unwrap();
+
+                    for sample in data.iter_mut() {
+                        let elapsed = *clock / sample_rate;
+                        let mut value = 0.0;
+
+                        for note in notes.iter() {
+                            if (elapsed >= note.t) && (elapsed <= note.t + note.d) {
+                                let t = elapsed - note.t;
+                                value += generate_wave(
+                                    &note.w,
+                                    pitch * note.f.clone().compute(),
+                                    t,
+                                    note.d,
+                                );
+                            }
+                        }
+
+                        *sample = value;
+                        buffer.push(value);
+                        *clock += 1.0;
+                    }
+                }
+            },
+            err_fn,
+            None,
+        )
+        .unwrap();
+
+    stream.play().unwrap();
+
+    let total_duration = notes.iter().map(|n| n.t + n.d).fold(0.0, f32::max);
+    thread::sleep(Duration::from_secs_f32(total_duration * 0.5));
 }

@@ -10,4 +10,6 @@ serde_json = "1.0"
 winit = "0.28.0"
 rand = "0.8"
 itertools = "*"
+hound = "3.5.0"  # For writing .wav files
+crossterm = "0.27"  # For keyboard input handling
 
