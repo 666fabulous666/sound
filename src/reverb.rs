@@ -35,27 +35,25 @@ impl<const N: usize> RingBuff<N> {
 pub struct Reverb {
     delays: Vec<(f32, usize)>, // WARNING: for simplicity, we work directily with the samples so it it sample_rate dependant.
     buffer: RingBuff<44100>,
-    dry: f32,
-    wet: f32,
+    dry_factor: f32,
 }
 
 impl Reverb {
-    pub fn new(dry: f32, wet: f32, delays: &[usize]) -> Self {
-        let a = 1.0 / delays.len() as f32;
+    pub fn new(dry_factor: f32, wet_factor: f32, delays: &[usize]) -> Self {
+        let a = wet_factor / delays.len() as f32;
 
         Self {
             delays: delays.iter().map(|&d| (a, d)).collect_vec(),
             buffer: RingBuff::default(),
-            dry,
-            wet,
+            dry_factor,
         }
     }
 
     pub fn process(&mut self, dry: f32) -> f32 {
-        let mut output = 0.5 * dry;
+        let mut output = self.dry_factor * dry;
 
         for &(a, d) in &self.delays {
-            output += 0.7 * a * self.buffer.backward(d);
+            output += a * self.buffer.backward(d);
             // if self.buffer.backward(d) == 0.0 {
             //     println!("0");
             // }

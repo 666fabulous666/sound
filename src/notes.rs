@@ -37,7 +37,7 @@ pub struct Note {
 
 #[derive(Deserialize, Clone)]
 pub enum Interval {
-    /// (degree, number_of_steps, octave)
+    /// (degree, octave)
     Tempered(i32, i32),
     /// (n rd steps, degree, base, octave)
     RDTempered(u32, i32, Vec<i32>, i32),

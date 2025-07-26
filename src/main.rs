@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::Instrument;
+use notes::{Instrument, Note};
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
@@ -116,6 +116,7 @@ fn main() {
     let (_config, sample_rate, channels) = setup_audio_stream();
 
     let mut all_recorded_samples = Vec::new();
+    let mut remaining_notes = Vec::new();
     loop {
         let items = read_notes_from_json("notes.json");
 
@@ -126,6 +127,7 @@ fn main() {
             freq0,
             &mut rng,
             recorded_samples.clone(),
+            &mut remaining_notes,
         );
 
         {
@@ -149,6 +151,7 @@ fn play_notes_with_recording(
     pitch: f32,
     rng: &mut rand::prelude::ThreadRng,
     recorded_samples: Arc<Mutex<Vec<f32>>>,
+    remaining_notes: &mut Vec<Note>,
 ) {
     let host = cpal::default_host();
     let device = host
@@ -159,7 +162,7 @@ fn play_notes_with_recording(
     let err_fn = |err| eprintln!("An error occurred on the output audio stream: {}", err);
 
     let sample_clock = Arc::new(Mutex::new(0f32));
-    let mut notes = Vec::<notes::Note>::new();
+    let mut notes = remaining_notes.clone();
     items.iter().for_each(|item| item.draw(&mut notes, rng));
 
     let mut reverb_left = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
@@ -169,7 +172,7 @@ fn play_notes_with_recording(
             &config,
             {
                 let sample_clock = sample_clock.clone();
-                let notes = notes.clone();
+                let mut notes = notes.clone();
                 let recorded_samples = recorded_samples.clone();
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                     let mut clock = sample_clock.lock().unwrap();
@@ -179,16 +182,30 @@ fn play_notes_with_recording(
                         let elapsed = *clock / sample_rate;
                         let mut dry = 0.0;
 
-                        for note in notes.iter() {
-                            if (elapsed >= note.t) && (elapsed <= note.t + note.d) {
-                                let t = elapsed - note.t;
-                                dry += generate_wave(
-                                    &note.w,
-                                    pitch * note.f.clone().compute(),
-                                    t,
-                                    note.d,
-                                );
-                            }
+                        let expired_notes_idx: Vec<usize> = notes
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(i, note)| {
+                                if elapsed >= note.t {
+                                    if elapsed <= note.t + note.d {
+                                        let t = elapsed - note.t;
+                                        dry += generate_wave(
+                                            &note.w,
+                                            pitch * note.f.clone().compute(),
+                                            t,
+                                            note.d,
+                                        );
+                                        None
+                                    } else {
+                                        Some(i)
+                                    }
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        for i in expired_notes_idx {
+                            notes.remove(i);
                         }
 
                         let left = reverb_left.process(dry);
@@ -210,5 +227,9 @@ fn play_notes_with_recording(
     stream.play().unwrap();
 
     let total_duration = notes.iter().map(|n| n.t + n.d).fold(0.0, f32::max);
-    thread::sleep(Duration::from_secs_f32(total_duration * 0.5));
+    thread::sleep(Duration::from_secs_f32(total_duration * 0.999));
+    *remaining_notes = notes
+        .into_iter()
+        .filter(|n| n.t + n.d > total_duration + 4.0)
+        .collect();
 }
