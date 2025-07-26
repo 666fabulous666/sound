@@ -107,7 +107,7 @@ impl Note {
             Interval::RDTempered(n, degree, base, octave) => {
                 let other_notes = notes
                     .iter()
-                    .filter(|n| (n.t - self.t).abs() < n.d + self.d)
+                    .filter(|n| (n.t - self.t).abs() < n.d + self.d - 0.0)
                     .filter_map(|n| {
                         if let Interval::Tempered(d, _) = n.f {
                             Some(d)
