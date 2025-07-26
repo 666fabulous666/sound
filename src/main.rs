@@ -145,11 +145,14 @@ fn main() {
                             frame[0] = (left + right) * 0.5;
                         }
 
-                        let out = (left + right) * 0.25; // NOTE: theoretically this could be 0.5 but it saturates otherwise
-                                                         // if out.abs() > 1.0 {
-                                                         //     eprintln!("⚠️ Saturation: output = {out}");
-                                                         // }
-                        buffer.push(out);
+                        // let out = (left + right) * 0.25; // NOTE: theoretically this could be 0.5 but it saturates otherwise
+
+                        // if out.abs() > 1.0 {
+                        //     eprintln!("⚠️ Saturation: output = {out}");
+                        // }
+                        // buffer.push(out);
+                        buffer.push(0.9 * left);
+                        buffer.push(0.9 * right);
                         *clock += 1.0;
                     }
                 },
