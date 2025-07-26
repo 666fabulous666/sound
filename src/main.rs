@@ -15,8 +15,15 @@ use reverb::Reverb;
 
 use crossterm::event::{poll, read, Event, KeyCode};
 
-const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+// // around 1/3 s
+// const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
+// const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+
+// const LEFT_DELAYS: [usize; 5] = [11, 19, 23, 37, 41];
+// const RIGHT_DELAYS: [usize; 5] = [13, 17, 29, 31, 43];
+
+const LEFT_DELAYS: [usize; 1] = [14713];
+const RIGHT_DELAYS: [usize; 1] = [14651];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
