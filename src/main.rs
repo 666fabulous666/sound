@@ -13,6 +13,12 @@ use waves::{basics::*, WaveType};
 use crossterm::event::{poll, read, Event, KeyCode};
 use std::io;
 
+mod reverb;
+use reverb::Reverb;
+
+const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
         if let Event::Key(event) = read().unwrap() {
@@ -156,6 +162,8 @@ fn play_notes_with_recording(
     let mut notes = Vec::<notes::Note>::new();
     items.iter().for_each(|item| item.draw(&mut notes, rng));
 
+    let mut reverb_left = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
+    let mut reverb_right = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
     let stream = device
         .build_output_stream(
             &config,
@@ -167,14 +175,14 @@ fn play_notes_with_recording(
                     let mut clock = sample_clock.lock().unwrap();
                     let mut buffer = recorded_samples.lock().unwrap();
 
-                    for sample in data.iter_mut() {
+                    for frame in data.chunks_mut(config.channels as usize) {
                         let elapsed = *clock / sample_rate;
-                        let mut value = 0.0;
+                        let mut dry = 0.0;
 
                         for note in notes.iter() {
                             if (elapsed >= note.t) && (elapsed <= note.t + note.d) {
                                 let t = elapsed - note.t;
-                                value += generate_wave(
+                                dry += generate_wave(
                                     &note.w,
                                     pitch * note.f.clone().compute(),
                                     t,
@@ -183,8 +191,13 @@ fn play_notes_with_recording(
                             }
                         }
 
-                        *sample = value;
-                        buffer.push(value);
+                        let left = reverb_left.process(dry);
+                        let right = reverb_right.process(dry); // independent
+
+                        frame[0] = left;
+                        frame[1] = right;
+
+                        buffer.push((left + right) * 0.5);
                         *clock += 1.0;
                     }
                 }
