@@ -9,18 +9,13 @@ use crate::waves::WaveType;
 #[derive(Deserialize, Clone)]
 pub enum Instrument {
     Notes {
-        t: f32,
+        t: f64,
         ns: Vec<Note>,
     },
-    Grid {
-        scale: (u32, i32, Vec<i32>),
-        chords: Vec<(f32, f32, Vec<usize>)>,
-        wave_type: WaveType,
-    },
     Sequence {
-        t_min: f32,
-        t_max: f32,
-        step: f32,
+        t_min: f64,
+        t_max: f64,
+        step: f64,
         skips: Vec<u32>,
         f: Interval,
         w: WaveType,
@@ -29,8 +24,8 @@ pub enum Instrument {
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
-    pub t: f32,
-    pub d: f32,
+    pub t: f64,
+    pub d: f64,
     pub f: Interval,
     pub w: WaveType,
 }
@@ -50,26 +45,6 @@ impl Instrument {
                 ns.iter()
                     .for_each(|n| notes.push(n.draw(notes, rng).shift(*t)));
             }
-            Instrument::Grid {
-                scale,
-                chords,
-                wave_type,
-            } => {
-                chords
-                    .iter()
-                    .flat_map(|(time, duration, degrees)| {
-                        degrees.iter().map(|d| {
-                            let tmp = scale.2[d % scale.2.len()];
-                            Note {
-                                t: *time,
-                                d: *duration,
-                                f: Interval::Tempered(tmp, scale.1),
-                                w: *wave_type,
-                            }
-                        })
-                    })
-                    .for_each(|n| notes.push(n));
-            }
             Instrument::Sequence {
                 t_min,
                 t_max,
@@ -80,7 +55,7 @@ impl Instrument {
             } => {
                 let ts = (0..)
                     .filter(|i| skips.iter().all(|s| (i + 1) % s != 0))
-                    .map(|i| t_min + i as f32 * step)
+                    .map(|i| t_min + i as f64 * step)
                     .take_while(|t| t <= t_max);
                 let ds = ts
                     .clone()
@@ -132,7 +107,7 @@ impl Note {
             _ => self.clone(),
         }
     }
-    pub fn shift(self, dt: f32) -> Self {
+    pub fn shift(self, dt: f64) -> Self {
         Self {
             t: self.t + dt,
             ..self
@@ -141,9 +116,9 @@ impl Note {
 }
 
 impl Interval {
-    pub fn compute(self) -> f32 {
+    pub fn compute(&self) -> f64 {
         match self {
-            Interval::Tempered(degree, octave) => (degree as f32 / 12.0 + octave as f32).exp2(),
+            Interval::Tempered(degree, octave) => (*degree as f64 / 12.0 + *octave as f64).exp2(),
             _ => panic!(),
         }
     }
