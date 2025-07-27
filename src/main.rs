@@ -16,8 +16,8 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // // around 1/3 s
-const LEFT_DELAYS: [usize; 6] = [2, 7, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 6] = [3, 5, 14633, 14651, 14657, 14669];
+const LEFT_DELAYS: [usize; 4] = [14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 4] = [14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [13, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [11, 14713, 22051, 7349];
