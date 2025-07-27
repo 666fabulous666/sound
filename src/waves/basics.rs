@@ -1,9 +1,11 @@
+use std::f64::consts::PI;
+
 pub fn sine_wave(frequency: f64, time: f64) -> f64 {
-    let attack_slide = (frequency / 440.0).powf(0.5);
+    let attack_slide = (frequency / 440.0).sqrt();
     // let attack_slide = (frequency / 220.0).sinh().min(2.0);
     let tt = time + attack_slide * (1.66 + 3.0 * time).powi(-10);
-    // let tt = tt + 2.5e-4 * (128.0 * tt).sin();
-    (2.0 * std::f64::consts::PI * frequency * tt).sin() / attack_slide
+    let tt = tt + 2.5e-2 / frequency * (2.0 * PI * 24.0 * tt).sin();
+    (2.0 * PI * frequency * tt).sin() / attack_slide
 }
 
 pub fn square_wave(frequency: f64, time: f64) -> f64 {

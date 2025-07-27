@@ -16,14 +16,14 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // around 1/3 s
-// const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
-// const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
 
-// const LEFT_DELAYS: [usize; 5] = [11, 19, 23, 37, 41];
-// const RIGHT_DELAYS: [usize; 5] = [13, 17, 29, 31, 43];
+// const LEFT_DELAYS: [usize; 4] = [13, 14699, 22037, 7351];
+// const RIGHT_DELAYS: [usize; 4] = [11, 14713, 22051, 7349];
 
-const LEFT_DELAYS: [usize; 1] = [14713];
-const RIGHT_DELAYS: [usize; 1] = [14651];
+// const LEFT_DELAYS: [usize; 1] = [14713];
+// const RIGHT_DELAYS: [usize; 1] = [14651];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -109,8 +109,8 @@ fn main() {
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
 
-    let mut reverb_left = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
-    let mut reverb_right = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
+    let mut reverb_left = Reverb::new(0.2, 0.8, &LEFT_DELAYS);
+    let mut reverb_right = Reverb::new(0.2, 0.8, &RIGHT_DELAYS);
 
     // Start persistent audio stream
     let stream = {
