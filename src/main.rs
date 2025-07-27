@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::{Instrument, Note};
+use notes::{Note, Sequence};
 use std::fs::File;
 use std::io::{self, BufReader};
 use std::sync::{Arc, Mutex};
@@ -16,14 +16,14 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // around 1/3 s
-const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+// const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
+// const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [13, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [11, 14713, 22051, 7349];
 
-// const LEFT_DELAYS: [usize; 1] = [14713];
-// const RIGHT_DELAYS: [usize; 1] = [14651];
+const LEFT_DELAYS: [usize; 1] = [14713];
+const RIGHT_DELAYS: [usize; 1] = [14651];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -68,7 +68,7 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f32], channels: u16)
     );
 }
 
-fn read_notes_from_json(path: &str) -> Vec<Instrument> {
+fn read_notes_from_json(path: &str) -> Vec<Sequence> {
     let file = File::open(path).expect("Failed to open JSON file");
     let reader = BufReader::new(file);
     serde_json::from_reader(reader).expect("Failed to parse JSON")
@@ -109,8 +109,8 @@ fn main() {
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
 
-    let mut reverb_left = Reverb::new(0.2, 0.8, &LEFT_DELAYS);
-    let mut reverb_right = Reverb::new(0.2, 0.8, &RIGHT_DELAYS);
+    let mut reverb_left = Reverb::new(0.3, 0.5, &LEFT_DELAYS);
+    let mut reverb_right = Reverb::new(0.3, 0.5, &RIGHT_DELAYS);
 
     // Start persistent audio stream
     let stream = {

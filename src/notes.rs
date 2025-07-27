@@ -7,19 +7,13 @@ use serde::Deserialize;
 use crate::waves::WaveType;
 
 #[derive(Deserialize, Clone)]
-pub enum Instrument {
-    Notes {
-        t: f64,
-        ns: Vec<Note>,
-    },
-    Sequence {
-        t_min: f64,
-        t_max: f64,
-        step: f64,
-        skips: Vec<u32>,
-        f: Interval,
-        w: WaveType,
-    },
+pub struct Sequence {
+    t_min: f64,
+    t_max: f64,
+    step: f64,
+    skips: Vec<u32>,
+    f: Interval,
+    w: WaveType,
 }
 
 #[derive(Deserialize, Clone)]
@@ -38,41 +32,26 @@ pub enum Interval {
     RDTempered(u32, i32, Vec<i32>, i32),
 }
 
-impl Instrument {
+impl Sequence {
     pub fn draw(&self, notes: &mut Vec<Note>, rng: &mut rand::prelude::ThreadRng) {
-        match self {
-            Instrument::Notes { t, ns } => {
-                ns.iter()
-                    .for_each(|n| notes.push(n.draw(notes, rng).shift(*t)));
-            }
-            Instrument::Sequence {
-                t_min,
-                t_max,
-                step,
-                skips,
-                f,
-                w,
-            } => {
-                let ts = (0..)
-                    .filter(|i| skips.iter().all(|s| (i + 1) % s != 0))
-                    .map(|i| t_min + i as f64 * step)
-                    .take_while(|t| t <= t_max);
-                let ds = ts
-                    .clone()
-                    .chain(once(*t_max))
-                    .tuple_windows()
-                    .map(|(t1, t2)| t2 - t1)
-                    .collect::<Vec<_>>();
-                ts.zip(ds.iter())
-                    .map(|(t, d)| Note {
-                        t,
-                        d: *d,
-                        f: f.clone(),
-                        w: *w,
-                    })
-                    .for_each(|n| notes.push(n.draw(notes, rng)));
-            }
-        }
+        let ts = (0..)
+            .filter(|i| self.skips.iter().all(|s| (i + 1) % s != 0))
+            .map(|i| self.t_min + i as f64 * self.step)
+            .take_while(|t| *t <= self.t_max);
+        let ds = ts
+            .clone()
+            .chain(once(self.t_max))
+            .tuple_windows()
+            .map(|(t1, t2)| t2 - t1)
+            .collect::<Vec<_>>();
+        ts.zip(ds.iter())
+            .map(|(t, d)| Note {
+                t,
+                d: *d,
+                f: self.f.clone(),
+                w: self.w,
+            })
+            .for_each(|n| notes.push(n.draw(notes, rng)));
     }
 }
 
