@@ -9,4 +9,5 @@ pub enum WaveType {
     Sawtooth,
     Custom1,
     Custom2,
+    Droplet,
 }

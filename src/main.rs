@@ -94,6 +94,7 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
             WaveType::Sawtooth => sawtooth_wave(frequency, time) as f32,
             WaveType::Custom1 => custom1(frequency, time) as f32,
             WaveType::Custom2 => custom2(frequency, time) as f32,
+            WaveType::Droplet => droplet_wave(frequency, time) as f32,
         }
 }
 
