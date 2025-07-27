@@ -1,4 +1,4 @@
-use rand::prelude::SliceRandom;
+use rand::{prelude::SliceRandom, seq::index::sample};
 use std::iter::once;
 
 use itertools::Itertools;
@@ -11,7 +11,7 @@ pub struct Sequence {
     t_min: f64,
     t_max: f64,
     step: f64,
-    skips: Vec<u32>,
+    skips: usize,
     f: Interval,
     w: WaveType,
 }
@@ -34,8 +34,14 @@ pub enum Interval {
 
 impl Sequence {
     pub fn draw(&self, notes: &mut Vec<Note>, rng: &mut rand::prelude::ThreadRng) {
+        let skips = sample(rng, self.skips + 3, self.skips)
+            .into_iter()
+            .map(|k| k + 2)
+            .collect_vec();
+        // let skips = self.skips.clone();
+        // println!("{skips:?}");
         let ts = (0..)
-            .filter(|i| self.skips.iter().all(|s| (i + 1) % s != 0))
+            .filter(|i| skips.iter().all(|s| (i + 1) % s != 0))
             .map(|i| self.t_min + i as f64 * self.step)
             .take_while(|t| *t <= self.t_max);
         let ds = ts
@@ -84,12 +90,6 @@ impl Note {
                 }
             }
             _ => self.clone(),
-        }
-    }
-    pub fn shift(self, dt: f64) -> Self {
-        Self {
-            t: self.t + dt,
-            ..self
         }
     }
 }

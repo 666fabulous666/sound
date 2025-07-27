@@ -15,15 +15,18 @@ use reverb::Reverb;
 
 use crossterm::event::{poll, read, Event, KeyCode};
 
-// // around 1/3 s
-// const LEFT_DELAYS: [usize; 5] = [14683, 14699, 14713, 14717, 14723];
-// const RIGHT_DELAYS: [usize; 5] = [14627, 14633, 14651, 14657, 14669];
+// // // around 1/3 s
+const LEFT_DELAYS: [usize; 6] = [2, 7, 14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 6] = [3, 5, 14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [13, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [11, 14713, 22051, 7349];
 
-const LEFT_DELAYS: [usize; 1] = [14713];
-const RIGHT_DELAYS: [usize; 1] = [14651];
+// const LEFT_DELAYS: [usize; 1] = [14713];
+// const RIGHT_DELAYS: [usize; 1] = [14651];
+
+// const LEFT_DELAYS: [usize; 2] = [11, 14713];
+// const RIGHT_DELAYS: [usize; 2] = [13, 14651];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -45,11 +48,12 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f32], channels: u16)
     let path = format!("../audio/{}.wav", filename);
     let mut writer = hound::WavWriter::create(&path, spec).expect("Failed to create WAV file");
 
-    let max_amp = samples
-        .iter()
-        .copied()
-        .fold(0f32, |a, b| a.max(b.abs()))
-        .max(1e-6);
+    // let max_amp = samples
+    //     .iter()
+    //     .copied()
+    //     .fold(0f32, |a, b| a.max(b.abs()))
+    //     .max(1e-6);
+    let max_amp = 5.0;
 
     for &sample in samples {
         let scaled =
@@ -109,8 +113,8 @@ fn main() {
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
 
-    let mut reverb_left = Reverb::new(0.3, 0.5, &LEFT_DELAYS);
-    let mut reverb_right = Reverb::new(0.3, 0.5, &RIGHT_DELAYS);
+    let mut reverb_left = Reverb::new(0.4, 0.5, &LEFT_DELAYS);
+    let mut reverb_right = Reverb::new(0.4, 0.5, &RIGHT_DELAYS);
 
     // Start persistent audio stream
     let stream = {
@@ -158,8 +162,8 @@ fn main() {
                         //     eprintln!("⚠️ Saturation: output = {out}");
                         // }
                         // buffer.push(out);
-                        buffer.push(0.9 * left);
-                        buffer.push(0.9 * right);
+                        buffer.push(left);
+                        buffer.push(right);
                         *clock += 1.0;
                     }
                 },
