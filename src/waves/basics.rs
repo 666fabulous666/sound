@@ -13,7 +13,7 @@ pub fn droplet_wave(frequency: f64, time: f64) -> f64 {
     let tt = time + attack_slide * (1.66 + 3.0 * time).powi(-10);
     let delta = 5e-3;
     let phase = 2.0 * PI * (frequency) * tt;
-    (0..5)
+    (0..4)
         .map(|k| {
             (0.5f64).powi(k)
                 * ((phase * (1.0 + 2.0f64.powi(k) * delta)).sin()
