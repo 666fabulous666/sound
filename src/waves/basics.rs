@@ -137,8 +137,8 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
 /// A single audio sample (f64) producing a short, punchy kick‐drum sound.
 pub fn kick(frequency: f64, time: f64) -> f64 {
     // ——— Envelope parameters ———
-    let amp_tau = 0.2; // main amplitude decay ≈ 200 ms
-    let sweep_rate = 5.0; // how quickly the pitch sweeps downward
+    let amp_tau = 0.1; // main amplitude decay ≈ 200 ms
+    let sweep_rate = 8.0; // how quickly the pitch sweeps downward
     let noise_level = 0.2; // level of click‐noise on the attack
     let click_tau = 0.005; // click‐noise decay ≈ 5 ms
 
@@ -161,5 +161,89 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
     let click_env = (-time / click_tau).exp();
 
     // 4) Mix oscillator and click under their respective envelopes
-    20.0 * (env * osc + noise_level * click_env * noise)
+    10.0 * (env * osc + noise_level * click_env * noise)
+}
+
+/// --- SNARE DRUM ---
+/// Combines a noisy “crack” with a pitched “body”
+/// - `frequency`: tuned pitch for the snare body (e.g. 200–300 Hz)
+/// - `time`: time in seconds
+pub fn snare(frequency: f64, time: f64) -> f64 {
+    // Envelope time‐constants
+    let noise_tau = 0.15; // noise decay ≈ 150 ms
+    let tone_tau = 0.25; // body decay ≈ 250 ms
+
+    // Levels
+    let noise_level = 1.0;
+    let tone_level = 0.6;
+
+    // Envelopes
+    let env_noise = (-time / noise_tau).exp();
+    let env_tone = (-time / tone_tau).exp();
+
+    // ===== NOISE “CRACK” =====
+    // deterministic pseudo‐noise from time
+    let raw = (time * 1e7).sin() * 1e6;
+    let frac = (raw.fract() + 1.0).fract();
+    let noise = 2.0 * frac - 1.0;
+
+    // ===== TONAL “BODY” =====
+    // simple sine at fixed frequency, you could add a slight pitch-drop if desired
+    let tone = (2.0 * PI * frequency * time).sin();
+
+    // Mix noise + tone
+    env_noise * noise_level * noise + env_tone * tone_level * tone
+}
+
+/// --- RIDE/BELL HYBRID ---
+/// Metallic “bell” tone plus noisy ring modulation.
+/// - `frequency`: the fundamental “bell” pitch in Hz (e.g. 440.0 for A4)
+/// - `time`: time in seconds
+pub fn ride(frequency: f64, time: f64) -> f64 {
+    // ——— Envelope parameters ———
+    // Bell component: soft attack + long bell decay
+    let tau_bell = 1.0; // ≈1.0 s decay
+    let alpha_bell = 0.3; // gentle rise
+    let bell_env = time.powf(alpha_bell) * (-time / tau_bell).exp();
+
+    // Noise/ring component: moderate decay
+    let tau_noise = 0.7; // ≈0.7 s decay
+    let alpha_noise = 0.3; // gentle rise
+    let noise_env = time.powf(alpha_noise) * (-time / tau_noise).exp();
+
+    // Mix levels
+    let bell_level = 0.9;
+    let noise_level = 0.4;
+
+    // ——— Bell‐like harmonic partials ———
+    let mut bell = 0.0;
+    let harmonics = 6;
+    let fq_bits = frequency.to_bits();
+    let tm_bits = time.to_bits();
+
+    for k in 1..=harmonics {
+        // build seed and slight inharmonic detune
+        let seed = fq_bits.wrapping_mul(0x9E3779B97F4A7C15) ^ tm_bits ^ (k as u64);
+        let detune = 1.0 + (prng_unit(seed) - 0.5) * 0.04; // ±2% detune
+        let fk = frequency * (k as f64) * detune;
+
+        // roll‐off amplitude of higher harmonics
+        let ak = 1.0 / (1.0 + 0.2 * ((k - 1) as f64));
+
+        // random phase
+        let phase = prng_unit(seed ^ 0xDEADBEEF_DEADBEEF) * 2.0 * PI;
+
+        bell += ak * (2.0 * PI * fk * time + phase).sin();
+    }
+
+    // ——— Noisy “ring” via ring‐modulated noise ———
+    // deterministic noise from time
+    let raw = (time * 5e6).sin() * 1e6;
+    let frac = (raw.fract() + 1.0).fract();
+    let noise = 2.0 * frac - 1.0;
+    // ring‐modulate noise at the bell frequency
+    let ring = noise * (2.0 * PI * frequency * time).sin();
+
+    // ——— Final mix ———
+    bell_level * bell_env * bell + noise_level * noise_env * ring
 }

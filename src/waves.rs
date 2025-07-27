@@ -13,4 +13,6 @@ pub enum WaveType {
     DropletOct,
     HiHat,
     Kick,
+    Snare,
+    Ride,
 }

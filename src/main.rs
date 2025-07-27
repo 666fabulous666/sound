@@ -98,6 +98,8 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
             WaveType::DropletOct => droplet_oct_wave(frequency, time) as f32,
             WaveType::HiHat => hi_hat(frequency, time) as f32,
             WaveType::Kick => kick(frequency, time) as f32,
+            WaveType::Snare => snare(frequency, time) as f32,
+            WaveType::Ride => ride(frequency, time) as f32,
         }
 }
 
