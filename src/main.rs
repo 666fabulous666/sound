@@ -16,8 +16,8 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // // around 1/3 s
-const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
+// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [13, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [11, 14713, 22051, 7349];
@@ -25,8 +25,8 @@ const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 // const LEFT_DELAYS: [usize; 1] = [14713];
 // const RIGHT_DELAYS: [usize; 1] = [14651];
 
-// const LEFT_DELAYS: [usize; 2] = [11, 14713];
-// const RIGHT_DELAYS: [usize; 2] = [13, 14651];
+const LEFT_DELAYS: [usize; 3] = [1, 14713, 22049];
+const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -95,6 +95,9 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
             WaveType::Custom1 => custom1(frequency, time) as f32,
             WaveType::Custom2 => custom2(frequency, time) as f32,
             WaveType::Droplet => droplet_wave(frequency, time) as f32,
+            WaveType::DropletOct => droplet_oct_wave(frequency, time) as f32,
+            WaveType::HiHat => hi_hat(frequency, time) as f32,
+            WaveType::Kick => kick(frequency, time) as f32,
         }
 }
 

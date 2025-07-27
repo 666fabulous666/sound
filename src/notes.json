@@ -3,9 +3,36 @@
     {
         "t_min": 0.0,
         "t_max": 64.0,
+        "step": [1,12],
+        "skips": 10,
+        "f": {"RDTempered": [2, 0, [-7, -2, 0, 2, 7], -2]},
+        "w": "HiHat"
+    },
+
+    {
+        "t_min": 0.0,
+        "t_max": 64.0,
+        "step": [1,1],
+        "skips": 2,
+        "f": {"RDTempered": [2, 0, [-7, -2, 0, 2, 7], -2]},
+        "w": "Kick"
+    },
+
+    {
+        "t_min": 0.0,
+        "t_max": 64.0,
         "step": [2,1],
-        "skips": 4,
-        "f": {"RDTempered": [3, 0, [-7, 0, 7, 7], -2]},
+        "skips": 6,
+        "f": {"RDTempered": [2, 0, [-7, -2, 0, 2, 7], -2]},
+        "w": "Droplet"
+    },
+
+    {
+        "t_min": 0.0,
+        "t_max": 64.0,
+        "step": [2,1],
+        "skips": 6,
+        "f": {"RDTempered": [1, 0, [-4, 0, 3], -1]},
         "w": "Droplet"
     },
 
@@ -14,16 +41,16 @@
         "t_min": 0.0,
         "t_max": 32.0,
         "step": [1,2],
-        "skips": 4,
-        "f": {"RDTempered": [1, 0, [-7, -7, 0, 7, 7, 7], -1]},
+        "skips": 7,
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
         "w": "Droplet"
     },
     {
         "t_min": 0.0,
         "t_max": 32.0,
         "step": [1,2],
-        "skips": 4,
-        "f": {"RDTempered": [1, 0, [-7, -7, 0, 2, 7, 7], -1]},
+        "skips": 7,
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
         "w": "Droplet"
     },
 
@@ -31,51 +58,65 @@
         "t_min": 32.0,
         "t_max": 64.0,
         "step": [1,2],
-        "skips": 4,
-        "f": {"RDTempered": [1, 0, [-7, -7, 0, 7, 7, 7], -1]},
+        "skips": 7,
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
         "w": "Droplet"
     },
     {
         "t_min": 32.0,
         "t_max": 64.0,
         "step": [1,2],
-        "skips": 4,
-        "f": {"RDTempered": [1, 0, [-7, -7, 0, 2, 7, 7], -1]},
+        "skips": 7,
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
         "w": "Droplet"
     },
 
     {
         "t_min": 0.0,
-        "t_max": 12.0,
+        "t_max": 12.33333,
         "skips": 7,
         "step": [1,6],
-        "f": {"RDTempered": [1, 0, [-7, -2, 0,  2, 7], 0]},
+        "f": {"RDTempered": [2, 0, [-7, 0, 7], 0]},
         "w": "Droplet"
     },
     {
-        "t_min": 12.0,
+        "t_min": 12.33333,
+        "t_max": 16.0,
+        "step": [1,4],
+        "skips": 10,
+        "f": {"RDTempered": [2, 0, [-7, 0, 7], 0]},
+        "w": "Droplet"
+    },
+    {
+        "t_min": 16.0,
         "t_max": 36.0,
-        "step": [1,3],
-        "skips": 4,
-        "f": {"RDTempered": [1, 0, [-7, -2, 0,  2], 1]},
+        "step": [1,6],
+        "skips": 8,
+        "f": {"RDTempered": [2, 0, [-7, 0, 7], 0]},
         "w": "Droplet"
     },
     {
         "t_min": 36.0,
-        "t_max": 48.0,
+        "t_max": 48.66667,
         "step": [1,6],
-        "skips": 6,
-        "f": {"RDTempered": [1, 0, [-7, -2, 0,  2, 7], 0]},
+        "skips": 7,
+        "f": {"RDTempered": [2, 0, [-7, 0, 7], 0]},
         "w": "Droplet"
     },
     {
-        "t_min": 48.0,
+        "t_min": 48.66667,
+        "t_max": 50.0,
+        "step": [1,4],
+        "skips": 10,
+        "f": {"RDTempered": [2, 0, [-7, 0, 7], 0]},
+        "w": "Droplet"
+    },
+    {
+        "t_min": 50.0,
         "t_max": 64.0,
-        "step": [1,3],
-        "skips": 5,
-        "f": {"RDTempered": [1, 0, [-7, -2, 0,  2], 1]},
+        "step": [1,6],
+        "skips": 8,
+        "f": {"RDTempered": [2, 0, [-7, 0,  7], 0]},
         "w": "Droplet"
     }
-
-
 ]

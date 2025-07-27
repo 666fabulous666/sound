@@ -10,4 +10,7 @@ pub enum WaveType {
     Custom1,
     Custom2,
     Droplet,
+    DropletOct,
+    HiHat,
+    Kick,
 }
