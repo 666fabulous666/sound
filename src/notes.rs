@@ -10,7 +10,7 @@ use crate::waves::WaveType;
 pub struct Sequence {
     t_min: f64,
     t_max: f64,
-    step: f64,
+    step: [usize; 2],
     skips: usize,
     f: Interval,
     w: WaveType,
@@ -40,9 +40,10 @@ impl Sequence {
             .collect_vec();
         // let skips = self.skips.clone();
         // println!("{skips:?}");
+        let step_as_time = self.step[0] as f64 / self.step[1] as f64;
         let ts = (0..)
             .filter(|i| skips.iter().all(|s| (i + 1) % s != 0))
-            .map(|i| self.t_min + i as f64 * self.step)
+            .map(|i| self.t_min + i as f64 * step_as_time)
             .take_while(|t| *t <= self.t_max);
         let ds = ts
             .clone()

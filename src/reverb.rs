@@ -49,7 +49,7 @@ impl Reverb {
         }
 
         // Apply smoothing with internal memory
-        output = 0.5 * output + 0.5 * self.buffer.backward(1);
+        // output = 0.5 * output + 0.5 * self.buffer.backward(1);
         self.buffer.push(output);
 
         output

@@ -11,7 +11,7 @@ pub fn sine_wave(frequency: f64, time: f64) -> f64 {
 pub fn droplet_wave(frequency: f64, time: f64) -> f64 {
     let attack_slide = (frequency / 440.0).sqrt();
     let tt = time + attack_slide * (1.66 + 3.0 * time).powi(-10);
-    let delta = 5e-3 * attack_slide;
+    let delta = 5e-3;
     let phase = 2.0 * PI * (frequency) * tt;
     (0..5)
         .map(|k| {
