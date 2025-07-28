@@ -25,7 +25,7 @@ use crossterm::event::{poll, read, Event, KeyCode};
 // const LEFT_DELAYS: [usize; 1] = [14713];
 // const RIGHT_DELAYS: [usize; 1] = [14651];
 
-const LEFT_DELAYS: [usize; 3] = [1, 14713, 22049];
+const LEFT_DELAYS: [usize; 3] = [1, 14713, 22037];
 const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
 
 fn wait_for_exit_signal() -> bool {

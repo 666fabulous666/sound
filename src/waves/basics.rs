@@ -137,10 +137,10 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
 /// A single audio sample (f64) producing a short, punchy kick‐drum sound.
 pub fn kick(frequency: f64, time: f64) -> f64 {
     // ——— Envelope parameters ———
-    let amp_tau = 0.1; // main amplitude decay ≈ 200 ms
-    let sweep_rate = 8.0; // how quickly the pitch sweeps downward
-    let noise_level = 0.2; // level of click‐noise on the attack
-    let click_tau = 0.005; // click‐noise decay ≈ 5 ms
+    let amp_tau = 0.15; // main amplitude decay ≈ 200 ms
+    let sweep_rate = 7.5; // how quickly the pitch sweeps downward
+    let noise_level = 0.15; // level of click‐noise on the attack
+    let click_tau = 0.0025; // click‐noise decay ≈ 5 ms
 
     // 1) Amplitude envelope: exponential decay
     //    E_amp(t) = exp(−t / amp_tau)
