@@ -12,10 +12,17 @@ pub struct Sequence {
     t_max: f64,
     step: [usize; 2],
     skips: usize,
+
+    #[serde(default = "default_beat_offset")]
+    beat_offset: usize, // WARNING: relative to step
+
     f: Interval,
     w: WaveType,
 }
 
+fn default_beat_offset() -> usize {
+    0
+}
 #[derive(Deserialize, Clone)]
 pub struct Note {
     pub t: f64,
@@ -42,7 +49,7 @@ impl Sequence {
         // println!("{skips:?}");
         let step_as_time = self.step[0] as f64 / self.step[1] as f64;
         let ts = (0..)
-            .filter(|i| skips.iter().all(|s| (i + 1) % s != 0))
+            .filter(|i| skips.iter().all(|s| (i + 1 + self.beat_offset) % s != 0))
             .map(|i| self.t_min + i as f64 * step_as_time)
             .take_while(|t| *t <= self.t_max);
         let ds = ts

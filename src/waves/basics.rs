@@ -83,9 +83,9 @@ fn prng_unit(seed: u64) -> f64 {
 /// using a deterministic PRNG based on frequency, time, and partial index.
 pub fn hi_hat(frequency: f64, time: f64) -> f64 {
     // Envelope params
-    let tau = 0.005; // decay ≈ 5 ms
-    let alpha = 1.0; // attack shape
-    let noise_level = 0.1; // amount of noise mixed in
+    let tau = 0.020; // decay ≈ 20 ms
+    let alpha = 0.2; // attack shape
+    let noise_level = 0.25; // amount of noise mixed in
 
     // Amplitude envelope: E(t) = t^α * exp(-t / τ)
     let env = time.powf(alpha) * (-time / tau).exp();
@@ -124,7 +124,7 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
     let noise = 2.0 * frac - 1.0;
 
     // Mix resonators + noise under the same short envelope
-    100.0 * (env * osc + noise_level * env * noise)
+    env * osc + noise_level * env * noise
 }
 
 /// Generate a kick‐drum–style sample at a given base frequency and time.
@@ -137,8 +137,8 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
 /// A single audio sample (f64) producing a short, punchy kick‐drum sound.
 pub fn kick(frequency: f64, time: f64) -> f64 {
     // ——— Envelope parameters ———
-    let amp_tau = 0.15; // main amplitude decay ≈ 200 ms
-    let sweep_rate = 7.5; // how quickly the pitch sweeps downward
+    let amp_tau = 0.1; // main amplitude decay ≈ 200 ms
+    let sweep_rate = 10.0; // how quickly the pitch sweeps downward
     let noise_level = 0.15; // level of click‐noise on the attack
     let click_tau = 0.0025; // click‐noise decay ≈ 5 ms
 
@@ -161,7 +161,7 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
     let click_env = (-time / click_tau).exp();
 
     // 4) Mix oscillator and click under their respective envelopes
-    10.0 * (env * osc + noise_level * click_env * noise)
+    5.0 * (env * osc + noise_level * click_env * noise)
 }
 
 /// --- SNARE DRUM ---
@@ -170,12 +170,12 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
 /// - `time`: time in seconds
 pub fn snare(frequency: f64, time: f64) -> f64 {
     // Envelope time‐constants
-    let noise_tau = 0.15; // noise decay ≈ 150 ms
-    let tone_tau = 0.25; // body decay ≈ 250 ms
+    let noise_tau = 0.1; // noise decay ≈ 150 ms
+    let tone_tau = 0.5; // body decay ≈ 50 ms
 
     // Levels
-    let noise_level = 1.0;
-    let tone_level = 0.6;
+    let noise_level = 0.15;
+    let tone_level = 0.5;
 
     // Envelopes
     let env_noise = (-time / noise_tau).exp();
@@ -202,22 +202,22 @@ pub fn snare(frequency: f64, time: f64) -> f64 {
 pub fn ride(frequency: f64, time: f64) -> f64 {
     // ——— Envelope parameters ———
     // Bell component: soft attack + long bell decay
-    let tau_bell = 1.0; // ≈1.0 s decay
+    let tau_bell = 0.4; // ≈1.0 s decay
     let alpha_bell = 0.3; // gentle rise
     let bell_env = time.powf(alpha_bell) * (-time / tau_bell).exp();
 
     // Noise/ring component: moderate decay
-    let tau_noise = 0.7; // ≈0.7 s decay
+    let tau_noise = 0.2; // ≈0.7 s decay
     let alpha_noise = 0.3; // gentle rise
     let noise_env = time.powf(alpha_noise) * (-time / tau_noise).exp();
 
     // Mix levels
-    let bell_level = 0.9;
+    let bell_level = 0.2;
     let noise_level = 0.4;
 
     // ——— Bell‐like harmonic partials ———
     let mut bell = 0.0;
-    let harmonics = 6;
+    let harmonics = 10;
     let fq_bits = frequency.to_bits();
     let tm_bits = time.to_bits();
 

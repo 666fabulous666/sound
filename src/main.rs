@@ -37,7 +37,7 @@ fn wait_for_exit_signal() -> bool {
     false
 }
 
-fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f32], channels: u16) {
+fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16) {
     let spec = hound::WavSpec {
         channels,
         sample_rate: sample_rate as u32,
@@ -57,7 +57,7 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f32], channels: u16)
 
     for &sample in samples {
         let scaled =
-            (sample / max_amp * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+            (sample / max_amp * i16::MAX as f64).clamp(i16::MIN as f64, i16::MAX as f64) as i16;
         writer.write_sample(scaled).unwrap();
     }
 
@@ -78,28 +78,28 @@ fn read_notes_from_json(path: &str) -> Vec<Sequence> {
     serde_json::from_reader(reader).expect("Failed to parse JSON")
 }
 
-fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f32 {
+fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
         let time_fraction = time / note_duration;
-        (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f32
+        0.1 * (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64
     }
 }
 
-fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration: f64) -> f32 {
+fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration: f64) -> f64 {
     envelope(3.0, 1.0, note_duration)(time)
         * match wave_type {
-            WaveType::Sine => sine_wave(frequency, time) as f32,
-            WaveType::Square => square_wave(frequency, time) as f32,
-            WaveType::Triangle => triangle_wave(frequency, time) as f32,
-            WaveType::Sawtooth => sawtooth_wave(frequency, time) as f32,
-            WaveType::Custom1 => custom1(frequency, time) as f32,
-            WaveType::Custom2 => custom2(frequency, time) as f32,
-            WaveType::Droplet => droplet_wave(frequency, time) as f32,
-            WaveType::DropletOct => droplet_oct_wave(frequency, time) as f32,
-            WaveType::HiHat => hi_hat(frequency, time) as f32,
-            WaveType::Kick => kick(frequency, time) as f32,
-            WaveType::Snare => snare(frequency, time) as f32,
-            WaveType::Ride => ride(frequency, time) as f32,
+            WaveType::Sine => sine_wave(frequency, time),
+            WaveType::Square => square_wave(frequency, time),
+            WaveType::Triangle => triangle_wave(frequency, time),
+            WaveType::Sawtooth => sawtooth_wave(frequency, time),
+            WaveType::Custom1 => custom1(frequency, time),
+            WaveType::Custom2 => custom2(frequency, time),
+            WaveType::Droplet => droplet_wave(frequency, time),
+            WaveType::DropletOct => droplet_oct_wave(frequency, time),
+            WaveType::HiHat => hi_hat(frequency, time),
+            WaveType::Kick => kick(frequency, time),
+            WaveType::Snare => snare(frequency, time),
+            WaveType::Ride => ride(frequency, time),
         }
 }
 
@@ -156,10 +156,10 @@ fn main() {
                         let right = reverb_right.process(dry);
 
                         if channels >= 2 {
-                            frame[0] = left;
-                            frame[1] = right;
+                            frame[0] = left as f32;
+                            frame[1] = right as f32;
                         } else {
-                            frame[0] = (left + right) * 0.5;
+                            frame[0] = (left + right) as f32 * 0.5;
                         }
 
                         // let out = (left + right) * 0.25; // NOTE: theoretically this could be 0.5 but it saturates otherwise
@@ -168,8 +168,8 @@ fn main() {
                         //     eprintln!("⚠️ Saturation: output = {out}");
                         // }
                         // buffer.push(out);
-                        buffer.push(left);
-                        buffer.push(right);
+                        buffer.push(0.1 * left);
+                        buffer.push(0.1 * right);
                         *clock += 1.0;
                     }
                 },

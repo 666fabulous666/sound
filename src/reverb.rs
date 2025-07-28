@@ -1,7 +1,7 @@
 use itertools::Itertools;
 
 struct RingBuff<const N: usize> {
-    data: [f32; N],
+    data: [f64; N],
     head: usize,
 }
 
@@ -15,24 +15,24 @@ impl<const N: usize> Default for RingBuff<N> {
 }
 
 impl<const N: usize> RingBuff<N> {
-    fn backward(&self, n: usize) -> f32 {
+    fn backward(&self, n: usize) -> f64 {
         self.data[(self.head + (N - n)) % N]
     }
-    fn push(&mut self, value: f32) {
+    fn push(&mut self, value: f64) {
         self.head = (self.head + 1) % N;
         self.data[self.head] = value;
     }
 }
 
 pub struct Reverb {
-    delays: Vec<(f32, usize)>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
+    delays: Vec<(f64, usize)>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
     buffer: RingBuff<44100>,
-    dry_factor: f32,
+    dry_factor: f64,
 }
 
 impl Reverb {
-    pub fn new(dry_factor: f32, wet_factor: f32, delays: &[usize]) -> Self {
-        let a = wet_factor / delays.len() as f32;
+    pub fn new(dry_factor: f64, wet_factor: f64, delays: &[usize]) -> Self {
+        let a = wet_factor / delays.len() as f64;
 
         Self {
             delays: delays.iter().map(|&d| (a, d)).collect_vec(),
@@ -41,7 +41,7 @@ impl Reverb {
         }
     }
 
-    pub fn process(&mut self, dry: f32) -> f32 {
+    pub fn process(&mut self, dry: f64) -> f64 {
         let mut output = self.dry_factor * dry;
 
         for &(a, d) in &self.delays {
