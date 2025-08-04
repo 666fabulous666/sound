@@ -11,7 +11,7 @@ pub struct Sequence {
     t_min: f64,
     t_max: f64,
     step: [usize; 2],
-    skips: usize,
+    skips: (usize, usize),
 
     #[serde(default = "default_beat_offset")]
     beat_offset: usize, // WARNING: relative to step
@@ -41,7 +41,7 @@ pub enum Interval {
 
 impl Sequence {
     pub fn draw(&self, notes: &mut Vec<Note>, rng: &mut rand::prelude::ThreadRng) {
-        let skips = sample(rng, self.skips + 3, self.skips)
+        let skips = sample(rng, self.skips.1, self.skips.0)
             .into_iter()
             .map(|k| k + 2)
             .collect_vec();
