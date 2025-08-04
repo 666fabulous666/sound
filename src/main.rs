@@ -86,7 +86,7 @@ fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 
 }
 
 fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration: f64) -> f64 {
-    envelope(3.0, 2.0, note_duration)(time)
+    envelope(4.0, 0.33, note_duration)(time)
         * match wave_type {
             WaveType::Sine => sine_wave(frequency, time),
             WaveType::Square => square_wave(frequency, time),
