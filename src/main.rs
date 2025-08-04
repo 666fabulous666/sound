@@ -48,12 +48,12 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16)
     let path = format!("../audio/{}.wav", filename);
     let mut writer = hound::WavWriter::create(&path, spec).expect("Failed to create WAV file");
 
-    // let max_amp = samples
-    //     .iter()
-    //     .copied()
-    //     .fold(0f32, |a, b| a.max(b.abs()))
-    //     .max(1e-6);
-    let max_amp = 5.0;
+    let max_amp = samples
+        .iter()
+        .copied()
+        .fold(0f64, |a, b| a.max(b.abs()))
+        .max(1e-6);
+    // let max_amp = 5.0;
 
     for &sample in samples {
         let scaled =
@@ -86,7 +86,7 @@ fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 
 }
 
 fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration: f64) -> f64 {
-    envelope(3.0, 1.0, note_duration)(time)
+    envelope(3.0, 2.0, note_duration)(time)
         * match wave_type {
             WaveType::Sine => sine_wave(frequency, time),
             WaveType::Square => square_wave(frequency, time),
@@ -100,6 +100,8 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
             WaveType::Kick => kick(frequency, time),
             WaveType::Snare => snare(frequency, time),
             WaveType::Ride => ride(frequency, time),
+            WaveType::Mute => mute_wave(frequency, time),
+            WaveType::Xylo => xylophone_wave(frequency, time),
         }
 }
 
@@ -145,7 +147,9 @@ fn main() {
                                 true
                             } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
-                                dry += generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
+                                let volume = 1.0 / (1.0 + note.t.fract());
+                                dry += volume
+                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
                                 true
                             } else {
                                 false

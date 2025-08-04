@@ -15,4 +15,6 @@ pub enum WaveType {
     Kick,
     Snare,
     Ride,
+    Mute,
+    Xylo,
 }
