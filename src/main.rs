@@ -16,17 +16,19 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // // around 1/3 s
-const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
+// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 
 // const LEFT_DELAYS: [usize; 1] = [14713];
-// const RIGHT_DELAYS: [usize; 1] = [14651];
+// const RIGHT_DELAYS: [usize; 1] = [14651];3
+const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
+const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
 
-// const LEFT_DELAYS: [usize; 3] = [1, 14713, 22037];
-// const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
+// const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
+// const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -48,12 +50,12 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16)
     let path = format!("../audio/{}.wav", filename);
     let mut writer = hound::WavWriter::create(&path, spec).expect("Failed to create WAV file");
 
-    let max_amp = samples
-        .iter()
-        .copied()
-        .fold(0f64, |a, b| a.max(b.abs()))
-        .max(1e-6);
-    // let max_amp = 5.0;
+    // let max_amp = samples
+    //     .iter()
+    //     .copied()
+    //     .fold(0f64, |a, b| a.max(b.abs()))
+    //     .max(1e-6);
+    let max_amp = 1.0;
 
     for &sample in samples {
         let scaled =
@@ -115,14 +117,15 @@ fn main() {
         .expect("Failed to get default output device");
     let config = device.default_output_config().unwrap().config();
     let sample_rate = config.sample_rate.0 as f64;
+    let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
 
     let note_queue: Arc<Mutex<Vec<Note>>> = Arc::new(Mutex::new(Vec::new()));
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
 
-    let mut reverb_left = Reverb::new(0.4, 0.5, &LEFT_DELAYS);
-    let mut reverb_right = Reverb::new(0.4, 0.5, &RIGHT_DELAYS);
+    let mut reverb_left: Reverb<44100> = Reverb::new(0.4, 0.5, &LEFT_DELAYS);
+    let mut reverb_right: Reverb<44100> = Reverb::new(0.4, 0.5, &RIGHT_DELAYS);
 
     // Start persistent audio stream
     let stream = {
@@ -139,13 +142,33 @@ fn main() {
                     let mut clock = sample_clock.lock().unwrap();
 
                     for frame in data.chunks_mut(channels as usize) {
-                        let elapsed = *clock / sample_rate;
+                        // let elapsed = *clock / sample_rate;
+                        let elapsed = *clock;
                         let mut dry = 0.0;
 
-                        notes.retain(|note| {
-                            if elapsed < note.t {
-                                true
-                            } else if elapsed <= note.t + note.d {
+                        // notes.retain(|note| {
+                        //     if elapsed < note.t {
+                        //         true
+                        //     } else if elapsed <= note.t + note.d {
+                        //         let t = elapsed - note.t;
+                        //         let volume = 0.5
+                        //             / (0.25
+                        //                 + (0.5 * note.t).fract()
+                        //                 + (1.2 * note.t).fract()
+                        //                 + (2.5 * note.t).fract()
+                        //                 + (3.0 * note.t).fract())
+                        //             .min(1.0);
+                        //         // TODO: this could be part of the sequence's parameter
+                        //         println!("time: {elapsed}");
+                        //         dry += volume
+                        //             * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d); // TODO: not computing note.f here
+                        //         true
+                        //     } else {
+                        //         false
+                        //     }
+                        // });
+                        notes.iter().for_each(|note| {
+                            if note.t <= elapsed && elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
                                 let volume = 0.5
                                     / (0.25
@@ -158,9 +181,6 @@ fn main() {
                                 println!("time: {elapsed}");
                                 dry += volume
                                     * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
-                                true
-                            } else {
-                                false
                             }
                         });
 
@@ -180,9 +200,10 @@ fn main() {
                         //     eprintln!("⚠️ Saturation: output = {out}");
                         // }
                         // buffer.push(out);
-                        buffer.push(0.1 * left);
-                        buffer.push(0.1 * right);
-                        *clock += 1.0;
+                        buffer.push(left);
+                        buffer.push(right);
+                        // *clock += 1.0;
+                        *clock += sample_duration;
                     }
                 },
                 |err| eprintln!("Stream error: {}", err),

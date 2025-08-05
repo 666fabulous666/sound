@@ -24,13 +24,13 @@ impl<const N: usize> RingBuff<N> {
     }
 }
 
-pub struct Reverb {
+pub struct Reverb<const B: usize> {
     delays: Vec<(f64, usize)>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
-    buffer: RingBuff<44100>,
+    buffer: RingBuff<B>,
     dry_factor: f64,
 }
 
-impl Reverb {
+impl<const B: usize> Reverb<B> {
     pub fn new(dry_factor: f64, wet_factor: f64, delays: &[usize]) -> Self {
         let a = wet_factor / delays.len() as f64;
 
@@ -48,8 +48,6 @@ impl Reverb {
             output += a * self.buffer.backward(d);
         }
 
-        // Apply smoothing with internal memory
-        // output = 0.5 * output + 0.5 * self.buffer.backward(1);
         self.buffer.push(output);
 
         output
