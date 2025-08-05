@@ -19,15 +19,15 @@ use crossterm::event::{poll, read, Event, KeyCode};
 // const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
 // const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
-// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
+const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 
 // const LEFT_DELAYS: [usize; 1] = [14713];
 // const RIGHT_DELAYS: [usize; 1] = [14651];
 // const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
 // const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
-const LEFT_DELAYS: [usize; 2] = [14713, 22337];
-const RIGHT_DELAYS: [usize; 2] = [14651, 22051];
+// const LEFT_DELAYS: [usize; 2] = [14713, 22337];
+// const RIGHT_DELAYS: [usize; 2] = [14651, 22051];
 
 // const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
 // const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
