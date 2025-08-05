@@ -33,7 +33,7 @@
         "t_max": 32.0,
         "step": [1,2],
         "skips": [7, 10],
-        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -2]},
         "w": "Droplet"
     },
     {
@@ -41,8 +41,8 @@
         "t_max": 32.0,
         "step": [1,2],
         "skips": [7, 10],
-        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
-        "w": "Droplet"
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -2]},
+        "w": "DistOrg"
     },
 
     {
@@ -50,7 +50,7 @@
         "t_max": 64.0,
         "step": [1,2],
         "skips": [7, 10],
-        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -2]},
         "w": "Droplet"
     },
     {
@@ -58,8 +58,8 @@
         "t_max": 64.0,
         "step": [1,2],
         "skips": [7, 10],
-        "f": {"RDTempered": [1, 0, [-7, 0, 7], -1]},
-        "w": "Droplet"
+        "f": {"RDTempered": [1, 0, [-7, 0, 7], -2]},
+        "w": "DistOrg"
     },
 
     {
@@ -114,8 +114,8 @@
     {
         "t_min": 0.0,
         "t_max": 16.0,
-        "step": [1,12],
-        "skips": [16, 19],
+        "step": [1,6],
+        "skips": [3, 5],
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "Xylo"
     },
@@ -123,8 +123,8 @@
     {
         "t_min": 16.0,
         "t_max": 32.0,
-        "step": [1,12],
-        "skips": [12, 15],
+        "step": [1,6],
+        "skips": [6, 8],
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "Xylo"
     },
@@ -132,7 +132,7 @@
     {
         "t_min": 32.0,
         "t_max": 48.0,
-        "step": [1,12],
+        "step": [1,6],
         "skips": [16, 19],
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "Xylo"
@@ -141,7 +141,7 @@
     {
         "t_min": 48.0,
         "t_max": 64.0,
-        "step": [1,12],
+        "step": [1,6],
         "skips": [12, 15],
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "Xylo"
@@ -150,7 +150,7 @@
     {
         "t_min": 0.0,
         "t_max": 16.0,
-        "step": [1,12],
+        "step": [1,6],
         "skips": [16, 19],
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "Xylo"
@@ -204,10 +204,10 @@
     },
     {
         "t_min": 24.0,
-        "t_max": 48.0,
+        "t_max": 32.0,
         "step": [1,12],
-        "skips": [12, 15],
-        "beat_offset": 2,
+        "skips": [6, 15],
+        "beat_offset": 3,
         "f": {"RDTempered": [0, 0, [], 0]},
         "w": "HiHat"
     },

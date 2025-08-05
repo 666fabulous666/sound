@@ -23,9 +23,11 @@ use crossterm::event::{poll, read, Event, KeyCode};
 // const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 
 // const LEFT_DELAYS: [usize; 1] = [14713];
-// const RIGHT_DELAYS: [usize; 1] = [14651];3
-const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
-const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
+// const RIGHT_DELAYS: [usize; 1] = [14651];
+// const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
+// const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
+const LEFT_DELAYS: [usize; 2] = [14713, 22337];
+const RIGHT_DELAYS: [usize; 2] = [14651, 22051];
 
 // const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
 // const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
@@ -94,7 +96,7 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
             WaveType::Square => square_wave(frequency, time),
             WaveType::Triangle => triangle_wave(frequency, time),
             WaveType::Sawtooth => sawtooth_wave(frequency, time),
-            WaveType::Custom1 => custom1(frequency, time),
+            WaveType::DistOrg => dist_org(frequency, time),
             WaveType::Custom2 => custom2(frequency, time),
             WaveType::Droplet => droplet_wave(frequency, time),
             WaveType::DropletOct => droplet_oct_wave(frequency, time),
@@ -152,37 +154,23 @@ fn main() {
                             } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
                                 let volume = 0.5
-                                    / (0.25
+                                    / (0.5
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()
-                                        + (3.0 * note.t).fract())
-                                    .min(1.0);
+                                        + (3.0 * note.t).fract());
                                 // TODO: this could be part of the sequence's parameter
-                                println!("time: {elapsed}");
+                                // println!("time: {elapsed}");
                                 dry += volume
                                     * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d); // TODO: not computing note.f here
                                 true
-                            } else {
+                            } else if elapsed > note.t + note.d + 16.0 {
+                                // FIXME: make this 16 automatic
                                 false
+                            } else {
+                                true
                             }
                         });
-                        // notes.iter().for_each(|note| {
-                        //     if note.t <= elapsed && elapsed <= note.t + note.d {
-                        //         let t = elapsed - note.t;
-                        //         let volume = 0.5
-                        //             / (0.25
-                        //                 + (0.5 * note.t).fract()
-                        //                 + (1.2 * note.t).fract()
-                        //                 + (2.5 * note.t).fract()
-                        //                 + (3.0 * note.t).fract())
-                        //             .min(1.0);
-                        //         // TODO: this could be part of the sequence's parameter
-                        //         println!("time: {elapsed}");
-                        //         dry += volume
-                        //             * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
-                        //     }
-                        // });
 
                         let left = reverb_left.process(dry);
                         let right = reverb_right.process(dry);
@@ -194,15 +182,8 @@ fn main() {
                             frame[0] = (left + right) as f32 * 0.5;
                         }
 
-                        // let out = (left + right) * 0.25; // NOTE: theoretically this could be 0.5 but it saturates otherwise
-
-                        // if out.abs() > 1.0 {
-                        //     eprintln!("⚠️ Saturation: output = {out}");
-                        // }
-                        // buffer.push(out);
                         buffer.push(left);
                         buffer.push(right);
-                        // *clock += 1.0;
                         *clock += sample_duration;
                     }
                 },
@@ -217,7 +198,7 @@ fn main() {
     println!("🎵 Press 'q' or 'Esc' to quit...");
 
     let mut batch_index = 0;
-    let batch_interval = 64.0; // FIXME: make this automatic
+    let batch_interval = 64.0; // FIXME: make this 54 automatic
 
     loop {
         let start_time = batch_interval * batch_index as f64;

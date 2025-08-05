@@ -7,7 +7,7 @@ pub enum WaveType {
     Square,
     Triangle,
     Sawtooth,
-    Custom1,
+    DistOrg,
     Custom2,
     Droplet,
     DropletOct,

@@ -7,6 +7,14 @@ pub fn sine_wave(frequency: f64, time: f64) -> f64 {
     let phase = 2.0 * PI * (frequency) * tt;
     phase.sin() / attack_slide
 }
+pub fn sine(frequency: f64, time: f64) -> f64 {
+    let phase = 2.0 * PI * (frequency) * time;
+    phase.sin()
+}
+pub fn cosine(frequency: f64, time: f64) -> f64 {
+    let phase = 2.0 * PI * (frequency) * time;
+    phase.cos()
+}
 
 pub fn droplet_wave(frequency: f64, time: f64) -> f64 {
     let attack_slide = (frequency / 440.0).sqrt();
@@ -66,21 +74,21 @@ pub fn sawtooth_wave(frequency: f64, time: f64) -> f64 {
     frequency * time - (0.5 + frequency * time).floor()
 }
 
-pub fn custom1(frequency: f64, time: f64) -> f64 {
-    let attack_slide = (frequency / 440.0).sinh().min(2.0);
-    let tt = time + attack_slide * (1.25 + time).powi(-10);
-    // let tt = time;
-    let tt = tt + 5e-5 * (32.0 * tt).sin();
-    let tmp = sine_wave(frequency, tt);
-    tmp.signum() * tmp.abs().powf(1.0 + 0.1 * time)
+pub fn dist_org(frequency: f64, time: f64) -> f64 {
+    let tmp = sine(frequency, time);
+    tmp.signum()
+        * tmp.abs().powf(
+            1.0 + (sine(41.0, time.sqrt())
+                * cosine(29.0, time.sqrt())
+                * sine(23.0, time.sqrt())
+                * cosine(19.0, time.sqrt())
+                * sine(17.0, time.sqrt())
+                * cosine(13.0, time.sqrt())),
+        )
 }
 
 pub fn custom2(frequency: f64, time: f64) -> f64 {
-    let attack_slide = (frequency / 880.0).sinh().min(1.0);
-    let tt = time + attack_slide * (5.75 + 3.0 * time).powi(-10);
-    let tt = tt + 5e-5 * (32.0 * tt).sin();
-    let tmp = sine_wave(frequency, tt);
-    tmp.signum() * tmp.abs().powf(1.0 / (0.2 + time * time))
+    todo!()
 }
 
 /// A simple xorshift64* pseudo‐random number generator
