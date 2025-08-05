@@ -146,29 +146,10 @@ fn main() {
                         let elapsed = *clock;
                         let mut dry = 0.0;
 
-                        // notes.retain(|note| {
-                        //     if elapsed < note.t {
-                        //         true
-                        //     } else if elapsed <= note.t + note.d {
-                        //         let t = elapsed - note.t;
-                        //         let volume = 0.5
-                        //             / (0.25
-                        //                 + (0.5 * note.t).fract()
-                        //                 + (1.2 * note.t).fract()
-                        //                 + (2.5 * note.t).fract()
-                        //                 + (3.0 * note.t).fract())
-                        //             .min(1.0);
-                        //         // TODO: this could be part of the sequence's parameter
-                        //         println!("time: {elapsed}");
-                        //         dry += volume
-                        //             * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d); // TODO: not computing note.f here
-                        //         true
-                        //     } else {
-                        //         false
-                        //     }
-                        // });
-                        notes.iter().for_each(|note| {
-                            if note.t <= elapsed && elapsed <= note.t + note.d {
+                        notes.retain(|note| {
+                            if elapsed < note.t {
+                                true
+                            } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
                                 let volume = 0.5
                                     / (0.25
@@ -180,9 +161,28 @@ fn main() {
                                 // TODO: this could be part of the sequence's parameter
                                 println!("time: {elapsed}");
                                 dry += volume
-                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
+                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d); // TODO: not computing note.f here
+                                true
+                            } else {
+                                false
                             }
                         });
+                        // notes.iter().for_each(|note| {
+                        //     if note.t <= elapsed && elapsed <= note.t + note.d {
+                        //         let t = elapsed - note.t;
+                        //         let volume = 0.5
+                        //             / (0.25
+                        //                 + (0.5 * note.t).fract()
+                        //                 + (1.2 * note.t).fract()
+                        //                 + (2.5 * note.t).fract()
+                        //                 + (3.0 * note.t).fract())
+                        //             .min(1.0);
+                        //         // TODO: this could be part of the sequence's parameter
+                        //         println!("time: {elapsed}");
+                        //         dry += volume
+                        //             * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
+                        //     }
+                        // });
 
                         let left = reverb_left.process(dry);
                         let right = reverb_right.process(dry);
@@ -217,7 +217,7 @@ fn main() {
     println!("🎵 Press 'q' or 'Esc' to quit...");
 
     let mut batch_index = 0;
-    let batch_interval = 64.0; // seconds
+    let batch_interval = 64.0; // FIXME: make this automatic
 
     loop {
         let start_time = batch_interval * batch_index as f64;
@@ -242,7 +242,7 @@ fn main() {
         batch_index += 1;
 
         // Sleep until next batch is due
-        let now = *sample_clock.lock().unwrap() / sample_rate;
+        let now = *sample_clock.lock().unwrap();
         let target = batch_interval * batch_index as f64;
 
         if target > now {
