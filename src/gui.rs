@@ -7,6 +7,24 @@ use crate::{notes::Sequence, waves::WaveType};
 // ------------------------------------------------------------
 const LOOP_LEN: f64 = 64.0; // seconds
 
+// All possible variants for the ComboBox
+const ALL_WAVES: [WaveType; 14] = [
+    WaveType::Sine,
+    WaveType::Square,
+    WaveType::Triangle,
+    WaveType::Sawtooth,
+    WaveType::DistOrg,
+    WaveType::Custom2,
+    WaveType::Droplet,
+    WaveType::DropletOct,
+    WaveType::HiHat,
+    WaveType::Kick,
+    WaveType::Snare,
+    WaveType::Ride,
+    WaveType::Mute,
+    WaveType::Xylo,
+];
+
 pub struct GuiApp {
     seqs: Vec<Sequence>,                 // editable score
     selected: Option<usize>,             // currently picked sequence index
@@ -99,8 +117,23 @@ impl App for GuiApp {
                     if let Some(seq) = self.seqs.get_mut(i) {
                         ui.heading(format!("Track {}", i + 1));
                         ui.separator();
+                        // ---- WaveType picker ----
+                        let mut w_choice = seq.w;
+                        egui::ComboBox::from_id_source("wave_type_combo")
+                            .selected_text((&w_choice).to_string())
+                            .show_ui(ui, |ui| {
+                                for var in ALL_WAVES.iter() {
+                                    ui.selectable_value(&mut w_choice, *var, (&var).to_string());
+                                }
+                            });
+                        if w_choice != seq.w {
+                            seq.w = w_choice;
+                            self.dirty = true;
+                        }
 
-                        // editable fields
+                        ui.separator(); // visual break before the rest
+
+                        // ---- editable fields ----
                         let mut t_min = seq.t_min;
                         let mut t_max = seq.t_max;
                         ui.add(egui::Slider::new(&mut t_min, 0.0..=LOOP_LEN).text("t_min"));

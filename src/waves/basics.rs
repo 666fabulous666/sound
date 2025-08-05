@@ -75,8 +75,12 @@ pub fn sawtooth_wave(frequency: f64, time: f64) -> f64 {
 }
 
 pub fn dist_org(frequency: f64, time: f64) -> f64 {
-    let tmp = sine(frequency, time);
-    (880.0 / frequency).sqrt()
+    let tmp = 0.1
+        * (sine(frequency * 1.005, time) + 2.0 * sine(frequency * 1.002, time)
+            - 3.0 * sine(frequency, time)
+            + 2.0 * sine(frequency * 0.998, time)
+            + sine(frequency * 0.995, time));
+    (440.0 / frequency).sqrt()
         * tmp.signum()
         * tmp.abs().powf(
             1.0 + (sine(41.0, time.sqrt())
