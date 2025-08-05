@@ -255,7 +255,9 @@ fn main() {
     });
 
     // macOS: GUI must be on main thread
-    gui::run_gui(); // blocks; returns when window is closed
+    gui::run_gui(Some(Arc::clone(&sample_clock))); // <- pass the shared clock
+                                                   // blocks; returns when window is closed
+
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
     // Wait for the scheduler thread to finish (it will exit automatically

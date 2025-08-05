@@ -2,11 +2,11 @@ use rand::{prelude::SliceRandom, seq::index::sample};
 use std::iter::once;
 
 use itertools::Itertools;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::waves::WaveType;
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
@@ -31,7 +31,7 @@ pub struct Note {
     pub w: WaveType,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum Interval {
     /// (degree, octave)
     Tempered(i32, i32),
