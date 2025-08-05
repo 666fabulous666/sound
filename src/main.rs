@@ -1,11 +1,14 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use notes::{Note, Sequence};
 use std::fs::File;
-use std::io::{self, BufReader};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::io::BufReader;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use std::time::Duration;
 
+mod gui;
 mod notes;
 mod waves;
 use waves::{basics::*, WaveType};
@@ -110,7 +113,6 @@ fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration:
 }
 
 fn main() {
-    let mut rng = rand::thread_rng();
     let freq0 = 440.0f64;
 
     let host = cpal::default_host();
@@ -125,6 +127,7 @@ fn main() {
     let note_queue: Arc<Mutex<Vec<Note>>> = Arc::new(Mutex::new(Vec::new()));
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
+    let running = Arc::new(AtomicBool::new(true));
 
     let mut reverb_left: Reverb<44100> = Reverb::new(0.4, 0.5, &LEFT_DELAYS);
     let mut reverb_right: Reverb<44100> = Reverb::new(0.4, 0.5, &RIGHT_DELAYS);
@@ -195,50 +198,68 @@ fn main() {
 
     stream.play().unwrap();
 
-    println!("🎵 Press 'q' or 'Esc' to quit...");
+    // 1.  Make *new* handles for the scheduler thread
+    let note_queue_sched = Arc::clone(&note_queue);
+    let sample_clock_sched = Arc::clone(&sample_clock);
+    let recorded_samples_sched = Arc::clone(&recorded_samples);
 
-    let mut batch_index = 0;
-    let batch_interval = 64.0; // FIXME: make this 54 automatic
+    let running_sched = Arc::clone(&running);
+    let scheduler = std::thread::spawn(move || {
+        let mut rng = rand::thread_rng(); // local RNG (Send not required)
 
-    loop {
-        let start_time = batch_interval * batch_index as f64;
+        println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
+        let mut batch_index = 0;
+        let batch_interval = 64.0;
 
-        // Read and generate notes
-        let instruments = read_notes_from_json("notes.json");
-        let mut new_notes = Vec::new();
-        for inst in instruments {
-            inst.draw(&mut new_notes, &mut rng);
+        while running_sched.load(Ordering::Relaxed) {
+            let start_time = batch_interval * batch_index as f64;
+
+            // ----- create notes exactly like before -----
+            let instruments = read_notes_from_json("notes.json");
+            let mut new_notes = Vec::new();
+            for inst in instruments {
+                inst.draw(&mut new_notes, &mut rng);
+            }
+            for note in &mut new_notes {
+                note.t += start_time;
+            }
+            note_queue_sched.lock().unwrap().extend(new_notes);
+            batch_index += 1;
+
+            // ----- timing -----
+            let now = *sample_clock_sched.lock().unwrap();
+            let target = batch_interval * batch_index as f64;
+            if target > now {
+                std::thread::sleep(std::time::Duration::from_secs_f64(target - now - 1.0));
+            }
+
+            // ----- exit? -----
+            if wait_for_exit_signal() {
+                println!("Exiting. Please enter a filename:");
+                let mut name = String::new();
+                std::io::stdin().read_line(&mut name).unwrap();
+                let name = name.trim();
+
+                let buffer = recorded_samples_sched.lock().unwrap();
+                save_to_wav(name, sample_rate, &buffer, channels);
+                break; // leave the loop → thread ends
+            }
+            // manual quit?
+            if wait_for_exit_signal() {
+                println!("Exiting. Please enter a filename:");
+                // … WAV export …
+                running_sched.store(false, Ordering::Relaxed); // tell everybody else to stop
+                break;
+            }
         }
+    });
 
-        // Apply time offset
-        for note in &mut new_notes {
-            note.t += start_time;
-        }
+    // macOS: GUI must be on main thread
+    gui::run_gui(); // blocks; returns when window is closed
+    running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
-        {
-            let mut notes = note_queue.lock().unwrap();
-            notes.extend(new_notes);
-        }
-
-        batch_index += 1;
-
-        // Sleep until next batch is due
-        let now = *sample_clock.lock().unwrap();
-        let target = batch_interval * batch_index as f64;
-
-        if target > now {
-            thread::sleep(Duration::from_secs_f64(target - now - 1.0));
-        }
-
-        if wait_for_exit_signal() {
-            println!("Exiting. Please enter a filename:");
-            let mut name = String::new();
-            io::stdin().read_line(&mut name).unwrap();
-            let name = name.trim();
-
-            let buffer = recorded_samples.lock().unwrap();
-            save_to_wav(name, sample_rate, &buffer, channels);
-            break;
-        }
-    }
+    // Wait for the scheduler thread to finish (it will exit automatically
+    // if the user already pressed q/Esc; otherwise closing the GUI window
+    // doesn’t stop it, so you may want a channel/flag – see below).
+    scheduler.join().ok();
 }

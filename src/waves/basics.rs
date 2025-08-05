@@ -88,7 +88,7 @@ pub fn dist_org(frequency: f64, time: f64) -> f64 {
         )
 }
 
-pub fn custom2(frequency: f64, time: f64) -> f64 {
+pub fn custom2(_frequency: f64, _time: f64) -> f64 {
     todo!()
 }
 

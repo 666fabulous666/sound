@@ -12,4 +12,6 @@ rand = "0.8"
 itertools = "*"
 hound = "3.5.0"  # For writing .wav files
 crossterm = "0.27"  # For keyboard input handling
-
+egui = "0.28"
+eframe = { version = "0.28", default-features = false, features = ["glow"] }
+anyhow = "1"

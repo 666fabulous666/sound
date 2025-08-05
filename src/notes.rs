@@ -8,16 +8,16 @@ use crate::waves::WaveType;
 
 #[derive(Deserialize, Clone)]
 pub struct Sequence {
-    t_min: f64,
-    t_max: f64,
-    step: [usize; 2],
-    skips: (usize, usize),
+    pub t_min: f64,
+    pub t_max: f64,
+    pub step: [usize; 2],
+    pub skips: (usize, usize),
 
     #[serde(default = "default_beat_offset")]
-    beat_offset: usize, // WARNING: relative to step
+    pub beat_offset: usize, // WARNING: relative to step
 
-    f: Interval,
-    w: WaveType,
+    pub f: Interval,
+    pub w: WaveType,
 }
 
 fn default_beat_offset() -> usize {
