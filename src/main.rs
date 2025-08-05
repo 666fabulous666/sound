@@ -16,11 +16,11 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // // around 1/3 s
-// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
-const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
+// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 
 // const LEFT_DELAYS: [usize; 1] = [14713];
 // const RIGHT_DELAYS: [usize; 1] = [14651];
@@ -147,13 +147,15 @@ fn main() {
                                 true
                             } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
-                                let volume = 0.3
+                                let volume = 0.5
                                     / (0.25
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()
                                         + (3.0 * note.t).fract())
-                                    .min(1.0); // TODO: this could be part of the sequence's parameter
+                                    .min(1.0);
+                                // TODO: this could be part of the sequence's parameter
+                                println!("time: {elapsed}");
                                 dry += volume
                                     * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
                                 true
