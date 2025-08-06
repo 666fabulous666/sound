@@ -156,7 +156,7 @@ fn main() {
                                 true
                             } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
-                                let volume = 0.5
+                                let volume = note.volume
                                     / (0.5
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()

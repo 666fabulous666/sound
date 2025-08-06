@@ -145,12 +145,15 @@ impl App for GuiApp {
                         ui.horizontal(|ui| {
                             if ui.button("Delete").clicked() {
                                 action = Action::Delete;
+                                self.dirty = true;
                             }
                             if ui.button("↑").clicked() && can_up {
                                 action = Action::Up;
+                                self.dirty = true;
                             }
                             if ui.button("↓").clicked() && can_down {
                                 action = Action::Down;
+                                self.dirty = true;
                             }
                         });
 
@@ -178,6 +181,7 @@ impl App for GuiApp {
                         ui.add(egui::Slider::new(&mut t_max, 0.0..=LOOP_LEN).text("t_max"));
                         if t_max < t_min {
                             t_max = t_min;
+                            self.dirty = true;
                         }
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
                             seq.t_min = t_min;
@@ -191,23 +195,59 @@ impl App for GuiApp {
                         // step
                         ui.horizontal(|ui| {
                             ui.label("step:");
-                            ui.add(egui::DragValue::new(&mut seq.step.0).range(1..=128));
+                            if ui
+                                .add(egui::DragValue::new(&mut seq.step.0).range(1..=128))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
                             ui.label("/");
-                            ui.add(egui::DragValue::new(&mut seq.step.1).range(1..=128));
+                            if ui
+                                .add(egui::DragValue::new(&mut seq.step.1).range(1..=128))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
                         });
 
                         // skips
                         ui.horizontal(|ui| {
                             ui.label("skips:");
-                            ui.add(egui::DragValue::new(&mut seq.skips.0).range(0..=512));
+                            if ui
+                                .add(egui::DragValue::new(&mut seq.skips.0).range(0..=512))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
                             ui.label(",");
-                            ui.add(egui::DragValue::new(&mut seq.skips.1).range(0..=512));
+                            if ui
+                                .add(egui::DragValue::new(&mut seq.skips.1).range(0..=512))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
                         });
 
                         // beat_offset
                         ui.horizontal(|ui| {
                             ui.label("beat_offset:");
-                            ui.add(egui::DragValue::new(&mut seq.beat_offset).range(0..=256));
+                            if ui
+                                .add(egui::DragValue::new(&mut seq.beat_offset).range(0..=256))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
+                        });
+
+                        // volume
+                        ui.horizontal(|ui| {
+                            ui.label("volume:");
+                            if ui
+                                .add(egui::Slider::new(&mut seq.volume, 0.0..=32.0).text("volume"))
+                                .changed()
+                            {
+                                self.dirty = true
+                            };
                         });
                     }
                 } else {

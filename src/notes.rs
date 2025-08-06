@@ -12,16 +12,20 @@ pub struct Sequence {
     pub t_max: f64,
     pub step: (usize, usize),
     pub skips: (usize, usize),
-
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize, // WARNING: relative to step
-
     pub f: Interval,
     pub w: WaveType,
+    #[serde(default = "default_volume")]
+    pub volume: f64,
 }
 
 fn default_beat_offset() -> usize {
     0
+}
+
+fn default_volume() -> f64 {
+    5.0
 }
 
 impl Default for Sequence {
@@ -31,9 +35,10 @@ impl Default for Sequence {
             t_max: 4.0,
             step: (1, 1),
             skips: (3, 5),
-            beat_offset: 0,
+            beat_offset: default_beat_offset(),
             f: Interval::RDTempered(2, 0, vec![-7, 0, 7], 0),
             w: WaveType::Droplet,
+            volume: default_volume(),
         }
     }
 }
@@ -44,6 +49,7 @@ pub struct Note {
     pub d: f64,
     pub f: Interval,
     pub w: WaveType,
+    pub volume: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -79,6 +85,7 @@ impl Sequence {
                 d: *d,
                 f: self.f.clone(),
                 w: self.w,
+                volume: self.volume,
             })
             .for_each(|n| notes.push(n.draw(notes, rng)));
     }
