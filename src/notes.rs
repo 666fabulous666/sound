@@ -23,6 +23,21 @@ pub struct Sequence {
 fn default_beat_offset() -> usize {
     0
 }
+
+impl Default for Sequence {
+    fn default() -> Self {
+        Sequence {
+            t_min: 0.0,
+            t_max: 4.0,
+            step: [1, 1],
+            skips: (3, 5),
+            beat_offset: 0,
+            f: Interval::RDTempered(2, 0, vec![-7, 0, 7], 0),
+            w: WaveType::Droplet,
+        }
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub struct Note {
     pub t: f64,

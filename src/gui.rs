@@ -4,10 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::{notes::Sequence, waves::WaveType};
 
-// ------------------------------------------------------------
-const LOOP_LEN: f64 = 64.0; // seconds
-
-// All possible variants for the ComboBox
+// list of all wave variants for the ComboBox
 const ALL_WAVES: [WaveType; 14] = [
     WaveType::Sine,
     WaveType::Square,
@@ -25,10 +22,13 @@ const ALL_WAVES: [WaveType; 14] = [
     WaveType::Xylo,
 ];
 
+// ------------------------------------------------------------
+const LOOP_LEN: f64 = 64.0; // seconds
+
 pub struct GuiApp {
     seqs: Vec<Sequence>,                 // editable score
     selected: Option<usize>,             // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
+    clock: Option<Arc<Mutex<f64>>>,      // shared play‑head seconds from audio
     dirty: bool,                         // unsaved edits?
     fall_back_start: std::time::Instant, // for standalone demo
 }
@@ -49,12 +49,7 @@ impl GuiApp {
     }
 
     fn t_to_x(rect: egui::Rect, t: f64) -> f32 {
-        let clamped = if t <= LOOP_LEN {
-            t as f32
-        } else {
-            t.rem_euclid(LOOP_LEN) as f32
-        };
-        rect.left() + clamped / LOOP_LEN as f32 * rect.width()
+        rect.left() + t as f32 / LOOP_LEN as f32 * rect.width()
     }
 
     fn brighten(col: egui::Color32) -> egui::Color32 {
@@ -101,21 +96,64 @@ impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
-            if ui.button("Save").clicked() {
-                self.save_to_file();
-            }
-            if self.dirty {
-                ui.colored_label(egui::Color32::YELLOW, "unsaved");
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Save").clicked() {
+                    self.save_to_file();
+                }
+                if ui.button("New score").clicked() {
+                    self.seqs.clear();
+                    self.selected = None;
+                    self.dirty = true;
+                }
+                if ui.button("Add track").clicked() {
+                    let idx = self.seqs.len();
+                    self.seqs.push(Sequence::default());
+                    self.selected = Some(idx);
+                    self.dirty = true;
+                }
+                if self.dirty {
+                    ui.colored_label(egui::Color32::YELLOW, "unsaved");
+                }
+            });
         });
 
         // -------- property pane --------
         egui::SidePanel::right("props")
             .default_width(230.0)
             .show(ctx, |ui| {
-                if let Some(i) = self.selected {
-                    if let Some(seq) = self.seqs.get_mut(i) {
-                        ui.heading(format!("Track {}", i + 1));
+                // Which structural edit (if any) should happen after the UI is drawn?
+                enum Action {
+                    None,
+                    Delete,
+                    Up,
+                    Down,
+                }
+                let mut action = Action::None;
+
+                if let Some(sel) = self.selected {
+                    let seq_len = self.seqs.len(); // ← NEW (immutable, early)
+
+                    if sel < seq_len {
+                        let seq = &mut self.seqs[sel]; // mutable borrow starts here
+
+                        ui.heading(format!("Track {}", sel + 1));
+
+                        // ── delete / move buttons ─────────────────────────
+                        let can_up = sel > 0;
+                        let can_down = sel + 1 < seq_len; // ← NEW: use cached len
+
+                        ui.horizontal(|ui| {
+                            if ui.button("Delete").clicked() {
+                                action = Action::Delete;
+                            }
+                            if ui.button("↑").clicked() && can_up {
+                                action = Action::Up;
+                            }
+                            if ui.button("↓").clicked() && can_down {
+                                action = Action::Down;
+                            }
+                        });
+
                         ui.separator();
                         // ---- WaveType picker ----
                         let mut w_choice = seq.w;
@@ -131,9 +169,9 @@ impl App for GuiApp {
                             self.dirty = true;
                         }
 
-                        ui.separator(); // visual break before the rest
+                        ui.separator();
 
-                        // ---- editable fields ----
+                        // ---- numeric fields ----
                         let mut t_min = seq.t_min;
                         let mut t_max = seq.t_max;
                         ui.add(egui::Slider::new(&mut t_min, 0.0..=LOOP_LEN).text("t_min"));
@@ -153,26 +191,53 @@ impl App for GuiApp {
                         // step
                         ui.horizontal(|ui| {
                             ui.label("step:");
-                            ui.add(egui::DragValue::new(&mut seq.step[0]).clamp_range(1..=128));
+                            ui.add(egui::DragValue::new(&mut seq.step[0]).range(1..=128));
                             ui.label("/");
-                            ui.add(egui::DragValue::new(&mut seq.step[1]).clamp_range(1..=128));
+                            ui.add(egui::DragValue::new(&mut seq.step[1]).range(1..=128));
                         });
+
                         // skips
                         ui.horizontal(|ui| {
                             ui.label("skips:");
-                            ui.add(egui::DragValue::new(&mut seq.skips.0).clamp_range(0..=512));
+                            ui.add(egui::DragValue::new(&mut seq.skips.0).range(0..=512));
                             ui.label(",");
-                            ui.add(egui::DragValue::new(&mut seq.skips.1).clamp_range(0..=512));
+                            ui.add(egui::DragValue::new(&mut seq.skips.1).range(0..=512));
                         });
-                        // beat_offset if the field exists (make public in struct)
-                        #[allow(unused_mut)]
+
+                        // beat_offset
                         ui.horizontal(|ui| {
                             ui.label("beat_offset:");
-                            ui.add(egui::DragValue::new(&mut seq.beat_offset).clamp_range(0..=256));
+                            ui.add(egui::DragValue::new(&mut seq.beat_offset).range(0..=256));
                         });
                     }
                 } else {
                     ui.label("Click a block to edit");
+                }
+
+                // -------- perform structural edit after UI borrow ends --------
+                match action {
+                    Action::None => {}
+                    Action::Delete => {
+                        if let Some(sel) = self.selected {
+                            self.seqs.remove(sel);
+                            self.selected = if sel == 0 { None } else { Some(sel - 1) };
+                            self.dirty = true;
+                        }
+                    }
+                    Action::Up => {
+                        if let Some(sel) = self.selected {
+                            self.seqs.swap(sel, sel - 1);
+                            self.selected = Some(sel - 1);
+                            self.dirty = true;
+                        }
+                    }
+                    Action::Down => {
+                        if let Some(sel) = self.selected {
+                            self.seqs.swap(sel, sel + 1);
+                            self.selected = Some(sel + 1);
+                            self.dirty = true;
+                        }
+                    }
                 }
             });
 
@@ -241,7 +306,7 @@ impl App for GuiApp {
                 );
             }
 
-            // play-head
+            // play‑head
             let ph = self.current_time() % LOOP_LEN;
             let x = Self::t_to_x(rect, ph);
             painter.line_segment(
