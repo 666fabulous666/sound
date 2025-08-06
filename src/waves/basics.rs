@@ -183,7 +183,7 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
     //    instantaneous phase = 2π ∫₀ᵗ f(t') dt'
     //    with f(t) = frequency * exp(−sweep_rate * t)
     //    ⇒ ∫₀ᵗ f exp(−s t) dt = frequency * (1 − exp(−sweep_rate·t)) / sweep_rate
-    let phase = 2.0 * PI * frequency * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
+    let phase = PI * frequency / 4.0 * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
     let osc = phase.sin();
 
     // 3) Deterministic “click” noise on attack

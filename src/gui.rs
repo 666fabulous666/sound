@@ -191,9 +191,9 @@ impl App for GuiApp {
                         // step
                         ui.horizontal(|ui| {
                             ui.label("step:");
-                            ui.add(egui::DragValue::new(&mut seq.step[0]).range(1..=128));
+                            ui.add(egui::DragValue::new(&mut seq.step.0).range(1..=128));
                             ui.label("/");
-                            ui.add(egui::DragValue::new(&mut seq.step[1]).range(1..=128));
+                            ui.add(egui::DragValue::new(&mut seq.step.1).range(1..=128));
                         });
 
                         // skips
@@ -273,25 +273,52 @@ impl App for GuiApp {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
-                let x0 = Self::t_to_x(rect, seq.t_min);
-                let x1 = Self::t_to_x(rect, seq.t_max).max(x0 + 4.0);
+                let x0 = Self::t_to_x(rect, (seq.t_min - self.current_time()).rem_euclid(LOOP_LEN));
+                let x1 = Self::t_to_x(rect, (seq.t_max - self.current_time()).rem_euclid(LOOP_LEN));
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
+                let block_rect_l =
+                    egui::Rect::from_min_max(egui::pos2(0.0, y0), egui::pos2(x1, y1));
+                let block_rect_r = egui::Rect::from_min_max(
+                    egui::pos2(x0, y0),
+                    egui::pos2(Self::t_to_x(rect, LOOP_LEN), y1),
+                );
                 let mut col = Self::hash_color(&seq.w);
                 if self.selected == Some(idx) {
                     col = Self::brighten(col);
                 }
 
-                painter.rect_filled(block_rect, 4.0, col);
-                painter.rect_stroke(
-                    block_rect,
-                    4.0,
-                    egui::Stroke::new(1.0, egui::Color32::BLACK),
-                );
+                if x0 < x1 {
+                    painter.rect_filled(block_rect, 4.0, col);
+                    painter.rect_stroke(
+                        block_rect,
+                        4.0,
+                        egui::Stroke::new(1.0, egui::Color32::BLACK),
+                    );
+                } else {
+                    painter.rect_filled(block_rect_l, 4.0, col);
+                    painter.rect_stroke(
+                        block_rect_l,
+                        4.0,
+                        egui::Stroke::new(1.0, egui::Color32::BLACK),
+                    );
+                    painter.rect_filled(block_rect_r, 4.0, col);
+                    painter.rect_stroke(
+                        block_rect_r,
+                        4.0,
+                        egui::Stroke::new(1.0, egui::Color32::BLACK),
+                    );
+                }
 
                 if ui
                     .interact(block_rect, egui::Id::new(idx), egui::Sense::click())
                     .clicked()
+                    || ui
+                        .interact(block_rect_l, egui::Id::new(idx), egui::Sense::click())
+                        .clicked()
+                    || ui
+                        .interact(block_rect_r, egui::Id::new(idx), egui::Sense::click())
+                        .clicked()
                 {
                     self.selected = Some(idx);
                 }
@@ -306,13 +333,13 @@ impl App for GuiApp {
                 );
             }
 
-            // play‑head
-            let ph = self.current_time() % LOOP_LEN;
-            let x = Self::t_to_x(rect, ph);
-            painter.line_segment(
-                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(2.0, egui::Color32::LIGHT_GREEN),
-            );
+            // // play‑head
+            // let ph = self.current_time() % LOOP_LEN;
+            // let x = Self::t_to_x(rect, ph);
+            // painter.line_segment(
+            //     [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+            //     egui::Stroke::new(2.0, egui::Color32::LIGHT_GREEN),
+            // );
         });
 
         ctx.request_repaint_after(std::time::Duration::from_millis(16));

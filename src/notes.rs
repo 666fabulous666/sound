@@ -10,7 +10,7 @@ use crate::waves::WaveType;
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
-    pub step: [usize; 2],
+    pub step: (usize, usize),
     pub skips: (usize, usize),
 
     #[serde(default = "default_beat_offset")]
@@ -29,7 +29,7 @@ impl Default for Sequence {
         Sequence {
             t_min: 0.0,
             t_max: 4.0,
-            step: [1, 1],
+            step: (1, 1),
             skips: (3, 5),
             beat_offset: 0,
             f: Interval::RDTempered(2, 0, vec![-7, 0, 7], 0),
@@ -62,7 +62,7 @@ impl Sequence {
             .collect_vec();
         // let skips = self.skips.clone();
         // println!("{skips:?}");
-        let step_as_time = self.step[0] as f64 / self.step[1] as f64;
+        let step_as_time = self.step.0 as f64 / self.step.1 as f64;
         let ts = (0..)
             .filter(|i| skips.iter().all(|s| (i + 1 + self.beat_offset) % s != 0))
             .map(|i| self.t_min + i as f64 * step_as_time)
