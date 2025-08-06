@@ -36,7 +36,7 @@ impl Default for Sequence {
             step: (1, 1),
             skips: (3, 5),
             beat_offset: default_beat_offset(),
-            f: Interval::RDTempered(2, 0, vec![-7, 0, 7], 0),
+            f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             w: WaveType::Droplet,
             volume: default_volume(),
         }
@@ -56,8 +56,8 @@ pub struct Note {
 pub enum Interval {
     /// (degree, octave)
     Tempered(i32, i32),
-    /// (n rd steps, degree, base, octave)
-    RDTempered(u32, i32, Vec<i32>, i32),
+    /// (n rd steps, base, octave)
+    RDTempered(u32, Vec<i32>, i32),
 }
 
 impl Sequence {
@@ -94,7 +94,7 @@ impl Sequence {
 impl Note {
     pub fn draw(&self, notes: &[Note], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.f {
-            Interval::RDTempered(n, degree, base, octave) => {
+            Interval::RDTempered(n, base, octave) => {
                 let other_notes = notes
                     .iter()
                     .filter(|n| ((n.t - self.t).abs() < n.d + self.d + 2.0))
@@ -107,13 +107,8 @@ impl Note {
                     })
                     .collect_vec();
 
-                let mut degree = if other_notes.is_empty() {
-                    (0..*n).fold(*degree, |acc, _| acc + base.choose(rng).unwrap())
-                } else {
-                    let tmp = other_notes.choose(rng).unwrap();
-                    (0..*n).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap())
-                };
-                degree %= 12;
+                let tmp = other_notes.choose(rng).unwrap_or(&0);
+                let degree = (0..*n).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap()) % 12;
                 Self {
                     f: Interval::Tempered(degree, *octave),
                     ..(*self)

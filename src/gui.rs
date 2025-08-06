@@ -233,7 +233,6 @@ impl App for GuiApp {
 
                         if let Interval::RDTempered(
                             ref mut nb_rd_steps,
-                            _,
                             ref mut tones,
                             ref mut octave,
                         ) = seq.f
