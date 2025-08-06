@@ -2,7 +2,10 @@ use eframe::{egui, App, CreationContext, NativeOptions};
 use serde_json as json;
 use std::sync::{Arc, Mutex};
 
-use crate::{notes::Sequence, waves::WaveType};
+use crate::{
+    notes::{Interval, Sequence},
+    waves::WaveType,
+};
 
 // list of all wave variants for the ComboBox
 const ALL_WAVES: [WaveType; 14] = [
@@ -227,6 +230,41 @@ impl App for GuiApp {
                                 self.dirty = true
                             };
                         });
+
+                        if let Interval::RDTempered(ref mut n, _, ref mut tones, _) = seq.f {
+                            // nb_rd_steps
+                            ui.horizontal(|ui| {
+                                ui.label("nb_rd_steps:");
+                                if ui.add(egui::DragValue::new(n).range(0..=8)).changed() {
+                                    self.dirty = true
+                                };
+                            });
+                            // ----- RDTempered tones (–11 … 11) ---------------------------------
+                            ui.label("RD tones:");
+                            ui.horizontal_wrapped(|ui| {
+                                for tone in -11..=11 {
+                                    let mut selected = tones.contains(&tone);
+
+                                    // show the checkbox; the label *is* the number
+                                    if ui.checkbox(&mut selected, tone.to_string()).changed() {
+                                        if selected {
+                                            // add if absent
+                                            if !tones.contains(&tone) {
+                                                tones.push(tone);
+                                                tones.sort_unstable();
+                                            }
+                                        } else {
+                                            // remove if present
+                                            if let Some(pos) = tones.iter().position(|&v| v == tone)
+                                            {
+                                                tones.remove(pos);
+                                            }
+                                        }
+                                        self.dirty = true;
+                                    }
+                                }
+                            });
+                        }
 
                         // beat_offset
                         ui.horizontal(|ui| {
