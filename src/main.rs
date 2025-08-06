@@ -27,13 +27,13 @@ use crossterm::event::{poll, read, Event, KeyCode};
 
 // const LEFT_DELAYS: [usize; 1] = [14713];
 // const RIGHT_DELAYS: [usize; 1] = [14651];
-// const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
-// const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
+const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
+const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
 // const LEFT_DELAYS: [usize; 2] = [14713, 22337];
 // const RIGHT_DELAYS: [usize; 2] = [14651, 22051];
 
-const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
-const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
+// const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
+// const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {

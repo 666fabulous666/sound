@@ -231,11 +231,27 @@ impl App for GuiApp {
                             };
                         });
 
-                        if let Interval::RDTempered(ref mut n, _, ref mut tones, _) = seq.f {
+                        if let Interval::RDTempered(
+                            ref mut nb_rd_steps,
+                            _,
+                            ref mut tones,
+                            ref mut octave,
+                        ) = seq.f
+                        {
+                            // octave
+                            ui.horizontal(|ui| {
+                                ui.label("octave:");
+                                if ui.add(egui::DragValue::new(octave).range(-5..=5)).changed() {
+                                    self.dirty = true
+                                };
+                            });
                             // nb_rd_steps
                             ui.horizontal(|ui| {
                                 ui.label("nb_rd_steps:");
-                                if ui.add(egui::DragValue::new(n).range(0..=8)).changed() {
+                                if ui
+                                    .add(egui::DragValue::new(nb_rd_steps).range(0..=16))
+                                    .changed()
+                                {
                                     self.dirty = true
                                 };
                             });
