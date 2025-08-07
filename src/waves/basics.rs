@@ -168,7 +168,8 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
 ///
 /// # Returns
 /// A single audio sample (f64) producing a short, punchy kick‐drum sound.
-pub fn kick(frequency: f64, time: f64) -> f64 {
+pub fn kick(_frequency: f64, time: f64) -> f64 {
+    let frequency = 220.0;
     // ——— Envelope parameters ———
     let amp_tau = 0.1; // main amplitude decay ≈ 200 ms
     let sweep_rate = 10.0; // how quickly the pitch sweeps downward
@@ -183,7 +184,7 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
     //    instantaneous phase = 2π ∫₀ᵗ f(t') dt'
     //    with f(t) = frequency * exp(−sweep_rate * t)
     //    ⇒ ∫₀ᵗ f exp(−s t) dt = frequency * (1 − exp(−sweep_rate·t)) / sweep_rate
-    let phase = PI * frequency / 4.0 * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
+    let phase = PI * frequency * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
     let osc = phase.sin();
 
     // 3) Deterministic “click” noise on attack
@@ -201,10 +202,10 @@ pub fn kick(frequency: f64, time: f64) -> f64 {
 /// Combines a noisy “crack” with a pitched “body”
 /// - `frequency`: tuned pitch for the snare body (e.g. 200–300 Hz)
 /// - `time`: time in seconds
-pub fn snare(frequency: f64, time: f64) -> f64 {
+pub fn snare(_frequency: f64, time: f64) -> f64 {
     // Envelope time‐constants
     let noise_tau = 0.1; // noise decay ≈ 150 ms
-    let tone_tau = 0.5; // body decay ≈ 50 ms
+    let tone_tau = 0.2; // body decay ≈ 50 ms
 
     // Levels
     let noise_level = 0.15;
@@ -222,10 +223,10 @@ pub fn snare(frequency: f64, time: f64) -> f64 {
 
     // ===== TONAL “BODY” =====
     // simple sine at fixed frequency, you could add a slight pitch-drop if desired
-    let tone = (2.0 * PI * frequency * time).sin();
+    let tone = (2.0 * PI * 110.0 * time).sin();
 
-    // Mix noise + tone
-    env_noise * noise_level * noise + env_tone * tone_level * tone
+    5.0 * (env_noise * noise_level * noise + env_tone * tone_level * tone)
+        * (1.0 + 0.25 * kick(110.0, (time * 0.25).sqrt()))
 }
 
 /// --- RIDE/BELL HYBRID ---

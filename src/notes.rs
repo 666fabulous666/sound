@@ -32,7 +32,7 @@ impl Default for Sequence {
     fn default() -> Self {
         Sequence {
             t_min: 0.0,
-            t_max: 4.0,
+            t_max: 64.0,
             step: (1, 1),
             skips: (3, 5),
             beat_offset: default_beat_offset(),
@@ -70,7 +70,7 @@ impl Sequence {
         // println!("{skips:?}");
         let step_as_time = self.step.0 as f64 / self.step.1 as f64;
         let ts = (0..)
-            .filter(|i| skips.iter().all(|s| (i + 1 + self.beat_offset) % s != 0))
+            .filter(|i| skips.iter().all(|s| (i + 1 - self.beat_offset) % s != 0))
             .map(|i| self.t_min + i as f64 * step_as_time)
             .take_while(|t| *t <= self.t_max);
         let ds = ts

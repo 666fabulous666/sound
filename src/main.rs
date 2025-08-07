@@ -19,21 +19,11 @@ use reverb::Reverb;
 use crossterm::event::{poll, read, Event, KeyCode};
 
 // // // around 1/3 s
-// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
+const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
 // const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
 // const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
-
-// const LEFT_DELAYS: [usize; 1] = [14713];
-// const RIGHT_DELAYS: [usize; 1] = [14651];
-const LEFT_DELAYS: [usize; 3] = [1, 14713, 22337];
-const RIGHT_DELAYS: [usize; 3] = [1, 14651, 22051];
-// const LEFT_DELAYS: [usize; 2] = [14713, 22337];
-// const RIGHT_DELAYS: [usize; 2] = [14651, 22051];
-
-// const LEFT_DELAYS: [usize; 3] = [1, 2, 3];
-// const RIGHT_DELAYS: [usize; 3] = [1, 2, 3];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -55,11 +45,6 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16)
     let path = format!("../audio/{}.wav", filename);
     let mut writer = hound::WavWriter::create(&path, spec).expect("Failed to create WAV file");
 
-    // let max_amp = samples
-    //     .iter()
-    //     .copied()
-    //     .fold(0f64, |a, b| a.max(b.abs()))
-    //     .max(1e-6);
     let max_amp = 1.0;
 
     for &sample in samples {
@@ -129,8 +114,8 @@ fn main() {
     let sample_clock = Arc::new(Mutex::new(0f64));
     let running = Arc::new(AtomicBool::new(true));
 
-    let mut reverb_left: Reverb<44100> = Reverb::new(0.4, 0.5, &LEFT_DELAYS);
-    let mut reverb_right: Reverb<44100> = Reverb::new(0.4, 0.5, &RIGHT_DELAYS);
+    let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
+    let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
 
     // Start persistent audio stream
     let stream = {
@@ -162,13 +147,10 @@ fn main() {
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()
                                         + (3.0 * note.t).fract());
-                                // TODO: this could be part of the sequence's parameter
-                                // println!("time: {elapsed}");
                                 dry += volume
-                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d); // TODO: not computing note.f here
+                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
                                 true
                             } else if elapsed > note.t + note.d + 16.0 {
-                                // FIXME: make this 16 automatic
                                 false
                             } else {
                                 true

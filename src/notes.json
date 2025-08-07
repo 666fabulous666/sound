@@ -1,92 +1,14 @@
 [
   {
     "t_min": 0.0,
-    "t_max": 16.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 0,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        -2
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 16.0,
-    "t_max": 32.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 0,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        -2
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 32.0,
-    "t_max": 48.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 0,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        -1
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 48.0,
     "t_max": 64.0,
     "step": [
       1,
-      8
+      6
     ],
     "skips": [
-      3,
-      5
+      10,
+      17
     ],
     "beat_offset": 0,
     "f": {
@@ -98,6 +20,58 @@
           7
         ],
         -1
+      ]
+    },
+    "w": "Droplet",
+    "volume": 2.5
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      6
+    ],
+    "skips": [
+      5,
+      9
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        -2
+      ]
+    },
+    "w": "DropletOct",
+    "volume": 5.0
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      6
+    ],
+    "skips": [
+      10,
+      15
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
       ]
     },
     "w": "Xylo",
@@ -105,94 +79,42 @@
   },
   {
     "t_min": 0.0,
-    "t_max": 16.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 4,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        0
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 16.0,
-    "t_max": 32.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 4,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        1
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 32.0,
-    "t_max": 48.0,
-    "step": [
-      1,
-      8
-    ],
-    "skips": [
-      3,
-      5
-    ],
-    "beat_offset": 2,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        0
-      ]
-    },
-    "w": "Xylo",
-    "volume": 5.0
-  },
-  {
-    "t_min": 48.0,
     "t_max": 64.0,
     "step": [
       1,
-      8
+      6
     ],
     "skips": [
-      3,
-      5
+      9,
+      15
     ],
-    "beat_offset": 1,
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        -2
+      ]
+    },
+    "w": "Xylo",
+    "volume": 5.0
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      6
+    ],
+    "skips": [
+      6,
+      10
+    ],
+    "beat_offset": 0,
     "f": {
       "RDTempered": [
         2,
@@ -204,7 +126,59 @@
         0
       ]
     },
-    "w": "Xylo",
+    "w": "Kick",
+    "volume": 5.0
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      12
+    ],
+    "skips": [
+      6,
+      10
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
+      ]
+    },
+    "w": "HiHat",
+    "volume": 5.0
+  },
+  {
+    "t_min": 2.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      1
+    ],
+    "skips": [
+      6,
+      10
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
+      ]
+    },
+    "w": "Snare",
     "volume": 5.0
   }
 ]

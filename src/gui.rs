@@ -150,11 +150,11 @@ impl App for GuiApp {
                                 action = Action::Delete;
                                 self.dirty = true;
                             }
-                            if ui.button("↑").clicked() && can_up {
+                            if ui.button("move up").clicked() && can_up {
                                 action = Action::Up;
                                 self.dirty = true;
                             }
-                            if ui.button("↓").clicked() && can_down {
+                            if ui.button("move down").clicked() && can_down {
                                 action = Action::Down;
                                 self.dirty = true;
                             }
