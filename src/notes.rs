@@ -1,4 +1,5 @@
 use rand::{prelude::SliceRandom, seq::index::sample};
+use serde_json as json; // NEW (used for light-weight fingerprints)
 use std::iter::once;
 
 use itertools::Itertools;
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::waves::WaveType;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
@@ -52,7 +53,7 @@ pub struct Note {
     pub volume: f64,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum Interval {
     /// (degree, octave)
     Tempered(i32, i32),
@@ -126,4 +127,21 @@ impl Interval {
             _ => panic!(),
         }
     }
+}
+#[inline]
+fn note_fingerprint(n: &Note) -> (f64, f64, String, String, f64) {
+    // (t, d, wave, interval_json, volume) — stable enough to match scheduled notes
+    (
+        n.t,
+        n.d,
+        (&n.w).to_string(),
+        json::to_string(&n.f).unwrap_or_default(),
+        n.volume,
+    )
+}
+
+// equality for removal without touching derives anywhere else
+#[inline]
+pub fn notes_equal(a: &Note, b: &Note) -> bool {
+    note_fingerprint(a) == note_fingerprint(b)
 }

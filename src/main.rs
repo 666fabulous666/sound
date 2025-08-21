@@ -1,5 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::{Note, Sequence};
+use notes::{notes_equal, Note, Sequence};
+use serde_json as json; // NEW (used for light-weight fingerprints)
+use std::collections::HashMap; // NEW
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::{
@@ -192,23 +194,120 @@ fn main() {
     let scheduler = std::thread::spawn(move || {
         let mut rng = rand::thread_rng(); // local RNG (Send not required)
 
+        // NEW: track last-seen sequences and all future scheduled notes per sequence
+        let mut last_seqs = shared_seqs_sched.lock().unwrap().clone();
+        let mut active_by_seq: HashMap<usize, Vec<Note>> = HashMap::new();
+
         println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
         let mut batch_index = 0;
         let batch_interval = 64.0;
 
         while running_sched.load(Ordering::Relaxed) {
             let start_time = batch_interval * batch_index as f64;
+            // NEW: detect GUI edits and re-generate remaining notes for changed sequences
+            {
+                let curr_seqs = shared_seqs_sched.lock().unwrap().clone();
+                if curr_seqs != last_seqs {
+                    let now = *sample_clock_sched.lock().unwrap();
 
-            // ----- create notes exactly like before -----
+                    let max_len = curr_seqs.len().max(last_seqs.len());
+                    for i in 0..max_len {
+                        let old_seq = last_seqs.get(i);
+                        let new_seq = curr_seqs.get(i);
+
+                        let changed = match (old_seq, new_seq) {
+                            (Some(a), Some(b)) => {
+                                // compare by JSON string to avoid adding PartialEq on WaveType/Interval
+                                json::to_string(a).ok() != json::to_string(b).ok()
+                            }
+                            (Some(_), None) => true, // removed
+                            (None, Some(_)) => true, // added
+                            (None, None) => false,
+                        };
+
+                        if !changed {
+                            continue;
+                        }
+
+                        // 1) Remove all *future* notes for this sequence from the global queue
+                        //    (keep already-started notes)
+                        if let Some(old_future) = active_by_seq.remove(&i) {
+                            let mut q = note_queue_sched.lock().unwrap();
+                            q.retain(|n| {
+                                !(n.t >= now && old_future.iter().any(|m| notes_equal(n, m)))
+                            });
+                        }
+
+                        // 2) If the sequence still exists, re-generate the remainder of the *current* batch
+                        if let Some(seq) = new_seq {
+                            let start_time = (now / batch_interval).floor() * batch_interval;
+                            let end_time = start_time + batch_interval;
+
+                            // Build context from other sequences' notes already scheduled in this batch
+                            // (convert back to local batch time by subtracting start_time)
+                            let mut context: Vec<Note> = active_by_seq
+                                .iter()
+                                .filter(|(j, _)| **j != i)
+                                .flat_map(|(_, ns)| {
+                                    ns.iter()
+                                        .filter(|n| n.t >= start_time && n.t < end_time)
+                                        .map(|n| {
+                                            let mut m = n.clone();
+                                            m.t -= start_time;
+                                            m
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect();
+
+                            // Generate new notes for this seq (in local batch time)
+                            let before = context.len();
+                            seq.clone().draw(&mut context, &mut rng);
+                            let mut new_local = context[before..].to_vec();
+
+                            // Shift to absolute time and keep only notes that haven't started yet
+                            for n in &mut new_local {
+                                n.t += start_time;
+                            }
+                            let new_future: Vec<Note> =
+                                new_local.into_iter().filter(|n| n.t >= now).collect();
+
+                            // Publish to the queue and remember them
+                            note_queue_sched.lock().unwrap().extend(new_future.clone());
+                            active_by_seq.insert(i, new_future);
+                        }
+                    }
+
+                    last_seqs = curr_seqs;
+                }
+            }
+
+            // ----- create notes exactly like before, but keep them grouped per sequence -----
             let instruments = shared_seqs_sched.lock().unwrap().clone();
-            let mut new_notes = Vec::new();
-            for inst in instruments {
-                inst.draw(&mut new_notes, &mut rng);
+
+            // Build per-sequence groups while preserving cross-sequence context.
+            // We use a single 'context' Vec<Note> exactly like before so interaction logic remains identical.
+            let mut context = Vec::<Note>::new();
+            let mut groups: Vec<(usize, Vec<Note>)> = Vec::new();
+
+            for (idx, inst) in instruments.iter().enumerate() {
+                let before = context.len();
+                inst.draw(&mut context, &mut rng); // writes its notes to 'context'
+                let group = context[before..].to_vec(); // slice out *just* this sequence's new notes
+                groups.push((idx, group));
             }
-            for note in &mut new_notes {
-                note.t += start_time;
+
+            // Shift groups to absolute time, remember them, then flatten to the audio queue.
+            let mut flat: Vec<Note> = Vec::new();
+            for (idx, mut ns) in groups {
+                for n in &mut ns {
+                    n.t += start_time;
+                }
+                active_by_seq.entry(idx).or_default().extend(ns.clone());
+                flat.extend(ns);
             }
-            note_queue_sched.lock().unwrap().extend(new_notes);
+
+            note_queue_sched.lock().unwrap().extend(flat);
             batch_index += 1;
 
             // ----- timing -----
