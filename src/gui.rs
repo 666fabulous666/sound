@@ -29,23 +29,35 @@ const ALL_WAVES: [WaveType; 14] = [
 const LOOP_LEN: f64 = 64.0; // seconds
 
 pub struct GuiApp {
-    seqs: Vec<Sequence>,                 // editable score
-    selected: Option<usize>,             // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,      // shared play‑head seconds from audio
-    dirty: bool,                         // unsaved edits?
-    fall_back_start: std::time::Instant, // for standalone demo
+    seqs: Vec<Sequence>,                       // editable score
+    selected: Option<usize>,                   // currently picked sequence index
+    clock: Option<Arc<Mutex<f64>>>,            // shared play-head seconds from audio
+    shared: Option<Arc<Mutex<Vec<Sequence>>>>, // NEW: live shared sequences
+    dirty: bool,                               // unsaved edits?
+    fall_back_start: std::time::Instant,       // for standalone demo
 }
 
 impl GuiApp {
-    pub fn new(_cc: &CreationContext<'_>, clock: Option<Arc<Mutex<f64>>>) -> Self {
+    pub fn new(
+        _cc: &CreationContext<'_>,
+        clock: Option<Arc<Mutex<f64>>>,
+        shared: Option<Arc<Mutex<Vec<Sequence>>>>,
+    ) -> Self {
         let seqs: Vec<Sequence> = std::fs::read_to_string("notes.json")
             .ok()
             .and_then(|s| json::from_str(&s).ok())
             .unwrap_or_default();
+
+        // NEW: on startup, publish whatever we loaded into the shared state
+        if let Some(s) = &shared {
+            *s.lock().unwrap() = seqs.clone();
+        }
+
         Self {
             seqs,
             selected: None,
             clock,
+            shared, // NEW
             dirty: false,
             fall_back_start: std::time::Instant::now(),
         }
@@ -87,7 +99,12 @@ impl GuiApp {
         match json::to_string_pretty(&self.seqs) {
             Ok(s) => {
                 if std::fs::write("notes.json", s).is_ok() {
+                    // Keep disk state current…
                     self.dirty = false;
+                    // …and also refresh the live shared state
+                    if let Some(shared) = &self.shared {
+                        *shared.lock().unwrap() = self.seqs.clone();
+                    }
                 }
             }
             Err(e) => eprintln!("Save failed: {e}"),
@@ -425,28 +442,26 @@ impl App for GuiApp {
                     egui::Color32::WHITE,
                 );
             }
-
-            // // play‑head
-            // let ph = self.current_time() % LOOP_LEN;
-            // let x = Self::t_to_x(rect, ph);
-            // painter.line_segment(
-            //     [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-            //     egui::Stroke::new(2.0, egui::Color32::LIGHT_GREEN),
-            // );
         });
 
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        // NEW: reflect unsaved edits into the live shared sequences
+        if self.dirty {
+            if let Some(s) = &self.shared {
+                *s.lock().unwrap() = self.seqs.clone();
+            }
+        }
     }
 }
 
 // ------------------------------------------------------------
 
-pub fn run_gui(clock: Option<Arc<Mutex<f64>>>) {
+pub fn run_gui(clock: Option<Arc<Mutex<f64>>>, shared: Option<Arc<Mutex<Vec<Sequence>>>>) {
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
         native_options,
-        Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, clock.clone())))),
+        Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, clock.clone(), shared.clone())))),
     );
 }
 

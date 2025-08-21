@@ -113,6 +113,8 @@ fn main() {
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
     let running = Arc::new(AtomicBool::new(true));
+    let shared_seqs: Arc<Mutex<Vec<Sequence>>> =
+        Arc::new(Mutex::new(read_notes_from_json("notes.json")));
 
     let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
     let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
@@ -184,6 +186,7 @@ fn main() {
     let note_queue_sched = Arc::clone(&note_queue);
     let sample_clock_sched = Arc::clone(&sample_clock);
     let recorded_samples_sched = Arc::clone(&recorded_samples);
+    let shared_seqs_sched = Arc::clone(&shared_seqs);
 
     let running_sched = Arc::clone(&running);
     let scheduler = std::thread::spawn(move || {
@@ -197,7 +200,7 @@ fn main() {
             let start_time = batch_interval * batch_index as f64;
 
             // ----- create notes exactly like before -----
-            let instruments = read_notes_from_json("notes.json");
+            let instruments = shared_seqs_sched.lock().unwrap().clone();
             let mut new_notes = Vec::new();
             for inst in instruments {
                 inst.draw(&mut new_notes, &mut rng);
@@ -236,9 +239,10 @@ fn main() {
         }
     });
 
-    // macOS: GUI must be on main thread
-    gui::run_gui(Some(Arc::clone(&sample_clock))); // <- pass the shared clock
-                                                   // blocks; returns when window is closed
+    gui::run_gui(
+        Some(Arc::clone(&sample_clock)),
+        Some(Arc::clone(&shared_seqs)),
+    );
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
