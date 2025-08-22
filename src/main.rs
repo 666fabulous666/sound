@@ -128,9 +128,9 @@ fn main() {
 
     // Start persistent audio stream
     let stream = {
-        let note_queue = Arc::clone(&note_queue);
-        let recorded_samples = Arc::clone(&recorded_samples);
-        let sample_clock = Arc::clone(&sample_clock);
+        let note_queue = note_queue.clone();
+        let recorded_samples = recorded_samples.clone();
+        let sample_clock = sample_clock.clone();
 
         device
             .build_output_stream(
@@ -196,12 +196,12 @@ fn main() {
     stream.play().unwrap();
 
     // 1.  Make *new* handles for the scheduler thread
-    let note_queue_sched = Arc::clone(&note_queue);
-    let sample_clock_sched = Arc::clone(&sample_clock);
-    let recorded_samples_sched = Arc::clone(&recorded_samples);
-    let shared_seqs_sched = Arc::clone(&shared_seqs);
+    let note_queue_sched = note_queue.clone();
+    let sample_clock_sched = sample_clock.clone();
+    let recorded_samples_sched = recorded_samples.clone();
+    let shared_seqs_sched = shared_seqs.clone();
+    let running_sched = running.clone();
 
-    let running_sched = Arc::clone(&running);
     let scheduler = std::thread::spawn(move || {
         let mut rng = rand::thread_rng(); // local RNG (Send not required)
 
