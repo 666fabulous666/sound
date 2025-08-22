@@ -21,6 +21,7 @@ pub struct Sequence {
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
+    token: usize,
 }
 
 fn default_beat_offset() -> usize {
@@ -35,8 +36,8 @@ fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
 }
 
-impl Default for Sequence {
-    fn default() -> Self {
+impl Sequence {
+    pub fn default(token: usize) -> Self {
         Sequence {
             t_min: 0.0,
             t_max: 64.0,
@@ -47,6 +48,7 @@ impl Default for Sequence {
             w: WaveType::Droplet,
             volume: default_volume(),
             attack_decay: default_attack_decay(),
+            token,
         }
     }
 }

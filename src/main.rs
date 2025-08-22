@@ -2,8 +2,6 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use notes::{notes_equal, Note, Sequence};
 use serde_json as json;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufReader;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -65,12 +63,6 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16)
     );
 }
 
-fn read_sequences_from_json(path: &str) -> Vec<Sequence> {
-    let file = File::open(path).expect("Failed to open JSON file");
-    let reader = BufReader::new(file);
-    serde_json::from_reader(reader).expect("Failed to parse JSON")
-}
-
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
         let time_fraction = time / note_duration;
@@ -120,8 +112,7 @@ fn main() {
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
     let running = Arc::new(AtomicBool::new(true));
-    let shared_seqs: Arc<Mutex<Vec<Sequence>>> =
-        Arc::new(Mutex::new(read_sequences_from_json("notes.json")));
+    let shared_seqs: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
     let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
@@ -349,10 +340,7 @@ fn main() {
         }
     });
 
-    gui::run_gui(
-        Some(Arc::clone(&sample_clock)),
-        Some(Arc::clone(&shared_seqs)),
-    );
+    gui::run_gui(Some(Arc::clone(&sample_clock)), Arc::clone(&shared_seqs));
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 

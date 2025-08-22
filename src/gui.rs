@@ -1,5 +1,5 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
-use serde_json as json;
+// use serde_json as json;
 use std::sync::{Arc, Mutex};
 
 use crate::{
@@ -29,35 +29,25 @@ const ALL_WAVES: [WaveType; 14] = [
 const LOOP_LEN: f64 = 64.0; // seconds
 
 pub struct GuiApp {
-    seqs: Vec<Sequence>,                       // editable score
-    selected: Option<usize>,                   // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,            // shared play-head seconds from audio
-    shared: Option<Arc<Mutex<Vec<Sequence>>>>, // NEW: live shared sequences
-    dirty: bool,                               // unsaved edits?
-    fall_back_start: std::time::Instant,       // for standalone demo
+    shared: Arc<Mutex<Vec<Sequence>>>,   // NEW: live shared sequences
+    selected: Option<usize>,             // currently picked sequence index
+    clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
+    dirty: bool,                         // unsaved edits?
+    fall_back_start: std::time::Instant, // for standalone demo
 }
 
 impl GuiApp {
     pub fn new(
         _cc: &CreationContext<'_>,
         clock: Option<Arc<Mutex<f64>>>,
-        shared: Option<Arc<Mutex<Vec<Sequence>>>>,
+        shared: Arc<Mutex<Vec<Sequence>>>,
     ) -> Self {
-        let seqs: Vec<Sequence> = std::fs::read_to_string("notes.json")
-            .ok()
-            .and_then(|s| json::from_str(&s).ok())
-            .unwrap_or_default();
-
-        // NEW: on startup, publish whatever we loaded into the shared state
-        if let Some(s) = &shared {
-            *s.lock().unwrap() = seqs.clone();
-        }
+        *shared.lock().unwrap() = Vec::new();
 
         Self {
-            seqs,
+            shared,
             selected: None,
             clock,
-            shared, // NEW
             dirty: false,
             fall_back_start: std::time::Instant::now(),
         }
@@ -94,40 +84,24 @@ impl GuiApp {
             self.fall_back_start.elapsed().as_secs_f64()
         }
     }
-
-    fn save_to_file(&mut self) {
-        match json::to_string_pretty(&self.seqs) {
-            Ok(s) => {
-                if std::fs::write("notes.json", s).is_ok() {
-                    // Keep disk state current…
-                    self.dirty = false;
-                    // …and also refresh the live shared state
-                    if let Some(shared) = &self.shared {
-                        *shared.lock().unwrap() = self.seqs.clone();
-                    }
-                }
-            }
-            Err(e) => eprintln!("Save failed: {e}"),
-        }
-    }
 }
 
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let current_time = self.current_time();
+        let mut seqs = self.shared.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button("Save").clicked() {
-                    self.save_to_file();
-                }
                 if ui.button("New score").clicked() {
-                    self.seqs.clear();
+                    self.shared.lock().unwrap().clear();
                     self.selected = None;
                     self.dirty = true;
                 }
                 if ui.button("Add track").clicked() {
-                    let idx = self.seqs.len();
-                    self.seqs.push(Sequence::default());
+                    let idx = seqs.len();
+                    let seq = Sequence::default(0); //FIXME
+                    seqs.push(seq);
                     self.selected = Some(idx);
                     self.dirty = true;
                 }
@@ -151,10 +125,10 @@ impl App for GuiApp {
                 let mut action = Action::None;
 
                 if let Some(sel) = self.selected {
-                    let seq_len = self.seqs.len(); // ← NEW (immutable, early)
+                    let seq_len = seqs.len(); // ← NEW (immutable, early)
 
                     if sel < seq_len {
-                        let seq = &mut self.seqs[sel]; // mutable borrow starts here
+                        let seq = &mut seqs[sel]; // mutable borrow starts here
 
                         ui.heading(format!("Track {}", sel + 1));
 
@@ -221,6 +195,7 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
+                            seq.attack_decay = (attack, seq.attack_decay.1);
                             self.dirty = true
                         };
                         if ui
@@ -231,6 +206,7 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
+                            seq.attack_decay = (seq.attack_decay.0, decay);
                             self.dirty = true
                         };
 
@@ -351,21 +327,21 @@ impl App for GuiApp {
                     Action::None => {}
                     Action::Delete => {
                         if let Some(sel) = self.selected {
-                            self.seqs.remove(sel);
+                            seqs.remove(sel);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                             self.dirty = true;
                         }
                     }
                     Action::Up => {
                         if let Some(sel) = self.selected {
-                            self.seqs.swap(sel, sel - 1);
+                            seqs.swap(sel, sel - 1);
                             self.selected = Some(sel - 1);
                             self.dirty = true;
                         }
                     }
                     Action::Down => {
                         if let Some(sel) = self.selected {
-                            self.seqs.swap(sel, sel + 1);
+                            seqs.swap(sel, sel + 1);
                             self.selected = Some(sel + 1);
                             self.dirty = true;
                         }
@@ -381,7 +357,7 @@ impl App for GuiApp {
             );
             let painter = ui.painter_at(rect);
 
-            let lanes = self.seqs.len().max(1);
+            let lanes = seqs.len().max(1);
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
@@ -401,12 +377,12 @@ impl App for GuiApp {
             }
 
             // sequences
-            for (idx, seq) in self.seqs.iter().enumerate() {
+            for (idx, seq) in seqs.iter().enumerate() {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
-                let x0 = Self::t_to_x(rect, (seq.t_min - self.current_time()).rem_euclid(LOOP_LEN));
-                let x1 = Self::t_to_x(rect, (seq.t_max - self.current_time()).rem_euclid(LOOP_LEN));
+                let x0 = Self::t_to_x(rect, (seq.t_min - current_time).rem_euclid(LOOP_LEN));
+                let x1 = Self::t_to_x(rect, (seq.t_max - current_time).rem_euclid(LOOP_LEN));
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
                 let block_rect_l =
@@ -467,18 +443,12 @@ impl App for GuiApp {
         });
 
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
-        // NEW: reflect unsaved edits into the live shared sequences
-        if self.dirty {
-            if let Some(s) = &self.shared {
-                *s.lock().unwrap() = self.seqs.clone();
-            }
-        }
     }
 }
 
 // ------------------------------------------------------------
 
-pub fn run_gui(clock: Option<Arc<Mutex<f64>>>, shared: Option<Arc<Mutex<Vec<Sequence>>>>) {
+pub fn run_gui(clock: Option<Arc<Mutex<f64>>>, shared: Arc<Mutex<Vec<Sequence>>>) {
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
