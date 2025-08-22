@@ -29,10 +29,9 @@ const ALL_WAVES: [WaveType; 14] = [
 const LOOP_LEN: f64 = 64.0; // seconds
 
 pub struct GuiApp {
-    shared: Arc<Mutex<Vec<Sequence>>>,   // NEW: live shared sequences
+    seqs: Arc<Mutex<Vec<Sequence>>>,     // NEW: live shared sequences
     selected: Option<usize>,             // currently picked sequence index
     clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
-    dirty: bool,                         // unsaved edits?
     fall_back_start: std::time::Instant, // for standalone demo
 }
 
@@ -45,10 +44,9 @@ impl GuiApp {
         *shared.lock().unwrap() = Vec::new();
 
         Self {
-            shared,
+            seqs: shared,
             selected: None,
             clock,
-            dirty: false,
             fall_back_start: std::time::Instant::now(),
         }
     }
@@ -89,24 +87,19 @@ impl GuiApp {
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
-        let mut seqs = self.shared.lock().unwrap();
+        let mut seqs = self.seqs.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    self.shared.lock().unwrap().clear();
+                    self.seqs.lock().unwrap().clear();
                     self.selected = None;
-                    self.dirty = true;
                 }
                 if ui.button("Add track").clicked() {
                     let idx = seqs.len();
                     let seq = Sequence::default(0); //FIXME
                     seqs.push(seq);
                     self.selected = Some(idx);
-                    self.dirty = true;
-                }
-                if self.dirty {
-                    ui.colored_label(egui::Color32::YELLOW, "unsaved");
                 }
             });
         });
@@ -139,15 +132,12 @@ impl App for GuiApp {
                         ui.horizontal(|ui| {
                             if ui.button("Delete").clicked() {
                                 action = Action::Delete;
-                                self.dirty = true;
                             }
                             if ui.button("move up").clicked() && can_up {
                                 action = Action::Up;
-                                self.dirty = true;
                             }
                             if ui.button("move down").clicked() && can_down {
                                 action = Action::Down;
-                                self.dirty = true;
                             }
                         });
 
@@ -163,7 +153,6 @@ impl App for GuiApp {
                             });
                         if w_choice != seq.w {
                             seq.w = w_choice;
-                            self.dirty = true;
                         }
 
                         ui.separator();
@@ -175,15 +164,12 @@ impl App for GuiApp {
                         ui.add(egui::Slider::new(&mut t_max, 0.0..=LOOP_LEN).text("t_max"));
                         if t_max < t_min {
                             t_max = t_min;
-                            self.dirty = true;
                         }
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
                             seq.t_min = t_min;
-                            self.dirty = true;
                         }
                         if (t_max - seq.t_max).abs() > f64::EPSILON {
                             seq.t_max = t_max;
-                            self.dirty = true;
                         }
                         let mut attack = seq.attack_decay.0;
                         let mut decay = seq.attack_decay.1;
@@ -196,7 +182,6 @@ impl App for GuiApp {
                             .changed()
                         {
                             seq.attack_decay = (attack, seq.attack_decay.1);
-                            self.dirty = true
                         };
                         if ui
                             .add(
@@ -207,7 +192,6 @@ impl App for GuiApp {
                             .changed()
                         {
                             seq.attack_decay = (seq.attack_decay.0, decay);
-                            self.dirty = true
                         };
 
                         // step
@@ -216,16 +200,12 @@ impl App for GuiApp {
                             if ui
                                 .add(egui::DragValue::new(&mut seq.step.0).range(1..=128))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                             ui.label("/");
                             if ui
                                 .add(egui::DragValue::new(&mut seq.step.1).range(1..=128))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                         });
 
                         // skips
@@ -234,16 +214,12 @@ impl App for GuiApp {
                             if ui
                                 .add(egui::DragValue::new(&mut seq.skips.0).range(0..=512))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                             ui.label(",");
                             if ui
                                 .add(egui::DragValue::new(&mut seq.skips.1).range(0..=512))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                         });
 
                         if let Interval::RDTempered(
@@ -255,9 +231,7 @@ impl App for GuiApp {
                             // octave
                             ui.horizontal(|ui| {
                                 ui.label("octave:");
-                                if ui.add(egui::DragValue::new(octave).range(-5..=5)).changed() {
-                                    self.dirty = true
-                                };
+                                if ui.add(egui::DragValue::new(octave).range(-5..=5)).changed() {};
                             });
                             // nb_rd_steps
                             ui.horizontal(|ui| {
@@ -265,9 +239,7 @@ impl App for GuiApp {
                                 if ui
                                     .add(egui::DragValue::new(nb_rd_steps).range(0..=16))
                                     .changed()
-                                {
-                                    self.dirty = true
-                                };
+                                {};
                             });
                             // ----- RDTempered tones (–11 … 11) ---------------------------------
                             ui.label("RD tones:");
@@ -290,7 +262,6 @@ impl App for GuiApp {
                                                 tones.remove(pos);
                                             }
                                         }
-                                        self.dirty = true;
                                     }
                                 }
                             });
@@ -302,9 +273,7 @@ impl App for GuiApp {
                             if ui
                                 .add(egui::DragValue::new(&mut seq.beat_offset).range(0..=256))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                         });
 
                         // volume
@@ -313,9 +282,7 @@ impl App for GuiApp {
                             if ui
                                 .add(egui::Slider::new(&mut seq.volume, 0.0..=32.0).text("volume"))
                                 .changed()
-                            {
-                                self.dirty = true
-                            };
+                            {};
                         });
                     }
                 } else {
@@ -329,21 +296,18 @@ impl App for GuiApp {
                         if let Some(sel) = self.selected {
                             seqs.remove(sel);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
-                            self.dirty = true;
                         }
                     }
                     Action::Up => {
                         if let Some(sel) = self.selected {
                             seqs.swap(sel, sel - 1);
                             self.selected = Some(sel - 1);
-                            self.dirty = true;
                         }
                     }
                     Action::Down => {
                         if let Some(sel) = self.selected {
                             seqs.swap(sel, sel + 1);
                             self.selected = Some(sel + 1);
-                            self.dirty = true;
                         }
                     }
                 }
