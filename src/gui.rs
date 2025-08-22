@@ -211,6 +211,28 @@ impl App for GuiApp {
                             seq.t_max = t_max;
                             self.dirty = true;
                         }
+                        let mut attack = seq.attack_decay.0;
+                        let mut decay = seq.attack_decay.1;
+                        if ui
+                            .add(
+                                egui::Slider::new(&mut attack, 0.01..=100.0)
+                                    .text("attack")
+                                    .logarithmic(true),
+                            )
+                            .changed()
+                        {
+                            self.dirty = true
+                        };
+                        if ui
+                            .add(
+                                egui::Slider::new(&mut decay, 0.01..=100.0)
+                                    .text("decay")
+                                    .logarithmic(true),
+                            )
+                            .changed()
+                        {
+                            self.dirty = true
+                        };
 
                         // step
                         ui.horizontal(|ui| {

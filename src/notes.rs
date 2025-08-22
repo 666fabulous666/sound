@@ -19,6 +19,8 @@ pub struct Sequence {
     pub w: WaveType,
     #[serde(default = "default_volume")]
     pub volume: f64,
+    #[serde(default = "default_attack_decay")]
+    pub attack_decay: (f64, f64),
 }
 
 fn default_beat_offset() -> usize {
@@ -27,6 +29,10 @@ fn default_beat_offset() -> usize {
 
 fn default_volume() -> f64 {
     5.0
+}
+
+fn default_attack_decay() -> (f64, f64) {
+    (4.0, 0.3333)
 }
 
 impl Default for Sequence {
@@ -40,6 +46,7 @@ impl Default for Sequence {
             f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             w: WaveType::Droplet,
             volume: default_volume(),
+            attack_decay: default_attack_decay(),
         }
     }
 }
@@ -51,6 +58,7 @@ pub struct Note {
     pub f: Interval,
     pub w: WaveType,
     pub volume: f64,
+    pub attack_decay: (f64, f64),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -87,6 +95,7 @@ impl Sequence {
                 f: self.f.clone(),
                 w: self.w,
                 volume: self.volume,
+                attack_decay: self.attack_decay,
             })
             .for_each(|n| notes.push(n.draw(notes, rng)));
     }

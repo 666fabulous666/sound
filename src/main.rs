@@ -1,7 +1,7 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use notes::{notes_equal, Note, Sequence};
-use serde_json as json; // NEW (used for light-weight fingerprints)
-use std::collections::HashMap; // NEW
+use serde_json as json;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::{
@@ -14,18 +14,17 @@ mod gui;
 mod notes;
 mod waves;
 use waves::{basics::*, WaveType};
-
 mod reverb;
 use reverb::Reverb;
 
 use crossterm::event::{poll, read, Event, KeyCode};
 
-// // // around 1/3 s
-const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+// // // // around 1/3 s
+// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
+// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 
-// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
+const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -66,7 +65,7 @@ fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16)
     );
 }
 
-fn read_notes_from_json(path: &str) -> Vec<Sequence> {
+fn read_sequences_from_json(path: &str) -> Vec<Sequence> {
     let file = File::open(path).expect("Failed to open JSON file");
     let reader = BufReader::new(file);
     serde_json::from_reader(reader).expect("Failed to parse JSON")
@@ -79,24 +78,30 @@ fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 
     }
 }
 
-fn generate_wave(wave_type: &WaveType, frequency: f64, time: f64, note_duration: f64) -> f64 {
-    envelope(4.0, 0.33, note_duration)(time)
-        * match wave_type {
-            WaveType::Sine => sine_wave(frequency, time),
-            WaveType::Square => square_wave(frequency, time),
-            WaveType::Triangle => triangle_wave(frequency, time),
-            WaveType::Sawtooth => sawtooth_wave(frequency, time),
-            WaveType::DistOrg => dist_org(frequency, time),
-            WaveType::Custom2 => custom2(frequency, time),
-            WaveType::Droplet => droplet_wave(frequency, time),
-            WaveType::DropletOct => droplet_oct_wave(frequency, time),
-            WaveType::HiHat => hi_hat(frequency, time),
-            WaveType::Kick => kick(frequency, time),
-            WaveType::Snare => snare(frequency, time),
-            WaveType::Ride => ride(frequency, time),
-            WaveType::Mute => mute_wave(frequency, time),
-            WaveType::Xylo => xylophone_wave(frequency, time),
-        }
+fn generate_wave(
+    wave_type: &WaveType,
+    freq: f64,
+    time: f64,
+    duration: f64,
+    attack_decay: (f64, f64),
+) -> f64 {
+    let (a, d) = attack_decay;
+    match wave_type {
+        WaveType::Sine => envelope(a, d, duration)(time) * sine_wave(freq, time),
+        WaveType::Square => envelope(a, d, duration)(time) * square_wave(freq, time),
+        WaveType::Triangle => envelope(a, d, duration)(time) * triangle_wave(freq, time),
+        WaveType::Sawtooth => envelope(a, d, duration)(time) * sawtooth_wave(freq, time),
+        WaveType::DistOrg => envelope(a, d, duration)(time) * dist_org(freq, time),
+        WaveType::Custom2 => envelope(a, d, duration)(time) * custom2(freq, time),
+        WaveType::Droplet => envelope(a, d, duration)(time) * droplet_wave(freq, time),
+        WaveType::DropletOct => envelope(a, d, duration)(time) * droplet_oct_wave(freq, time),
+        WaveType::HiHat => envelope(a, d, duration)(time) * hi_hat(freq, time),
+        WaveType::Kick => envelope(a, d, duration)(time) * kick(freq, time),
+        WaveType::Snare => envelope(a, d, duration)(time) * snare(freq, time),
+        WaveType::Ride => envelope(a, d, duration)(time) * ride(freq, time),
+        WaveType::Mute => envelope(a, d, duration)(time) * mute_wave(freq, time),
+        WaveType::Xylo => envelope(a, d, duration)(time) * xylophone_wave(freq, time),
+    }
 }
 
 fn main() {
@@ -116,7 +121,7 @@ fn main() {
     let sample_clock = Arc::new(Mutex::new(0f64));
     let running = Arc::new(AtomicBool::new(true));
     let shared_seqs: Arc<Mutex<Vec<Sequence>>> =
-        Arc::new(Mutex::new(read_notes_from_json("notes.json")));
+        Arc::new(Mutex::new(read_sequences_from_json("notes.json")));
 
     let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
     let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
@@ -152,7 +157,13 @@ fn main() {
                                         + (2.5 * note.t).fract()
                                         + (3.0 * note.t).fract());
                                 dry += volume
-                                    * generate_wave(&note.w, freq0 * note.f.compute(), t, note.d);
+                                    * generate_wave(
+                                        &note.w,
+                                        freq0 * note.f.compute(),
+                                        t,
+                                        note.d,
+                                        note.attack_decay,
+                                    );
                                 true
                             } else if elapsed > note.t + note.d + 16.0 {
                                 false

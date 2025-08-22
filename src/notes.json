@@ -7,34 +7,8 @@
       6
     ],
     "skips": [
-      10,
-      17
-    ],
-    "beat_offset": 0,
-    "f": {
-      "RDTempered": [
-        2,
-        [
-          -7,
-          0,
-          7
-        ],
-        -1
-      ]
-    },
-    "w": "Droplet",
-    "volume": 2.5
-  },
-  {
-    "t_min": 0.0,
-    "t_max": 64.0,
-    "step": [
-      1,
-      6
-    ],
-    "skips": [
-      5,
-      9
+      6,
+      11
     ],
     "beat_offset": 0,
     "f": {
@@ -48,7 +22,33 @@
         -2
       ]
     },
-    "w": "DropletOct",
+    "w": "Droplet",
+    "volume": 5.0
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      1
+    ],
+    "skips": [
+      3,
+      5
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        -1
+      ]
+    },
+    "w": "Xylo",
     "volume": 5.0
   },
   {
@@ -59,8 +59,8 @@
       6
     ],
     "skips": [
-      10,
-      15
+      3,
+      5
     ],
     "beat_offset": 0,
     "f": {
@@ -78,15 +78,15 @@
     "volume": 5.0
   },
   {
-    "t_min": 0.0,
+    "t_min": 2.0,
     "t_max": 64.0,
     "step": [
       1,
       6
     ],
     "skips": [
-      9,
-      15
+      0,
+      5
     ],
     "beat_offset": 0,
     "f": {
@@ -97,10 +97,10 @@
           0,
           7
         ],
-        -2
+        0
       ]
     },
-    "w": "Xylo",
+    "w": "Droplet",
     "volume": 5.0
   },
   {
@@ -111,7 +111,33 @@
       6
     ],
     "skips": [
-      6,
+      2,
+      4
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
+      ]
+    },
+    "w": "HiHat",
+    "volume": 5.0
+  },
+  {
+    "t_min": 8.0,
+    "t_max": 10.0,
+    "step": [
+      1,
+      12
+    ],
+    "skips": [
+      4,
       10
     ],
     "beat_offset": 0,
@@ -126,12 +152,12 @@
         0
       ]
     },
-    "w": "Kick",
+    "w": "HiHat",
     "volume": 5.0
   },
   {
-    "t_min": 0.0,
-    "t_max": 64.0,
+    "t_min": 21.5,
+    "t_max": 27.5,
     "step": [
       1,
       12
@@ -156,15 +182,15 @@
     "volume": 5.0
   },
   {
-    "t_min": 2.0,
-    "t_max": 64.0,
+    "t_min": 41.0,
+    "t_max": 50.0,
     "step": [
       1,
-      1
+      12
     ],
     "skips": [
-      6,
-      10
+      14,
+      23
     ],
     "beat_offset": 0,
     "f": {
@@ -178,7 +204,59 @@
         0
       ]
     },
-    "w": "Snare",
+    "w": "HiHat",
+    "volume": 5.0
+  },
+  {
+    "t_min": 0.0,
+    "t_max": 64.0,
+    "step": [
+      1,
+      1
+    ],
+    "skips": [
+      4,
+      6
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
+      ]
+    },
+    "w": "Kick",
+    "volume": 5.0
+  },
+  {
+    "t_min": 1.666,
+    "t_max": 64.0,
+    "step": [
+      5,
+      6
+    ],
+    "skips": [
+      7,
+      14
+    ],
+    "beat_offset": 0,
+    "f": {
+      "RDTempered": [
+        2,
+        [
+          -7,
+          0,
+          7
+        ],
+        0
+      ]
+    },
+    "w": "Kick",
     "volume": 5.0
   }
 ]
