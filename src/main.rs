@@ -20,9 +20,12 @@ use crossterm::event::{poll, read, Event, KeyCode};
 // // // // around 1/3 s
 // const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
 // const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
+// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
+// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+const LEFT_DELAYS: [usize; 1] = [1];
+const RIGHT_DELAYS: [usize; 1] = [1];
 
-const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+const LOOP_LEN: f64 = 16.0; // seconds
 
 fn wait_for_exit_signal() -> bool {
     if poll(Duration::from_millis(100)).unwrap() {
@@ -132,7 +135,6 @@ fn main() {
                     let mut clock = sample_clock.lock().unwrap();
 
                     for frame in data.chunks_mut(channels as usize) {
-                        // let elapsed = *clock / sample_rate;
                         let elapsed = *clock;
                         let mut dry = 0.0;
 
@@ -156,7 +158,7 @@ fn main() {
                                         note.attack_decay,
                                     );
                                 true
-                            } else if elapsed > note.t + note.d + 16.0 {
+                            } else if elapsed > note.t + note.d + 1.0 {
                                 false
                             } else {
                                 true
@@ -186,7 +188,6 @@ fn main() {
 
     stream.play().unwrap();
 
-    // 1.  Make *new* handles for the scheduler thread
     let note_queue_sched = note_queue.clone();
     let sample_clock_sched = sample_clock.clone();
     let recorded_samples_sched = recorded_samples.clone();
@@ -194,132 +195,55 @@ fn main() {
     let running_sched = running.clone();
 
     let scheduler = std::thread::spawn(move || {
-        let mut rng = rand::thread_rng(); // local RNG (Send not required)
-
-        // NEW: track last-seen sequences and all future scheduled notes per sequence
-        let mut last_seqs = shared_seqs_sched.lock().unwrap().clone();
-        let mut active_by_seq: HashMap<usize, Vec<Note>> = HashMap::new();
+        let mut rng = rand::thread_rng();
 
         println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
-        let mut batch_index = 0;
-        let batch_interval = 64.0;
+        let mut batch_index: usize = 0;
+        let batch_interval = LOOP_LEN; // seconds; one full loop per batch
 
         while running_sched.load(Ordering::Relaxed) {
+            // Absolute time at which this batch starts
             let start_time = batch_interval * batch_index as f64;
-            // NEW: detect GUI edits and re-generate remaining notes for changed sequences
-            {
-                let curr_seqs = shared_seqs_sched.lock().unwrap().clone();
-                if curr_seqs != last_seqs {
-                    let now = *sample_clock_sched.lock().unwrap();
 
-                    let max_len = curr_seqs.len().max(last_seqs.len());
-                    for i in 0..max_len {
-                        let old_seq = last_seqs.get(i);
-                        let new_seq = curr_seqs.get(i);
+            // 1) Snapshot sequences ONCE per batch (no change detection here)
+            let instruments = {
+                // keep lock scope tiny
+                shared_seqs_sched.lock().unwrap().clone()
+            };
 
-                        let changed = match (old_seq, new_seq) {
-                            (Some(a), Some(b)) => {
-                                // compare by JSON string to avoid adding PartialEq on WaveType/Interval
-                                json::to_string(a).ok() != json::to_string(b).ok()
-                            }
-                            (Some(_), None) => true, // removed
-                            (None, Some(_)) => true, // added
-                            (None, None) => false,
-                        };
+            // 2) Render one full batch in local time [seq.t_min, seq.t_max],
+            //    preserving cross-sequence context, then shift by start_time.
+            let mut context = Vec::<Note>::new(); // shared for interaction between sequences
+            let mut flat = Vec::<Note>::new();
 
-                        if !changed {
-                            continue;
-                        }
-
-                        // 1) Remove all *future* notes for this sequence from the global queue
-                        //    (keep already-started notes)
-                        if let Some(old_future) = active_by_seq.remove(&i) {
-                            let mut q = note_queue_sched.lock().unwrap();
-                            q.retain(|n| {
-                                !(n.t >= now && old_future.iter().any(|m| notes_equal(n, m)))
-                            });
-                        }
-
-                        // 2) If the sequence still exists, re-generate the remainder of the *current* batch
-                        if let Some(seq) = new_seq {
-                            let start_time = (now / batch_interval).floor() * batch_interval;
-                            let end_time = start_time + batch_interval;
-
-                            // Build context from other sequences' notes already scheduled in this batch
-                            // (convert back to local batch time by subtracting start_time)
-                            let mut context: Vec<Note> = active_by_seq
-                                .iter()
-                                .filter(|(j, _)| **j != i)
-                                .flat_map(|(_, ns)| {
-                                    ns.iter()
-                                        .filter(|n| n.t >= start_time && n.t < end_time)
-                                        .map(|n| {
-                                            let mut m = n.clone();
-                                            m.t -= start_time;
-                                            m
-                                        })
-                                        .collect::<Vec<_>>()
-                                })
-                                .collect();
-
-                            // Generate new notes for this seq (in local batch time)
-                            let before = context.len();
-                            seq.clone().draw(&mut context, &mut rng);
-                            let mut new_local = context[before..].to_vec();
-
-                            // Shift to absolute time and keep only notes that haven't started yet
-                            for n in &mut new_local {
-                                n.t += start_time;
-                            }
-                            let new_future: Vec<Note> =
-                                new_local.into_iter().filter(|n| n.t >= now).collect();
-
-                            // Publish to the queue and remember them
-                            note_queue_sched.lock().unwrap().extend(new_future.clone());
-                            active_by_seq.insert(i, new_future);
-                        }
-                    }
-
-                    last_seqs = curr_seqs;
-                }
-            }
-
-            // ----- create notes exactly like before, but keep them grouped per sequence -----
-            let instruments = shared_seqs_sched.lock().unwrap().clone();
-
-            // Build per-sequence groups while preserving cross-sequence context.
-            // We use a single 'context' Vec<Note> exactly like before so interaction logic remains identical.
-            let mut context = Vec::<Note>::new();
-            let mut groups: Vec<(usize, Vec<Note>)> = Vec::new();
-
-            for (idx, inst) in instruments.iter().enumerate() {
+            for inst in &instruments {
                 let before = context.len();
-                inst.draw(&mut context, &mut rng); // writes its notes to 'context'
-                let group = context[before..].to_vec(); // slice out *just* this sequence's new notes
-                groups.push((idx, group));
-            }
-
-            // Shift groups to absolute time, remember them, then flatten to the audio queue.
-            let mut flat: Vec<Note> = Vec::new();
-            for (idx, mut ns) in groups {
-                for n in &mut ns {
-                    n.t += start_time;
+                inst.draw(&mut context, &mut rng); // writes this seq's notes to `context`
+                let mut group = context[before..].to_vec();
+                for n in &mut group {
+                    n.t += start_time; // shift to absolute time in this batch
                 }
-                active_by_seq.entry(idx).or_default().extend(ns.clone());
-                flat.extend(ns);
+                flat.extend(group);
             }
 
+            // 3) Publish this batch’s notes to the audio thread
             note_queue_sched.lock().unwrap().extend(flat);
+
+            // 4) Prepare next batch
             batch_index += 1;
 
-            // ----- timing -----
+            // 5) Sleep until (just before) the next batch boundary
             let now = *sample_clock_sched.lock().unwrap();
             let target = batch_interval * batch_index as f64;
+
             if target > now {
-                std::thread::sleep(std::time::Duration::from_secs_f64(target - now - 1.0));
+                // wake up a little early to avoid missing the boundary
+                let wake_early = 0.02; // 20 ms
+                let sleep_s = (target - now - wake_early).max(0.0);
+                std::thread::sleep(std::time::Duration::from_secs_f64(sleep_s));
             }
 
-            // ----- exit? -----
+            // 6) Allow terminal quit + WAV export (unchanged from your code)
             if wait_for_exit_signal() {
                 println!("Exiting. Please enter a filename:");
                 let mut name = String::new();
@@ -328,13 +252,8 @@ fn main() {
 
                 let buffer = recorded_samples_sched.lock().unwrap();
                 save_to_wav(name, sample_rate, &buffer, channels);
-                break; // leave the loop → thread ends
-            }
-            // manual quit?
-            if wait_for_exit_signal() {
-                println!("Exiting. Please enter a filename:");
-                // … WAV export …
-                running_sched.store(false, Ordering::Relaxed); // tell everybody else to stop
+
+                running_sched.store(false, Ordering::Relaxed); // tell other threads to stop
                 break;
             }
         }

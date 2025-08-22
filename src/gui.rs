@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use crate::{
     notes::{Interval, Sequence},
     waves::WaveType,
+    LOOP_LEN,
 };
 
 // list of all wave variants for the ComboBox
@@ -26,7 +27,6 @@ const ALL_WAVES: [WaveType; 14] = [
 ];
 
 // ------------------------------------------------------------
-const LOOP_LEN: f64 = 64.0; // seconds
 
 pub struct GuiApp {
     seqs: Arc<Mutex<Vec<Sequence>>>,     // NEW: live shared sequences
