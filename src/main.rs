@@ -85,23 +85,23 @@ fn generate_wave(
     duration: f64,
     attack_decay: (f64, f64),
 ) -> f64 {
-    let (a, d) = attack_decay;
-    match wave_type {
-        WaveType::Sine => envelope(a, d, duration)(time) * sine_wave(freq, time),
-        WaveType::Square => envelope(a, d, duration)(time) * square_wave(freq, time),
-        WaveType::Triangle => envelope(a, d, duration)(time) * triangle_wave(freq, time),
-        WaveType::Sawtooth => envelope(a, d, duration)(time) * sawtooth_wave(freq, time),
-        WaveType::DistOrg => envelope(a, d, duration)(time) * dist_org(freq, time),
-        WaveType::Custom2 => envelope(a, d, duration)(time) * custom2(freq, time),
-        WaveType::Droplet => envelope(a, d, duration)(time) * droplet_wave(freq, time),
-        WaveType::DropletOct => envelope(a, d, duration)(time) * droplet_oct_wave(freq, time),
-        WaveType::HiHat => envelope(a, d, duration)(time) * hi_hat(freq, time),
-        WaveType::Kick => envelope(a, d, duration)(time) * kick(freq, time),
-        WaveType::Snare => envelope(a, d, duration)(time) * snare(freq, time),
-        WaveType::Ride => envelope(a, d, duration)(time) * ride(freq, time),
-        WaveType::Mute => envelope(a, d, duration)(time) * mute_wave(freq, time),
-        WaveType::Xylo => envelope(a, d, duration)(time) * xylophone_wave(freq, time),
-    }
+    envelope(attack_decay.0, attack_decay.1, duration)(time)
+        * match wave_type {
+            WaveType::Sine => sine_wave(freq, time),
+            WaveType::Square => square_wave(freq, time),
+            WaveType::Triangle => triangle_wave(freq, time),
+            WaveType::Sawtooth => sawtooth_wave(freq, time),
+            WaveType::DistOrg => dist_org(freq, time),
+            WaveType::Custom2 => custom2(freq, time),
+            WaveType::Droplet => droplet_wave(freq, time),
+            WaveType::DropletOct => droplet_oct_wave(freq, time),
+            WaveType::HiHat => hi_hat(freq, time),
+            WaveType::Kick => kick(freq, time),
+            WaveType::Snare => snare(freq, time),
+            WaveType::Ride => ride(freq, time),
+            WaveType::Mute => mute_wave(freq, time),
+            WaveType::Xylo => xylophone_wave(freq, time),
+        }
 }
 
 fn main() {
@@ -150,7 +150,7 @@ fn main() {
                                 true
                             } else if elapsed <= note.t + note.d {
                                 let t = elapsed - note.t;
-                                let volume = note.volume
+                                let volume = note.volume // TODO: make this parameters
                                     / (0.5
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()
