@@ -1,7 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::{notes_equal, Note, Sequence};
-use serde_json as json;
-use std::collections::HashMap;
+use notes::{Note, Sequence};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -206,7 +204,7 @@ fn main() {
             let start_time = batch_interval * batch_index as f64;
 
             // 1) Snapshot sequences ONCE per batch (no change detection here)
-            let instruments = {
+            let seqs = {
                 // keep lock scope tiny
                 shared_seqs_sched.lock().unwrap().clone()
             };
@@ -216,9 +214,9 @@ fn main() {
             let mut context = Vec::<Note>::new(); // shared for interaction between sequences
             let mut flat = Vec::<Note>::new();
 
-            for inst in &instruments {
+            for seq in &seqs {
                 let before = context.len();
-                inst.draw(&mut context, &mut rng); // writes this seq's notes to `context`
+                seq.draw(&mut context, &mut rng); // writes this seq's notes to `context`
                 let mut group = context[before..].to_vec();
                 for n in &mut group {
                     n.t += start_time; // shift to absolute time in this batch
@@ -238,7 +236,7 @@ fn main() {
 
             if target > now {
                 // wake up a little early to avoid missing the boundary
-                let wake_early = 0.02; // 20 ms
+                let wake_early = 1.0;
                 let sleep_s = (target - now - wake_early).max(0.0);
                 std::thread::sleep(std::time::Duration::from_secs_f64(sleep_s));
             }

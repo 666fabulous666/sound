@@ -5,7 +5,7 @@ use std::iter::once;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::waves::WaveType;
+use crate::{waves::WaveType, LOOP_LEN};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
@@ -21,7 +21,6 @@ pub struct Sequence {
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
-    token: usize,
 }
 
 fn default_beat_offset() -> usize {
@@ -36,11 +35,11 @@ fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
 }
 
-impl Sequence {
-    pub fn default(token: usize) -> Self {
+impl Default for Sequence {
+    fn default() -> Self {
         Sequence {
             t_min: 0.0,
-            t_max: 64.0,
+            t_max: LOOP_LEN,
             step: (1, 6),
             skips: (5, 10),
             beat_offset: default_beat_offset(),
@@ -48,7 +47,6 @@ impl Sequence {
             w: WaveType::Xylo,
             volume: default_volume(),
             attack_decay: default_attack_decay(),
-            token,
         }
     }
 }
@@ -138,21 +136,4 @@ impl Interval {
             _ => panic!(),
         }
     }
-}
-#[inline]
-fn note_fingerprint(n: &Note) -> (f64, f64, String, String, f64) {
-    // (t, d, wave, interval_json, volume) — stable enough to match scheduled notes
-    (
-        n.t,
-        n.d,
-        (&n.w).to_string(),
-        json::to_string(&n.f).unwrap_or_default(),
-        n.volume,
-    )
-}
-
-// equality for removal without touching derives anywhere else
-#[inline]
-pub fn notes_equal(a: &Note, b: &Note) -> bool {
-    note_fingerprint(a) == note_fingerprint(b)
 }

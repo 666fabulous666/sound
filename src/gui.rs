@@ -97,7 +97,7 @@ impl App for GuiApp {
                 }
                 if ui.button("Add track").clicked() {
                     let idx = seqs.len();
-                    let seq = Sequence::default(0); //FIXME
+                    let seq = Sequence::default();
                     seqs.push(seq);
                     self.selected = Some(idx);
                 }
