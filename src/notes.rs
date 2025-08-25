@@ -1,5 +1,5 @@
 use rand::{prelude::SliceRandom, seq::index::sample};
-use serde_json as json; // NEW (used for light-weight fingerprints)
+// NEW (used for light-weight fingerprints)
 use std::iter::once;
 
 use itertools::Itertools;
