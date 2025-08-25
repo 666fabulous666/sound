@@ -1,6 +1,6 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use notes::{Note, Sequence};
-use scheduler::make_scheduler;
+use scheduler::Scheduler;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -23,7 +23,7 @@ const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 // const LEFT_DELAYS: [usize; 1] = [1];
 // const RIGHT_DELAYS: [usize; 1] = [1];
 
-const LOOP_LEN: f64 = 16.0; // seconds
+const LOOP_LEN: f64 = 8.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
@@ -155,7 +155,7 @@ fn main() {
     let shared_seqs_sched = shared_seqs.clone();
     let running_sched = running.clone();
 
-    let scheduler = make_scheduler(
+    let scheduler = Scheduler::new(
         sample_rate,
         channels,
         note_queue_sched,
@@ -177,5 +177,5 @@ fn main() {
     // Wait for the scheduler thread to finish (it will exit automatically
     // if the user already pressed q/Esc; otherwise closing the GUI window
     // doesn’t stop it, so you may want a channel/flag – see below).
-    scheduler.join().ok();
+    scheduler.handle().join().ok();
 }

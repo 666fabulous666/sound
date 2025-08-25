@@ -12,74 +12,79 @@ use crate::{
     notes::{Note, Sequence},
     LOOP_LEN,
 };
+pub struct Scheduler {
+    handle: std::thread::JoinHandle<()>,
+}
 
-pub fn make_scheduler(
-    sample_rate: f64,
-    channels: u16,
-    note_queue_sched: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
-    sample_clock_sched: Arc<Mutex<f64>>,
-    recorded_samples_sched: Arc<Mutex<Vec<f64>>>,
-    shared_seqs_sched: Arc<Mutex<Vec<Sequence>>>,
-    running_sched: Arc<AtomicBool>,
-) -> std::thread::JoinHandle<()> {
-    let scheduler = std::thread::spawn(move || {
-        let mut rng = rand::thread_rng();
+pub enum SchedulerMessage {}
 
-        println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
-        let mut batch_index: usize = 0;
-        let batch_interval = LOOP_LEN; // seconds; one full loop per batch
+impl Scheduler {
+    pub fn new(
+        sample_rate: f64,
+        channels: u16,
+        note_queue_sched: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+        sample_clock_sched: Arc<Mutex<f64>>,
+        recorded_samples_sched: Arc<Mutex<Vec<f64>>>,
+        shared_seqs_sched: Arc<Mutex<Vec<Sequence>>>,
+        running_sched: Arc<AtomicBool>,
+    ) -> Self {
+        let scheduler = std::thread::spawn(move || {
+            let mut rng = rand::thread_rng();
 
-        while running_sched.load(Ordering::Relaxed) {
-            // Absolute time at which this batch starts
-            let start_time = batch_interval * batch_index as f64;
+            println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
+            let mut batch_index: usize = 0;
+            let batch_interval = LOOP_LEN; // seconds; one full loop per batch
 
-            // 1) Snapshot sequences ONCE per batch (no change detection here)
-            let seqs = {
-                // keep lock scope tiny
-                shared_seqs_sched.lock().unwrap().clone()
-            };
+            while running_sched.load(Ordering::Relaxed) {
+                // Absolute time at which this batch starts
+                let start_time = batch_interval * batch_index as f64;
 
-            // 2) Render one full batch in local time [seq.t_min, seq.t_max],
-            //    preserving cross-sequence context, then shift by start_time.
-            let mut context = Vec::<(usize, Vec<Note>)>::new(); // shared for interaction between sequences
+                let mut context = Vec::<(usize, Vec<Note>)>::new(); // shared for interaction between sequences
 
-            for seq in &seqs {
-                seq.draw(&mut context, &mut rng, start_time); // writes this seq's notes to `context`
+                {
+                    // keep lock scope tiny
+                    shared_seqs_sched.lock().unwrap().clone()
+                }
+                .iter()
+                .for_each(|seq| {
+                    seq.draw(&mut context, &mut rng, start_time); // writes this seq's notes to `context`
+                });
+
+                {
+                    note_queue_sched.lock().unwrap().extend(context)
+                };
+
+                batch_index += 1;
+
+                let now = *sample_clock_sched.lock().unwrap();
+                let target = batch_interval * batch_index as f64;
+
+                if target > now {
+                    // wake up a little early to avoid missing the boundary
+                    let wake_early = 1.0;
+                    let sleep_s = (target - now - wake_early).max(0.0);
+                    std::thread::sleep(std::time::Duration::from_secs_f64(sleep_s));
+                }
+
+                // if wait_for_exit_signal() {
+                //     println!("Exiting. Please enter a filename:");
+                //     let mut name = String::new();
+                //     std::io::stdin().read_line(&mut name).unwrap();
+                //     let name = name.trim();
+
+                //     let buffer = recorded_samples_sched.lock().unwrap();
+                //     save_to_wav(name, sample_rate, &buffer, channels);
+
+                //     running_sched.store(false, Ordering::Relaxed); // tell other threads to stop
+                //     break;
+                // }
             }
-
-            // 3) Publish this batch’s notes to the audio thread
-            note_queue_sched.lock().unwrap().extend(context);
-
-            // 4) Prepare next batch
-            batch_index += 1;
-
-            // 5) Sleep until (just before) the next batch boundary
-            let now = *sample_clock_sched.lock().unwrap();
-            let target = batch_interval * batch_index as f64;
-
-            if target > now {
-                // wake up a little early to avoid missing the boundary
-                let wake_early = 1.0;
-                let sleep_s = (target - now - wake_early).max(0.0);
-                std::thread::sleep(std::time::Duration::from_secs_f64(sleep_s));
-            }
-
-            // 6) Allow terminal quit + WAV export (unchanged from your code)
-            if wait_for_exit_signal() {
-                println!("Exiting. Please enter a filename:");
-                let mut name = String::new();
-                std::io::stdin().read_line(&mut name).unwrap();
-                let name = name.trim();
-
-                let buffer = recorded_samples_sched.lock().unwrap();
-                save_to_wav(name, sample_rate, &buffer, channels);
-
-                running_sched.store(false, Ordering::Relaxed); // tell other threads to stop
-                break;
-            }
-        }
-    });
-    scheduler
+        });
+        Self { handle: scheduler }
+    }
+    pub fn handle(self) -> std::thread::JoinHandle<()> {
+        self.handle
+    }
 }
 
 fn save_to_wav(filename: &str, sample_rate: f64, samples: &[f64], channels: u16) {
