@@ -165,7 +165,12 @@ fn main() {
         running_sched,
     );
 
-    gui::run_gui(Some(Arc::clone(&sample_clock)), Arc::clone(&shared_seqs));
+    let note_queue_gui = note_queue.clone();
+    gui::run_gui(
+        Some(Arc::clone(&sample_clock)),
+        Arc::clone(&shared_seqs),
+        note_queue_gui,
+    );
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 

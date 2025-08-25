@@ -1,9 +1,9 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
 // use serde_json as json;
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::AtomicUsize, Arc, Mutex};
 
 use crate::{
-    notes::{Interval, Sequence},
+    notes::{Interval, Note, Sequence},
     waves::WaveType,
     LOOP_LEN,
 };
@@ -33,7 +33,8 @@ pub struct GuiApp {
     selected: Option<usize>,             // currently picked sequence index
     clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
     fall_back_start: std::time::Instant, // for standalone demo
-    last_token: usize,
+    last_token: AtomicUsize,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
 }
 
 impl GuiApp {
@@ -41,6 +42,7 @@ impl GuiApp {
         _cc: &CreationContext<'_>,
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
+        note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     ) -> Self {
         *shared.lock().unwrap() = Vec::new();
 
@@ -49,7 +51,8 @@ impl GuiApp {
             selected: None,
             clock,
             fall_back_start: std::time::Instant::now(),
-            last_token: 0,
+            last_token: 0.into(),
+            note_queue,
         }
     }
 
@@ -89,7 +92,6 @@ impl GuiApp {
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
-        let mut last_token = self.last_token;
         let mut seqs = self.seqs.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
@@ -100,8 +102,10 @@ impl App for GuiApp {
                 }
                 if ui.button("Add track").clicked() {
                     let idx = seqs.len();
-                    last_token += 1;
-                    let seq = Sequence::new(last_token);
+                    self.last_token
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let seq =
+                        Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
                     seqs.push(seq);
                     self.selected = Some(idx);
                 }
@@ -298,7 +302,9 @@ impl App for GuiApp {
                     Action::None => {}
                     Action::Delete => {
                         if let Some(sel) = self.selected {
-                            seqs.remove(sel);
+                            let removed = seqs.remove(sel);
+                            let mut note_queue = self.note_queue.lock().unwrap();
+                            note_queue.retain(|(token, _)| removed.token != *token);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                         }
                     }
@@ -416,12 +422,23 @@ impl App for GuiApp {
 
 // ------------------------------------------------------------
 
-pub fn run_gui(clock: Option<Arc<Mutex<f64>>>, shared: Arc<Mutex<Vec<Sequence>>>) {
+pub fn run_gui(
+    clock: Option<Arc<Mutex<f64>>>,
+    shared: Arc<Mutex<Vec<Sequence>>>,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+) {
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
         native_options,
-        Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, clock.clone(), shared.clone())))),
+        Box::new(move |cc| {
+            Ok(Box::new(GuiApp::new(
+                cc,
+                clock.clone(),
+                shared.clone(),
+                note_queue.clone(),
+            )))
+        }),
     );
 }
 
