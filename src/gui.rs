@@ -33,6 +33,7 @@ pub struct GuiApp {
     selected: Option<usize>,             // currently picked sequence index
     clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
     fall_back_start: std::time::Instant, // for standalone demo
+    last_token: usize,
 }
 
 impl GuiApp {
@@ -48,6 +49,7 @@ impl GuiApp {
             selected: None,
             clock,
             fall_back_start: std::time::Instant::now(),
+            last_token: 0,
         }
     }
 
@@ -87,6 +89,7 @@ impl GuiApp {
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
+        let mut last_token = self.last_token;
         let mut seqs = self.seqs.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
@@ -97,7 +100,8 @@ impl App for GuiApp {
                 }
                 if ui.button("Add track").clicked() {
                     let idx = seqs.len();
-                    let seq = Sequence::default();
+                    last_token += 1;
+                    let seq = Sequence::new(last_token);
                     seqs.push(seq);
                     self.selected = Some(idx);
                 }

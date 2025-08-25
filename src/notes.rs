@@ -21,6 +21,7 @@ pub struct Sequence {
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
+    pub token: usize,
 }
 
 fn default_beat_offset() -> usize {
@@ -33,22 +34,6 @@ fn default_volume() -> f64 {
 
 fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
-}
-
-impl Default for Sequence {
-    fn default() -> Self {
-        Sequence {
-            t_min: 0.0,
-            t_max: LOOP_LEN,
-            step: (1, 6),
-            skips: (5, 10),
-            beat_offset: default_beat_offset(),
-            f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
-            w: WaveType::Xylo,
-            volume: default_volume(),
-            attack_decay: default_attack_decay(),
-        }
-    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -70,6 +55,20 @@ pub enum Interval {
 }
 
 impl Sequence {
+    pub fn new(token: usize) -> Self {
+        Sequence {
+            t_min: 0.0,
+            t_max: LOOP_LEN,
+            step: (1, 6),
+            skips: (5, 10),
+            beat_offset: default_beat_offset(),
+            f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
+            w: WaveType::Xylo,
+            volume: default_volume(),
+            attack_decay: default_attack_decay(),
+            token,
+        }
+    }
     pub fn draw(&self, notes: &mut Vec<Note>, rng: &mut rand::prelude::ThreadRng) {
         let skips = sample(rng, self.skips.1, self.skips.0)
             .into_iter()
