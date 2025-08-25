@@ -70,7 +70,7 @@ fn main() {
     let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
 
-    let note_queue: Arc<Mutex<Vec<Note>>> = Arc::new(Mutex::new(Vec::new()));
+    let note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
     let running = Arc::new(AtomicBool::new(true));
@@ -97,32 +97,34 @@ fn main() {
                         let elapsed = *clock;
                         let mut dry = 0.0;
 
-                        notes.retain(|note| {
-                            if elapsed < note.t {
-                                true
-                            } else if elapsed <= note.t + note.d {
-                                let t = elapsed - note.t;
-                                let volume = note.volume // TODO: make this parameters
+                        for (_, notes_from_seq) in notes.iter_mut() {
+                            notes_from_seq.retain(|note| {
+                                if elapsed < note.t {
+                                    true
+                                } else if elapsed <= note.t + note.d {
+                                    let t = elapsed - note.t;
+                                    let volume = note.volume // TODO: make this parameters
                                     / (0.5
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()
                                         + (3.0 * note.t).fract());
-                                dry += volume
-                                    * generate_wave(
-                                        &note.w,
-                                        freq0 * note.f.compute(),
-                                        t,
-                                        note.d,
-                                        note.attack_decay,
-                                    );
-                                true
-                            } else if elapsed > note.t + note.d + 1.0 {
-                                false
-                            } else {
-                                true
-                            }
-                        });
+                                    dry += volume
+                                        * generate_wave(
+                                            &note.w,
+                                            freq0 * note.f.compute(),
+                                            t,
+                                            note.d,
+                                            note.attack_decay,
+                                        );
+                                    true
+                                } else if elapsed > note.t + note.d + 1.0 {
+                                    false
+                                } else {
+                                    true
+                                }
+                            })
+                        }
 
                         let left = reverb_left.process(dry);
                         let right = reverb_right.process(dry);

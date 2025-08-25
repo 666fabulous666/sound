@@ -16,7 +16,7 @@ use crate::{
 pub fn make_scheduler(
     sample_rate: f64,
     channels: u16,
-    note_queue_sched: Arc<Mutex<Vec<Note>>>,
+    note_queue_sched: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     sample_clock_sched: Arc<Mutex<f64>>,
     recorded_samples_sched: Arc<Mutex<Vec<f64>>>,
     shared_seqs_sched: Arc<Mutex<Vec<Sequence>>>,
@@ -41,21 +41,14 @@ pub fn make_scheduler(
 
             // 2) Render one full batch in local time [seq.t_min, seq.t_max],
             //    preserving cross-sequence context, then shift by start_time.
-            let mut context = Vec::<Note>::new(); // shared for interaction between sequences
-            let mut flat = Vec::<Note>::new();
+            let mut context = Vec::<(usize, Vec<Note>)>::new(); // shared for interaction between sequences
 
             for seq in &seqs {
-                let before = context.len();
-                seq.draw(&mut context, &mut rng); // writes this seq's notes to `context`
-                let mut group = context[before..].to_vec();
-                for n in &mut group {
-                    n.t += start_time; // shift to absolute time in this batch
-                }
-                flat.extend(group);
+                seq.draw(&mut context, &mut rng, start_time); // writes this seq's notes to `context`
             }
 
             // 3) Publish this batch’s notes to the audio thread
-            note_queue_sched.lock().unwrap().extend(flat);
+            note_queue_sched.lock().unwrap().extend(context);
 
             // 4) Prepare next batch
             batch_index += 1;

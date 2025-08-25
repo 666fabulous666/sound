@@ -69,7 +69,12 @@ impl Sequence {
             token,
         }
     }
-    pub fn draw(&self, notes: &mut Vec<Note>, rng: &mut rand::prelude::ThreadRng) {
+    pub fn draw(
+        &self,
+        notes: &mut Vec<(usize, Vec<Note>)>,
+        rng: &mut rand::prelude::ThreadRng,
+        start_time: f64,
+    ) {
         let skips = sample(rng, self.skips.1, self.skips.0)
             .into_iter()
             .map(|k| k + 2)
@@ -87,25 +92,29 @@ impl Sequence {
             .tuple_windows()
             .map(|(t1, t2)| t2 - t1)
             .collect::<Vec<_>>();
-        ts.zip(ds.iter())
+        let notes_from_seq: Vec<Note> = ts
+            .zip(ds.iter())
             .map(|(t, d)| Note {
-                t,
+                t: t + start_time,
                 d: *d,
                 f: self.f.clone(),
                 w: self.w,
                 volume: self.volume,
                 attack_decay: self.attack_decay,
             })
-            .for_each(|n| notes.push(n.draw(notes, rng)));
+            .map(|n| n.draw(notes, rng))
+            .collect();
+        notes.push((self.token, notes_from_seq));
     }
 }
 
 impl Note {
-    pub fn draw(&self, notes: &[Note], rng: &mut rand::prelude::ThreadRng) -> Self {
+    pub fn draw(&self, notes: &[(usize, Vec<Note>)], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.f {
             Interval::RDTempered(n, base, octave) => {
                 let other_notes = notes
                     .iter()
+                    .flat_map(|(_, n)| n)
                     .filter(|n| ((n.t - self.t).abs() < n.d + self.d + 2.0))
                     .filter_map(|n| {
                         if let Interval::Tempered(d, _) = n.f {
