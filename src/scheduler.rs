@@ -3,6 +3,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
+    thread::JoinHandle,
     time::Duration,
 };
 
@@ -12,78 +13,73 @@ use crate::{
     notes::{Note, Sequence},
     LOOP_LEN,
 };
+
+pub enum Message {
+    NewSeq(Sequence),
+}
 pub struct Scheduler {
-    handle: std::thread::JoinHandle<()>,
+    notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    sequences: Arc<Mutex<Vec<Sequence>>>,
+    sample_clock: Arc<Mutex<f64>>,
+    messages: Arc<Mutex<Vec<Message>>>,
+    loop_start: f64,
 }
 
-pub enum SchedulerMessage {}
-
 impl Scheduler {
-    pub fn new(
-        sample_rate: f64,
-        channels: u16,
-        note_queue_sched: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
-        sample_clock_sched: Arc<Mutex<f64>>,
-        recorded_samples_sched: Arc<Mutex<Vec<f64>>>,
-        shared_seqs_sched: Arc<Mutex<Vec<Sequence>>>,
-        running_sched: Arc<AtomicBool>,
-    ) -> Self {
-        let scheduler = std::thread::spawn(move || {
+    pub fn new(sample_clock: Arc<Mutex<f64>>) -> Self {
+        let notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
+        let sequences: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
+        let messages: Arc<Mutex<Vec<Message>>> = Arc::new(Mutex::new(Vec::new()));
+        Self {
+            notes,
+            sequences,
+            sample_clock,
+            messages,
+            loop_start: 0.0,
+        }
+    }
+    fn now(&self) -> f64 {
+        *self.sample_clock.lock().unwrap()
+    }
+    pub fn notes(&self) -> Arc<Mutex<Vec<(usize, Vec<Note>)>>> {
+        self.notes.clone()
+    }
+    pub fn sequences(&self) -> Arc<Mutex<Vec<Sequence>>> {
+        self.sequences.clone()
+    }
+    pub fn messages(&self) -> Arc<Mutex<Vec<Message>>> {
+        self.messages.clone()
+    }
+    pub fn run(mut self, running_sched: Arc<AtomicBool>) -> JoinHandle<()> {
+        std::thread::spawn(move || {
             let mut rng = rand::thread_rng();
-
-            println!("🎵 Press 'q' or 'Esc' in this terminal to quit...");
-            let mut batch_index: usize = 0;
-            let batch_interval = LOOP_LEN; // seconds; one full loop per batch
-
             while running_sched.load(Ordering::Relaxed) {
-                // Absolute time at which this batch starts
-                let start_time = batch_interval * batch_index as f64;
-
-                let mut context = Vec::<(usize, Vec<Note>)>::new(); // shared for interaction between sequences
+                let mut tmp = Vec::<(usize, Vec<Note>)>::new();
 
                 {
                     // keep lock scope tiny
-                    shared_seqs_sched.lock().unwrap().clone()
+                    self.sequences.lock().unwrap().clone()
                 }
-                .iter()
+                .iter_mut()
                 .for_each(|seq| {
-                    seq.draw(&mut context, &mut rng, start_time); // writes this seq's notes to `context`
+                    if self.now() > seq.last_generation_time + LOOP_LEN {
+                        seq.draw(&mut tmp, &mut rng, self.loop_start); // writes this seq's notes to `context`
+                        seq.last_generation_time = self.now();
+                    }
                 });
 
                 {
-                    note_queue_sched.lock().unwrap().extend(context)
+                    self.notes.lock().unwrap().extend(tmp)
                 };
-
-                batch_index += 1;
-
-                let now = *sample_clock_sched.lock().unwrap();
-                let target = batch_interval * batch_index as f64;
-
-                if target > now {
+                self.loop_start += 1.0;
+                if self.loop_start > self.now() {
                     // wake up a little early to avoid missing the boundary
-                    let wake_early = 1.0;
-                    let sleep_s = (target - now - wake_early).max(0.0);
+                    let wake_early = 0.5;
+                    let sleep_s = (self.loop_start - self.now() - wake_early).max(0.0);
                     std::thread::sleep(std::time::Duration::from_secs_f64(sleep_s));
                 }
-
-                // if wait_for_exit_signal() {
-                //     println!("Exiting. Please enter a filename:");
-                //     let mut name = String::new();
-                //     std::io::stdin().read_line(&mut name).unwrap();
-                //     let name = name.trim();
-
-                //     let buffer = recorded_samples_sched.lock().unwrap();
-                //     save_to_wav(name, sample_rate, &buffer, channels);
-
-                //     running_sched.store(false, Ordering::Relaxed); // tell other threads to stop
-                //     break;
-                // }
             }
-        });
-        Self { handle: scheduler }
-    }
-    pub fn handle(self) -> std::thread::JoinHandle<()> {
-        self.handle
+        })
     }
 }
 

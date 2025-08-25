@@ -93,11 +93,13 @@ impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
         let mut seqs = self.seqs.lock().unwrap();
+        let mut note_queue = self.note_queue.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    self.seqs.lock().unwrap().clear();
+                    seqs.clear();
+                    note_queue.clear();
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
@@ -303,7 +305,6 @@ impl App for GuiApp {
                     Action::Delete => {
                         if let Some(sel) = self.selected {
                             let removed = seqs.remove(sel);
-                            let mut note_queue = self.note_queue.lock().unwrap();
                             note_queue.retain(|(token, _)| removed.token != *token);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                         }

@@ -1,5 +1,4 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::{Note, Sequence};
 use scheduler::Scheduler;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -23,7 +22,7 @@ const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 // const LEFT_DELAYS: [usize; 1] = [1];
 // const RIGHT_DELAYS: [usize; 1] = [1];
 
-const LOOP_LEN: f64 = 8.0; // seconds
+const LOOP_LEN: f64 = 4.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
@@ -70,11 +69,14 @@ fn main() {
     let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
 
-    let note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
-    let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let sample_clock = Arc::new(Mutex::new(0f64));
+    let scheduler = Scheduler::new(sample_clock.clone());
+    let shared_seqs = scheduler.sequences();
+    let note_queue = scheduler.notes();
+    // let note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
+    let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let running = Arc::new(AtomicBool::new(true));
-    let shared_seqs: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
+    // let shared_seqs: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
     let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
@@ -149,21 +151,8 @@ fn main() {
 
     stream.play().unwrap();
 
-    let note_queue_sched = note_queue.clone();
-    let sample_clock_sched = sample_clock.clone();
-    let recorded_samples_sched = recorded_samples.clone();
-    let shared_seqs_sched = shared_seqs.clone();
     let running_sched = running.clone();
-
-    let scheduler = Scheduler::new(
-        sample_rate,
-        channels,
-        note_queue_sched,
-        sample_clock_sched,
-        recorded_samples_sched,
-        shared_seqs_sched,
-        running_sched,
-    );
+    let handle = scheduler.run(running_sched);
 
     let note_queue_gui = note_queue.clone();
     gui::run_gui(
@@ -174,8 +163,5 @@ fn main() {
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
-    // Wait for the scheduler thread to finish (it will exit automatically
-    // if the user already pressed q/Esc; otherwise closing the GUI window
-    // doesn’t stop it, so you may want a channel/flag – see below).
-    scheduler.handle().join().ok();
+    handle.join().ok();
 }
