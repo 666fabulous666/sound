@@ -408,10 +408,16 @@ impl App for GuiApp {
                 let x1 = Self::t_to_x(rect, (seq.t_max - current_time).rem_euclid(LOOP_LEN));
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
-                let block_rect_l =
-                    egui::Rect::from_min_max(egui::pos2(0.0, y0), egui::pos2(x1, y1));
+                let block_rect_l = egui::Rect::from_min_max(
+                    egui::pos2(Self::t_to_x(rect, 0.0), y0),
+                    egui::pos2(x1, y1),
+                );
                 let block_rect_r = egui::Rect::from_min_max(
                     egui::pos2(x0, y0),
+                    egui::pos2(Self::t_to_x(rect, LOOP_LEN), y1),
+                );
+                let track_rect = egui::Rect::from_min_max(
+                    egui::pos2(Self::t_to_x(rect, 0.0), y0),
                     egui::pos2(Self::t_to_x(rect, LOOP_LEN), y1),
                 );
                 let mut col = Self::hash_color(&seq.w);
@@ -442,14 +448,8 @@ impl App for GuiApp {
                 }
 
                 if ui
-                    .interact(block_rect, egui::Id::new(idx), egui::Sense::click())
+                    .interact(track_rect, egui::Id::new(idx), egui::Sense::click())
                     .clicked()
-                    || ui
-                        .interact(block_rect_l, egui::Id::new(idx), egui::Sense::click())
-                        .clicked()
-                    || ui
-                        .interact(block_rect_r, egui::Id::new(idx), egui::Sense::click())
-                        .clicked()
                 {
                     self.selected = Some(idx);
                 }
