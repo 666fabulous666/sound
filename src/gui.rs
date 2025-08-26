@@ -1,9 +1,10 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
 // use serde_json as json;
-use std::sync::{atomic::AtomicUsize, Arc, Mutex};
+use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::{
     notes::{Interval, Note, Sequence},
+    scheduler::Message,
     waves::WaveType,
     LOOP_LEN,
 };
@@ -35,6 +36,7 @@ pub struct GuiApp {
     fall_back_start: std::time::Instant, // for standalone demo
     last_token: AtomicUsize,
     note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    messages: Sender<Message>,
 }
 
 impl GuiApp {
@@ -43,6 +45,7 @@ impl GuiApp {
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
         note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+        messages: Sender<Message>,
     ) -> Self {
         *shared.lock().unwrap() = Vec::new();
 
@@ -53,6 +56,7 @@ impl GuiApp {
             fall_back_start: std::time::Instant::now(),
             last_token: 0.into(),
             note_queue,
+            messages,
         }
     }
 
@@ -93,13 +97,11 @@ impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
         let mut seqs = self.seqs.lock().unwrap();
-        let mut note_queue = self.note_queue.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    seqs.clear();
-                    note_queue.clear();
+                    self.messages.send(Message::NewScore).unwrap();
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
@@ -304,8 +306,8 @@ impl App for GuiApp {
                     Action::None => {}
                     Action::Delete => {
                         if let Some(sel) = self.selected {
-                            let removed = seqs.remove(sel);
-                            note_queue.retain(|(token, _)| removed.token != *token);
+                            // let removed = seqs.remove(sel);
+                            // note_queue.retain(|(token, _)| removed.token != *token);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                         }
                     }
@@ -427,6 +429,7 @@ pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
     note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    messages: Sender<Message>,
 ) {
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
@@ -438,6 +441,7 @@ pub fn run_gui(
                 clock.clone(),
                 shared.clone(),
                 note_queue.clone(),
+                messages,
             )))
         }),
     );

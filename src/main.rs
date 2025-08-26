@@ -70,7 +70,7 @@ fn main() {
     let channels = config.channels;
 
     let sample_clock = Arc::new(Mutex::new(0f64));
-    let scheduler = Scheduler::new(sample_clock.clone());
+    let (scheduler, sender) = Scheduler::new(sample_clock.clone());
     let shared_seqs = scheduler.sequences();
     let note_queue = scheduler.notes();
     // let note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
@@ -159,6 +159,7 @@ fn main() {
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
         note_queue_gui,
+        sender,
     );
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
