@@ -22,7 +22,7 @@ const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 // const LEFT_DELAYS: [usize; 1] = [1];
 // const RIGHT_DELAYS: [usize; 1] = [1];
 
-const LOOP_LEN: f64 = 4.0; // seconds
+const LOOP_LEN: f64 = 16.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
@@ -154,11 +154,9 @@ fn main() {
     let running_sched = running.clone();
     let handle = scheduler.run(running_sched);
 
-    let note_queue_gui = note_queue.clone();
     gui::run_gui(
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
-        note_queue_gui,
         sender,
     );
 

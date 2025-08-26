@@ -14,8 +14,9 @@ use crate::{
 };
 
 pub enum Message {
-    Sequence(Sequence),
     NewScore,
+    Sequence(Sequence),
+    SwapSequences(usize, usize),
 }
 
 pub struct Scheduler {
@@ -23,7 +24,7 @@ pub struct Scheduler {
     sequences: Arc<Mutex<Vec<Sequence>>>,
     sample_clock: Arc<Mutex<f64>>,
     messages_rx: Receiver<Message>,
-    loop_start: f64,
+    sched_start: f64,
 }
 
 impl Scheduler {
@@ -31,7 +32,6 @@ impl Scheduler {
         let notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
         let sequences: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
-        // Channel replaces Arc<Mutex<Vec<Message>>>
         let (messages_tx, messages_rx) = mpsc::channel();
 
         let sched = Self {
@@ -39,7 +39,7 @@ impl Scheduler {
             sequences,
             sample_clock,
             messages_rx,
-            loop_start: 0.0,
+            sched_start: 0.0,
         };
 
         (sched, messages_tx)
@@ -64,13 +64,16 @@ impl Scheduler {
                 // ---- handle inbound messages (drain channel) ----
                 loop {
                     match self.messages_rx.try_recv() {
+                        Ok(Message::NewScore) => {
+                            // clear existing sequences
+                            self.sequences.lock().unwrap().clear();
+                        }
                         Ok(Message::Sequence(sequence)) => {
                             // enqueue a new sequence
                             self.sequences.lock().unwrap().push(sequence);
                         }
-                        Ok(Message::NewScore) => {
-                            // clear existing sequences
-                            self.sequences.lock().unwrap().clear();
+                        Ok(Message::SwapSequences(a, b)) => {
+                            self.sequences.lock().unwrap().swap(a, b);
                         }
                         Err(TryRecvError::Empty) => break, // no more messages this tick
                         Err(TryRecvError::Disconnected) => {
@@ -85,11 +88,15 @@ impl Scheduler {
                 let now = self.now();
 
                 {
-                    // IMPORTANT: don't clone; mutate the real sequences so timestamps persist
                     let mut seqs = self.sequences.lock().unwrap();
                     for seq in seqs.iter_mut() {
+                        // if now > seq.last_generation_time + LOOP_LEN {
                         if now > seq.last_generation_time + LOOP_LEN {
-                            seq.draw(&mut tmp, &mut rng, self.loop_start);
+                            seq.draw(
+                                &mut tmp,
+                                &mut rng,
+                                (self.sched_start / LOOP_LEN).floor() * LOOP_LEN,
+                            );
                             seq.last_generation_time = now;
                         }
                     }
@@ -100,12 +107,10 @@ impl Scheduler {
                     self.notes.lock().unwrap().extend(tmp);
                 }
 
-                // ---- sleep logic (unchanged) ----
-                self.loop_start += 1.0;
-                if self.loop_start > now {
-                    // wake up a little early to avoid missing the boundary
-                    let wake_early = 0.5;
-                    let sleep_s = (self.loop_start - self.now() - wake_early).max(0.0);
+                // ---- sleep logic ----
+                self.sched_start += 1.0;
+                if self.sched_start > now {
+                    let sleep_s = (self.sched_start - self.now() - 0.5).max(0.0);
                     std::thread::sleep(Duration::from_secs_f64(sleep_s));
                 }
             }

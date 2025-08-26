@@ -3,7 +3,7 @@ use eframe::{egui, App, CreationContext, NativeOptions};
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::{
-    notes::{Interval, Note, Sequence},
+    notes::{Interval, Sequence},
     scheduler::Message,
     waves::WaveType,
     LOOP_LEN,
@@ -35,7 +35,6 @@ pub struct GuiApp {
     clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
     fall_back_start: std::time::Instant, // for standalone demo
     last_token: AtomicUsize,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     messages: Sender<Message>,
 }
 
@@ -44,7 +43,6 @@ impl GuiApp {
         _cc: &CreationContext<'_>,
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
-        note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         messages: Sender<Message>,
     ) -> Self {
         *shared.lock().unwrap() = Vec::new();
@@ -55,7 +53,7 @@ impl GuiApp {
             clock,
             fall_back_start: std::time::Instant::now(),
             last_token: 0.into(),
-            note_queue,
+
             messages,
         }
     }
@@ -110,7 +108,8 @@ impl App for GuiApp {
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let seq =
                         Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
-                    seqs.push(seq);
+                    // seqs.push(seq);
+                    self.messages.send(Message::Sequence(seq)).unwrap();
                     self.selected = Some(idx);
                 }
             });
@@ -306,20 +305,22 @@ impl App for GuiApp {
                     Action::None => {}
                     Action::Delete => {
                         if let Some(sel) = self.selected {
-                            // let removed = seqs.remove(sel);
-                            // note_queue.retain(|(token, _)| removed.token != *token);
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                         }
                     }
                     Action::Up => {
                         if let Some(sel) = self.selected {
-                            seqs.swap(sel, sel - 1);
+                            self.messages
+                                .send(Message::SwapSequences(sel, sel - 1))
+                                .unwrap();
                             self.selected = Some(sel - 1);
                         }
                     }
                     Action::Down => {
                         if let Some(sel) = self.selected {
-                            seqs.swap(sel, sel + 1);
+                            self.messages
+                                .send(Message::SwapSequences(sel, sel + 1))
+                                .unwrap();
                             self.selected = Some(sel + 1);
                         }
                     }
@@ -428,7 +429,6 @@ impl App for GuiApp {
 pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     messages: Sender<Message>,
 ) {
     let native_options = NativeOptions::default();
@@ -440,7 +440,6 @@ pub fn run_gui(
                 cc,
                 clock.clone(),
                 shared.clone(),
-                note_queue.clone(),
                 messages,
             )))
         }),

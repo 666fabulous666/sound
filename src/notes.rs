@@ -81,8 +81,6 @@ impl Sequence {
             .into_iter()
             .map(|k| k + 2)
             .collect_vec();
-        // let skips = self.skips.clone();
-        // println!("{skips:?}");
         let step_as_time = self.step.0 as f64 / self.step.1 as f64;
         let ts = (0..)
             .filter(|i| skips.iter().all(|s| (i + 1 - self.beat_offset) % s != 0))
