@@ -94,7 +94,7 @@ impl GuiApp {
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
-        let mut seqs = self.seqs.lock().unwrap();
+        let seqs = self.seqs.lock().unwrap();
         // -------- top bar --------
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -109,7 +109,7 @@ impl App for GuiApp {
                     let seq =
                         Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
                     // seqs.push(seq);
-                    self.messages.send(Message::Sequence(seq)).unwrap();
+                    self.messages.send(Message::NewSequence(seq)).unwrap();
                     self.selected = Some(idx);
                 }
             });
@@ -126,13 +126,15 @@ impl App for GuiApp {
                     Up,
                     Down,
                 }
+
                 let mut action = Action::None;
+                let mut edited_seq: Option<Sequence> = None;
 
                 if let Some(sel) = self.selected {
                     let seq_len = seqs.len(); // ← NEW (immutable, early)
 
                     if sel < seq_len {
-                        let seq = &mut seqs[sel]; // mutable borrow starts here
+                        let seq = &seqs[sel]; // mutable borrow starts here
 
                         ui.heading(format!("Track {}", sel + 1));
 
@@ -154,7 +156,9 @@ impl App for GuiApp {
 
                         ui.separator();
                         // ---- WaveType picker ----
+                        // let mut w_choice = seq.w;
                         let mut w_choice = seq.w;
+
                         egui::ComboBox::from_id_source("wave_type_combo")
                             .selected_text((&w_choice).to_string())
                             .show_ui(ui, |ui| {
@@ -163,7 +167,7 @@ impl App for GuiApp {
                                 }
                             });
                         if w_choice != seq.w {
-                            seq.w = w_choice;
+                            edited_seq.get_or_insert(seqs[sel].clone()).w = w_choice;
                         }
 
                         ui.separator();
@@ -177,10 +181,10 @@ impl App for GuiApp {
                             t_max = t_min;
                         }
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
-                            seq.t_min = t_min;
+                            edited_seq.get_or_insert(seqs[sel].clone()).t_min = t_min;
                         }
                         if (t_max - seq.t_max).abs() > f64::EPSILON {
-                            seq.t_max = t_max;
+                            edited_seq.get_or_insert(seqs[sel].clone()).t_max = t_max;
                         }
                         let mut attack = seq.attack_decay.0;
                         let mut decay = seq.attack_decay.1;
@@ -192,7 +196,8 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
-                            seq.attack_decay = (attack, seq.attack_decay.1);
+                            edited_seq.get_or_insert(seqs[sel].clone()).attack_decay =
+                                (attack, seq.attack_decay.1);
                         };
                         if ui
                             .add(
@@ -202,98 +207,130 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
-                            seq.attack_decay = (seq.attack_decay.0, decay);
+                            edited_seq.get_or_insert(seqs[sel].clone()).attack_decay =
+                                (seq.attack_decay.0, decay);
                         };
 
                         // step
                         ui.horizontal(|ui| {
+                            let mut tmp_step = seq.step.clone();
                             ui.label("step:");
                             if ui
-                                .add(egui::DragValue::new(&mut seq.step.0).range(1..=128))
+                                .add(egui::DragValue::new(&mut tmp_step.0).range(1..=128))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).step.0 = tmp_step.0
+                            };
                             ui.label("/");
                             if ui
-                                .add(egui::DragValue::new(&mut seq.step.1).range(1..=128))
+                                .add(egui::DragValue::new(&mut tmp_step.1).range(1..=128))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).step.1 = tmp_step.1
+                            };
                         });
 
                         // skips
                         ui.horizontal(|ui| {
+                            let mut tmp_skips = seq.skips.clone();
                             ui.label("skips:");
                             if ui
-                                .add(egui::DragValue::new(&mut seq.skips.0).range(0..=512))
+                                .add(egui::DragValue::new(&mut tmp_skips.0).range(0..=512))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).skips.0 = tmp_skips.0
+                            };
                             ui.label(",");
                             if ui
-                                .add(egui::DragValue::new(&mut seq.skips.1).range(0..=512))
+                                .add(egui::DragValue::new(&mut tmp_skips.1).range(0..=512))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).skips.1 = tmp_skips.1
+                            };
                         });
 
-                        if let Interval::RDTempered(
-                            ref mut nb_rd_steps,
-                            ref mut tones,
-                            ref mut octave,
-                        ) = seq.f
                         {
-                            // octave
-                            ui.horizontal(|ui| {
-                                ui.label("octave:");
-                                if ui.add(egui::DragValue::new(octave).range(-5..=5)).changed() {};
-                            });
-                            // nb_rd_steps
-                            ui.horizontal(|ui| {
-                                ui.label("nb_rd_steps:");
-                                if ui
-                                    .add(egui::DragValue::new(nb_rd_steps).range(0..=16))
-                                    .changed()
-                                {};
-                            });
-                            // ----- RDTempered tones (–11 … 11) ---------------------------------
-                            ui.label("RD tones:");
-                            ui.horizontal_wrapped(|ui| {
-                                for tone in -11..=11 {
-                                    let mut selected = tones.contains(&tone);
+                            let mut changed = false;
+                            let mut f = seq.f.clone();
+                            if let Interval::RDTempered(
+                                ref mut nb_rd_steps,
+                                ref mut tones,
+                                ref mut octave,
+                            ) = f
+                            {
+                                // octave
+                                ui.horizontal(|ui| {
+                                    ui.label("octave:");
+                                    if ui.add(egui::DragValue::new(octave).range(-5..=5)).changed()
+                                    {
+                                        changed = true;
+                                    };
+                                });
+                                // nb_rd_steps
+                                ui.horizontal(|ui| {
+                                    ui.label("nb_rd_steps:");
+                                    if ui
+                                        .add(egui::DragValue::new(nb_rd_steps).range(0..=16))
+                                        .changed()
+                                    {
+                                        changed = true;
+                                    };
+                                });
+                                // ----- RDTempered tones (–11 … 11) ---------------------------------
+                                ui.label("RD tones:");
+                                ui.horizontal_wrapped(|ui| {
+                                    for tone in -11..=11 {
+                                        let mut selected = tones.contains(&tone);
 
-                                    // show the checkbox; the label *is* the number
-                                    if ui.checkbox(&mut selected, tone.to_string()).changed() {
-                                        if selected {
-                                            // add if absent
-                                            if !tones.contains(&tone) {
-                                                tones.push(tone);
-                                                tones.sort_unstable();
+                                        // show the checkbox; the label *is* the number
+                                        if ui.checkbox(&mut selected, tone.to_string()).changed() {
+                                            if selected {
+                                                // add if absent
+                                                if !tones.contains(&tone) {
+                                                    tones.push(tone);
+                                                    tones.sort_unstable();
+                                                }
+                                            } else {
+                                                // remove if present
+                                                if let Some(pos) =
+                                                    tones.iter().position(|&v| v == tone)
+                                                {
+                                                    tones.remove(pos);
+                                                }
                                             }
-                                        } else {
-                                            // remove if present
-                                            if let Some(pos) = tones.iter().position(|&v| v == tone)
-                                            {
-                                                tones.remove(pos);
-                                            }
+                                            changed = true;
                                         }
                                     }
-                                }
-                            });
+                                });
+                            }
+                            if changed {
+                                edited_seq.get_or_insert(seqs[sel].clone()).f = f;
+                            }
                         }
 
                         // beat_offset
                         ui.horizontal(|ui| {
+                            let mut tmp_beat_offset = seq.beat_offset.clone();
                             ui.label("beat_offset:");
                             if ui
-                                .add(egui::DragValue::new(&mut seq.beat_offset).range(0..=256))
+                                .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).beat_offset =
+                                    tmp_beat_offset;
+                            };
                         });
 
                         // volume
                         ui.horizontal(|ui| {
+                            let mut tmp_volume = seq.volume.clone();
                             ui.label("volume:");
                             if ui
-                                .add(egui::Slider::new(&mut seq.volume, 0.0..=32.0).text("volume"))
+                                .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0).text("volume"))
                                 .changed()
-                            {};
+                            {
+                                edited_seq.get_or_insert(seqs[sel].clone()).volume = tmp_volume;
+                            };
                         });
                     }
                 } else {
@@ -305,6 +342,7 @@ impl App for GuiApp {
                     Action::None => {}
                     Action::Delete => {
                         if let Some(sel) = self.selected {
+                            self.messages.send(Message::DeleteSequence(sel)).unwrap();
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
                         }
                     }
@@ -323,6 +361,13 @@ impl App for GuiApp {
                                 .unwrap();
                             self.selected = Some(sel + 1);
                         }
+                    }
+                }
+                if let Some(edited_seq) = edited_seq {
+                    if let Some(sel) = self.selected {
+                        self.messages
+                            .send(Message::EditSequence(sel, edited_seq))
+                            .unwrap();
                     }
                 }
             });

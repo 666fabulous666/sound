@@ -15,7 +15,9 @@ use crate::{
 
 pub enum Message {
     NewScore,
-    Sequence(Sequence),
+    NewSequence(Sequence),
+    EditSequence(usize, Sequence),
+    DeleteSequence(usize),
     SwapSequences(usize, usize),
 }
 
@@ -65,19 +67,23 @@ impl Scheduler {
                 loop {
                     match self.messages_rx.try_recv() {
                         Ok(Message::NewScore) => {
-                            // clear existing sequences
                             self.sequences.lock().unwrap().clear();
                         }
-                        Ok(Message::Sequence(sequence)) => {
-                            // enqueue a new sequence
+                        Ok(Message::NewSequence(sequence)) => {
                             self.sequences.lock().unwrap().push(sequence);
+                        }
+                        Ok(Message::EditSequence(a, sequence)) => {
+                            self.sequences.lock().unwrap()[a] = sequence;
+                        }
+                        Ok(Message::DeleteSequence(a)) => {
+                            self.sequences.lock().unwrap().remove(a);
                         }
                         Ok(Message::SwapSequences(a, b)) => {
                             self.sequences.lock().unwrap().swap(a, b);
                         }
                         Err(TryRecvError::Empty) => break, // no more messages this tick
                         Err(TryRecvError::Disconnected) => {
-                            // Sender dropped; you can choose to break the loop if desired
+                            // Sender dropped;
                             break;
                         }
                     }
