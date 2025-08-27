@@ -121,9 +121,11 @@ impl Scheduler {
                 }
 
                 // ---- sleep logic ----
-                self.sched_start += 0.01;
+                let sched_start_increase = 1e-2;
+                self.sched_start += sched_start_increase;
+                let wake_early = sched_start_increase * 2.0; // WARINIG: isn't it supposed to be smaller than sched_start_increase?
                 if self.sched_start > self.now() {
-                    let sleep_s = (self.sched_start - self.now() - 0.05).max(0.0);
+                    let sleep_s = (self.sched_start - self.now() - wake_early).max(0.0);
                     std::thread::sleep(Duration::from_secs_f64(sleep_s));
                 }
             }
