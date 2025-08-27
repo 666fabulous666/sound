@@ -104,12 +104,11 @@ impl Scheduler {
                 {
                     let mut seqs = self.sequences.lock().unwrap();
                     for seq in seqs.iter_mut() {
-                        // if now > seq.last_generation_time + LOOP_LEN {
-                        if seq.last_generation_time.is_none()
+                        if seq.not_generate_until.is_none()
                             || seq
-                                .last_generation_time
+                                .not_generate_until
                                 .as_ref()
-                                .is_some_and(|t| self.now() > t + LOOP_LEN)
+                                .is_some_and(|until| self.now() > *until)
                         {
                             self.draw_seq(seq, &mut rng, &mut notes_buffer, LOOP_LEN);
                         }
@@ -122,9 +121,9 @@ impl Scheduler {
                 }
 
                 // ---- sleep logic ----
-                self.sched_start += 1.0;
+                self.sched_start += 0.01;
                 if self.sched_start > self.now() {
-                    let sleep_s = (self.sched_start - self.now() - 0.5).max(0.0);
+                    let sleep_s = (self.sched_start - self.now() - 0.05).max(0.0);
                     std::thread::sleep(Duration::from_secs_f64(sleep_s));
                 }
             }
@@ -133,7 +132,7 @@ impl Scheduler {
 
     fn remove_seq_at(&mut self, a: usize) {
         let s = &mut self.sequences.lock().unwrap()[a];
-        s.last_generation_time = None;
+        s.not_generate_until = None;
         self.remove_seq(s.token);
     }
     fn draw_seq(
@@ -143,12 +142,9 @@ impl Scheduler {
         notes_buffer: &mut Vec<(usize, Vec<Note>)>,
         loop_len: f64,
     ) {
-        seq.draw(
-            notes_buffer,
-            rng,
-            (self.sched_start / loop_len).floor() * loop_len,
-        );
-        seq.last_generation_time = Some(self.now());
+        let seq_start = (self.sched_start / loop_len).floor() * loop_len;
+        seq.draw(notes_buffer, rng, seq_start);
+        seq.not_generate_until = Some(seq_start + loop_len - 0.1);
     }
     fn remove_seq(&self, tk: usize) {
         self.notes.lock().unwrap().retain(|(token, _)| *token != tk);

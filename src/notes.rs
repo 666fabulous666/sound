@@ -22,7 +22,7 @@ pub struct Sequence {
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
     pub token: usize,
-    pub last_generation_time: Option<f64>,
+    pub not_generate_until: Option<f64>,
 }
 
 fn default_beat_offset() -> usize {
@@ -68,7 +68,7 @@ impl Sequence {
             volume: default_volume(),
             attack_decay: default_attack_decay(),
             token,
-            last_generation_time: None,
+            not_generate_until: None,
         }
     }
     pub fn draw(
