@@ -131,7 +131,7 @@ impl Scheduler {
                 }
 
                 // ---- sleep logic ----
-                let sched_start_increase = 1e-2;
+                let sched_start_increase = 5e-2;
                 self.sched_start += sched_start_increase;
                 let wake_early = sched_start_increase * 2.0; // WARINIG: isn't it supposed to be smaller than sched_start_increase?
                 if self.sched_start > self.now() {

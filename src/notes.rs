@@ -21,6 +21,8 @@ pub struct Sequence {
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
+    pub attack_freq_modulation: (f64, f64),
+    pub vibrato: (f64, f64),
     pub token: usize,
     pub not_generate_until: Option<f64>,
 }
@@ -45,6 +47,8 @@ pub struct Note {
     pub w: WaveType,
     pub volume: f64,
     pub attack_decay: (f64, f64),
+    pub attack_freq_modulation: (f64, f64),
+    pub vibrato: (f64, f64),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -69,6 +73,8 @@ impl Sequence {
             attack_decay: default_attack_decay(),
             token,
             not_generate_until: None,
+            attack_freq_modulation: (0.0, 32.0),
+            vibrato: (0.0, 32.0),
         }
     }
     pub fn draw(
@@ -101,6 +107,8 @@ impl Sequence {
                 w: self.w,
                 volume: self.volume,
                 attack_decay: self.attack_decay,
+                attack_freq_modulation: self.attack_freq_modulation,
+                vibrato: self.vibrato,
             })
             .map(|n| n.draw(notes, rng))
             .collect();

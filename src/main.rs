@@ -1,8 +1,11 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use scheduler::Scheduler;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+use std::{
+    f64::consts::PI,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 mod gui;
@@ -30,6 +33,16 @@ fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 
         0.1 * (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64
     }
 }
+fn time_bender(
+    time: f64,
+    attack_mag: f64,
+    attack_time: f64,
+    vibrato_mag: f64,
+    vibrato_freq: f64,
+) -> f64 {
+    time + attack_mag * (1.0 + time).powf(-attack_time)
+        + vibrato_mag * (2.0 * PI * time * vibrato_freq).sin()
+}
 
 fn generate_wave(
     wave_type: &WaveType,
@@ -37,23 +50,32 @@ fn generate_wave(
     time: f64,
     duration: f64,
     attack_decay: (f64, f64),
+    attack_freq_modulation: (f64, f64),
+    vibrato: (f64, f64),
 ) -> f64 {
+    let time_bent = time_bender(
+        time,
+        attack_freq_modulation.0,
+        attack_freq_modulation.1,
+        vibrato.0,
+        vibrato.1,
+    );
     envelope(attack_decay.0, attack_decay.1, duration)(time)
         * match wave_type {
-            WaveType::Sine => sine_wave(freq, time),
-            WaveType::Square => square_wave(freq, time),
-            WaveType::Triangle => triangle_wave(freq, time),
-            WaveType::Sawtooth => sawtooth_wave(freq, time),
-            WaveType::DistOrg => dist_org(freq, time),
-            WaveType::Custom2 => custom2(freq, time),
-            WaveType::Droplet => droplet_wave(freq, time),
-            WaveType::DropletOct => droplet_oct_wave(freq, time),
-            WaveType::HiHat => hi_hat(freq, time),
-            WaveType::Kick => kick(freq, time),
-            WaveType::Snare => snare(freq, time),
-            WaveType::Ride => ride(freq, time),
-            WaveType::Mute => mute_wave(freq, time),
-            WaveType::Xylo => xylophone_wave(freq, time),
+            WaveType::Sine => sine_wave(freq, time_bent),
+            WaveType::Square => square_wave(freq, time_bent),
+            WaveType::Triangle => triangle_wave(freq, time_bent),
+            WaveType::Sawtooth => sawtooth_wave(freq, time_bent),
+            WaveType::DistOrg => dist_org(freq, time_bent),
+            WaveType::Custom2 => custom2(freq, time_bent),
+            WaveType::Droplet => droplet_wave(freq, time_bent),
+            WaveType::DropletOct => droplet_oct_wave(freq, time_bent),
+            WaveType::HiHat => hi_hat(freq, time_bent),
+            WaveType::Kick => kick(freq, time_bent),
+            WaveType::Snare => snare(freq, time_bent),
+            WaveType::Ride => ride(freq, time_bent),
+            WaveType::Mute => mute_wave(freq, time_bent),
+            WaveType::Xylo => xylophone_wave(freq, time_bent),
         }
 }
 
@@ -118,6 +140,8 @@ fn main() {
                                             t,
                                             note.d,
                                             note.attack_decay,
+                                            note.attack_freq_modulation,
+                                            note.vibrato,
                                         );
                                     true
                                 } else if elapsed > note.t + note.d + 1.0 {

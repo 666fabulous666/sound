@@ -295,31 +295,64 @@ impl App for GuiApp {
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                 .t_max = t_max;
                         }
-                        let mut attack = seq.attack_decay.0;
-                        let mut decay = seq.attack_decay.1;
+                        let mut attack_decay = seq.attack_decay;
                         if ui
                             .add(
-                                egui::Slider::new(&mut attack, 0.01..=100.0)
+                                egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
                                     .text("attack")
                                     .logarithmic(true),
                             )
                             .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
+                                        .text("decay")
+                                        .logarithmic(true),
+                                )
+                                .changed()
                         {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .attack_decay = (attack, seq.attack_decay.1);
+                                .attack_decay = seq.attack_decay;
                         };
+                        let mut attack_freq_modulation = seq.attack_freq_modulation;
                         if ui
                             .add(
-                                egui::Slider::new(&mut decay, 0.01..=100.0)
-                                    .text("decay")
-                                    .logarithmic(true),
+                                egui::Slider::new(&mut attack_freq_modulation.0, -0.1..=0.1)
+                                    .text("attack freq mod mag"),
                             )
                             .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut attack_freq_modulation.1, 1.0..=100.0)
+                                        .text("attack freq mod time")
+                                        .logarithmic(true),
+                                )
+                                .changed()
                         {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .attack_decay = (seq.attack_decay.0, decay);
+                                .attack_freq_modulation = attack_freq_modulation;
+                        };
+                        let mut vibrato = seq.vibrato;
+                        let mut vibrato_mag_display = vibrato.0 * 1e6;
+                        if ui
+                            .add(
+                                egui::Slider::new(&mut vibrato_mag_display, 0.0..=500.0)
+                                    .text("vibrato mag"),
+                            )
+                            .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
+                                        .text("vibrato fq")
+                                        .logarithmic(true),
+                                )
+                                .changed()
+                        {
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                         };
 
                         // step

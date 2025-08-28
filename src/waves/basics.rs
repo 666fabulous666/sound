@@ -32,9 +32,8 @@ pub fn droplet_wave(frequency: f64, time: f64) -> f64 {
         / attack_slide
 }
 pub fn xylophone_wave(frequency: f64, time: f64) -> f64 {
-    let attack_slide = (frequency / 440.0).sqrt();
-    let tt = time + 1e-4 * sine(frequency / 55.0, time) * (1.0 + time).powi(-2);
-    // let tt = time;
+    // let tt = time + 1e-4 * sine(frequency / 55.0, time) * (1.0 + time).powi(-2);
+    let tt = time;
     let delta = 3e-2 / (1.0 + 1e2 * time);
     let phase = 2.0 * PI * (frequency) * tt;
     (0..9)
@@ -45,7 +44,7 @@ pub fn xylophone_wave(frequency: f64, time: f64) -> f64 {
         })
         .sum::<f64>()
         // .tanh()
-        / attack_slide
+        / (frequency / 440.0).sqrt()
 }
 pub fn mute_wave(_frequency: f64, _time: f64) -> f64 {
     0.0
