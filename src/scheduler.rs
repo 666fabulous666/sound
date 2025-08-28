@@ -78,9 +78,15 @@ impl Scheduler {
                             self.sequences.lock().unwrap().push(sequence);
                         }
                         Ok(Message::EditSequence(a, mut sequence)) => {
-                            self.remove_seq(sequence.token);
-                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
-                            self.sequences.lock().unwrap()[a] = sequence;
+                            self.regen_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            let len = {
+                                let mut seqs = self.sequences.lock().unwrap();
+                                seqs[a] = sequence;
+                                seqs.len()
+                            };
+                            (a + 1..len).for_each(|k| {
+                                self.regen_seq_at(k, &mut rng, &mut notes_buffer, LOOP_LEN)
+                            });
                         }
                         Ok(Message::DeleteSequence(a)) => {
                             let tk = { self.sequences.lock().unwrap()[a].token.clone() };
@@ -88,9 +94,13 @@ impl Scheduler {
                             self.sequences.lock().unwrap().remove(a);
                         }
                         Ok(Message::SwapSequences(a, b)) => {
-                            self.remove_seq_at(a);
-                            self.remove_seq_at(b);
                             self.sequences.lock().unwrap().swap(a, b);
+                            self.regen_seq_at(a, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.regen_seq_at(b, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            let len = self.sequences.lock().unwrap().len();
+                            (a.max(b) + 1..len).for_each(|k| {
+                                self.regen_seq_at(k, &mut rng, &mut notes_buffer, LOOP_LEN)
+                            });
                         }
                         Err(TryRecvError::Empty) => break, // no more messages this tick
                         Err(TryRecvError::Disconnected) => {
@@ -132,11 +142,6 @@ impl Scheduler {
         })
     }
 
-    fn remove_seq_at(&mut self, a: usize) {
-        let s = &mut self.sequences.lock().unwrap()[a];
-        s.not_generate_until = None;
-        self.remove_seq(s.token);
-    }
     fn draw_seq(
         &self,
         seq: &mut Sequence,
@@ -150,5 +155,25 @@ impl Scheduler {
     }
     fn remove_seq(&self, tk: usize) {
         self.notes.lock().unwrap().retain(|(token, _)| *token != tk);
+    }
+    fn regen_seq(
+        &self,
+        seq: &mut Sequence,
+        rng: &mut ThreadRng,
+        notes_buffer: &mut Vec<(usize, Vec<Note>)>,
+        loop_len: f64,
+    ) {
+        self.remove_seq(seq.token);
+        self.draw_seq(seq, rng, notes_buffer, loop_len);
+    }
+    fn regen_seq_at(
+        &self,
+        a: usize,
+        rng: &mut ThreadRng,
+        notes_buffer: &mut Vec<(usize, Vec<Note>)>,
+        loop_len: f64,
+    ) {
+        let s = &mut self.sequences.lock().unwrap()[a];
+        self.regen_seq(s, rng, notes_buffer, loop_len);
     }
 }
