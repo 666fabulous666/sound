@@ -295,6 +295,7 @@ impl App for GuiApp {
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                 .t_max = t_max;
                         }
+
                         let mut attack_decay = seq.attack_decay;
                         if ui
                             .add(
@@ -313,8 +314,9 @@ impl App for GuiApp {
                         {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .attack_decay = seq.attack_decay;
+                                .attack_decay = attack_decay;
                         };
+
                         let mut attack_freq_modulation = seq.attack_freq_modulation;
                         if ui
                             .add(
@@ -334,6 +336,7 @@ impl App for GuiApp {
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                 .attack_freq_modulation = attack_freq_modulation;
                         };
+
                         let mut vibrato = seq.vibrato;
                         let mut vibrato_mag_display = vibrato.0 * 1e6;
                         if ui
@@ -353,6 +356,30 @@ impl App for GuiApp {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                 .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
+                        };
+
+                        let mut chorus = seq.chorus;
+                        if ui
+                            .add(egui::Slider::new(&mut chorus.0, 1..=10).text("chorus n"))
+                            .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut chorus.1, 1e-4..=1e-2)
+                                        .text("chorus delta")
+                                        .logarithmic(true),
+                                )
+                                .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut chorus.2, 0.0..=1.0)
+                                        .text("chorus decay")
+                                        .logarithmic(true),
+                                )
+                                .changed()
+                        {
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .chorus = chorus;
                         };
 
                         // step
