@@ -22,7 +22,7 @@ const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 // const LEFT_DELAYS: [usize; 1] = [1];
 // const RIGHT_DELAYS: [usize; 1] = [1];
 
-const LOOP_LEN: f64 = 4.0; // seconds
+const LOOP_LEN: f64 = 32.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {

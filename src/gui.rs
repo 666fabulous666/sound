@@ -8,6 +8,10 @@ use crate::{
     waves::WaveType,
     LOOP_LEN,
 };
+use rfd::FileDialog;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::sync::atomic::Ordering;
 
 // list of all wave variants for the ComboBox
 const ALL_WAVES: [WaveType; 14] = [
@@ -36,6 +40,12 @@ pub struct GuiApp {
     fall_back_start: std::time::Instant, // for standalone demo
     last_token: AtomicUsize,
     messages: Sender<Message>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct GuiState {
+    seqs: Vec<Sequence>,
+    selected: Option<usize>,
 }
 
 impl GuiApp {
@@ -89,13 +99,88 @@ impl GuiApp {
             self.fall_back_start.elapsed().as_secs_f64()
         }
     }
+    fn save_state(&self) {
+        // Choose where to save
+        if let Some(path) = FileDialog::new()
+            .set_title("Save session as JSON")
+            .add_filter("JSON", &["json"])
+            .save_file()
+        {
+            // Snapshot current state
+            let seqs = self.seqs.lock().unwrap().clone();
+            let state = GuiState {
+                seqs,
+                selected: self.selected,
+            };
+
+            match serde_json::to_string_pretty(&state) {
+                Ok(text) => {
+                    if let Err(e) = fs::write(&path, text) {
+                        eprintln!("[save_state] Failed to write file: {e}");
+                    }
+                }
+                Err(e) => eprintln!("[save_state] Failed to serialize: {e}"),
+            }
+        }
+    }
+
+    fn load_state(&mut self) {
+        // Pick a file to open
+        if let Some(path) = FileDialog::new()
+            .set_title("Load session from JSON")
+            .add_filter("JSON", &["json"])
+            .pick_file()
+        {
+            match fs::read_to_string(&path) {
+                Ok(text) => match serde_json::from_str::<GuiState>(&text) {
+                    Ok(state) => {
+                        // Clear current score on the audio side
+                        let _ = self.messages.send(Message::NewScore);
+
+                        // Send each sequence to the scheduler
+                        for seq in &state.seqs {
+                            let _ = self.messages.send(Message::NewSequence(seq.clone()));
+                        }
+
+                        // Update the shared mirror immediately so the UI reflects it right away
+                        if let Ok(mut shared) = self.seqs.lock() {
+                            *shared = state.seqs.clone();
+                        }
+
+                        // Keep tokens monotonic for future "Add track"
+                        let next_token = state
+                            .seqs
+                            .iter()
+                            .map(|s| s.token)
+                            .max()
+                            .unwrap_or(0)
+                            .saturating_add(1);
+                        self.last_token.store(next_token, Ordering::Relaxed);
+
+                        // Restore selection (clamped)
+                        self.selected = state.selected.and_then(|i| {
+                            if i < state.seqs.len() {
+                                Some(i)
+                            } else {
+                                None
+                            }
+                        });
+                    }
+                    Err(e) => eprintln!("[load_state] Failed to parse JSON: {e}"),
+                },
+                Err(e) => eprintln!("[load_state] Failed to read file: {e}"),
+            }
+        }
+    }
 }
 
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let current_time = self.current_time();
-        let seqs = self.seqs.lock().unwrap();
+        let len = self.seqs.lock().unwrap().len();
         // -------- top bar --------
+        let mut save = false;
+        let mut load = false;
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
@@ -103,7 +188,7 @@ impl App for GuiApp {
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
-                    let idx = seqs.len();
+                    let idx = len;
                     self.last_token
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let seq =
@@ -112,8 +197,18 @@ impl App for GuiApp {
                     self.messages.send(Message::NewSequence(seq)).unwrap();
                     self.selected = Some(idx);
                 }
+                save = ui.button("Save…").clicked();
+                load = ui.button("Load…").clicked();
             });
         });
+
+        if save {
+            self.save_state();
+        }
+        if load {
+            self.load_state();
+        }
+        let seqs = self.seqs.lock().unwrap(); // TODO: lock more locally by just giving a clone (not lock)
 
         // -------- property pane --------
         egui::SidePanel::right("props")
