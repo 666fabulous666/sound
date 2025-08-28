@@ -99,6 +99,11 @@ impl GuiApp {
             self.fall_back_start.elapsed().as_secs_f64()
         }
     }
+
+    fn exit(&self, ctx: &egui::Context) {
+        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+    }
+
     fn save_state(&self) {
         // Choose where to save
         if let Some(path) = FileDialog::new()
@@ -181,6 +186,7 @@ impl App for GuiApp {
         // -------- top bar --------
         let mut save = false;
         let mut load = false;
+        let mut exit = false;
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
@@ -199,6 +205,7 @@ impl App for GuiApp {
                 }
                 save = ui.button("Save…").clicked();
                 load = ui.button("Load…").clicked();
+                exit = ui.button("Exit").clicked();
             });
         });
 
@@ -207,6 +214,9 @@ impl App for GuiApp {
         }
         if load {
             self.load_state();
+        }
+        if exit {
+            self.exit(ctx);
         }
         let seqs = self.seqs.clone();
 
