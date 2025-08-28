@@ -208,7 +208,7 @@ impl App for GuiApp {
         if load {
             self.load_state();
         }
-        let seqs = self.seqs.lock().unwrap(); // TODO: lock more locally by just giving a clone (not lock)
+        let seqs = self.seqs.clone();
 
         // -------- property pane --------
         egui::SidePanel::right("props")
@@ -226,16 +226,14 @@ impl App for GuiApp {
                 let mut edited_seq: Option<Sequence> = None;
 
                 if let Some(sel) = self.selected {
-                    let seq_len = seqs.len(); // ← NEW (immutable, early)
-
-                    if sel < seq_len {
-                        let seq = &seqs[sel]; // mutable borrow starts here
+                    if sel < len {
+                        let seq = seqs.lock().unwrap()[sel].clone();
 
                         ui.heading(format!("Track {}", sel + 1));
 
                         // ── delete / move buttons ─────────────────────────
                         let can_up = sel > 0;
-                        let can_down = sel + 1 < seq_len; // ← NEW: use cached len
+                        let can_down = sel + 1 < len; // ← NEW: use cached len
 
                         ui.horizontal(|ui| {
                             if ui.button("Delete").clicked() {
@@ -262,7 +260,9 @@ impl App for GuiApp {
                                 }
                             });
                         if w_choice != seq.w {
-                            edited_seq.get_or_insert(seqs[sel].clone()).w = w_choice;
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .w = w_choice;
                         }
 
                         ui.separator();
@@ -276,10 +276,14 @@ impl App for GuiApp {
                             t_max = t_min;
                         }
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
-                            edited_seq.get_or_insert(seqs[sel].clone()).t_min = t_min;
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .t_min = t_min;
                         }
                         if (t_max - seq.t_max).abs() > f64::EPSILON {
-                            edited_seq.get_or_insert(seqs[sel].clone()).t_max = t_max;
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .t_max = t_max;
                         }
                         let mut attack = seq.attack_decay.0;
                         let mut decay = seq.attack_decay.1;
@@ -291,8 +295,9 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
-                            edited_seq.get_or_insert(seqs[sel].clone()).attack_decay =
-                                (attack, seq.attack_decay.1);
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .attack_decay = (attack, seq.attack_decay.1);
                         };
                         if ui
                             .add(
@@ -302,8 +307,9 @@ impl App for GuiApp {
                             )
                             .changed()
                         {
-                            edited_seq.get_or_insert(seqs[sel].clone()).attack_decay =
-                                (seq.attack_decay.0, decay);
+                            edited_seq
+                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                .attack_decay = (seq.attack_decay.0, decay);
                         };
 
                         // step
@@ -314,14 +320,20 @@ impl App for GuiApp {
                                 .add(egui::DragValue::new(&mut tmp_step.0).range(1..=128))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).step.0 = tmp_step.0
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .step
+                                    .0 = tmp_step.0
                             };
                             ui.label("/");
                             if ui
                                 .add(egui::DragValue::new(&mut tmp_step.1).range(1..=128))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).step.1 = tmp_step.1
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .step
+                                    .1 = tmp_step.1
                             };
                         });
 
@@ -333,14 +345,20 @@ impl App for GuiApp {
                                 .add(egui::DragValue::new(&mut tmp_skips.0).range(0..=512))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).skips.0 = tmp_skips.0
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .skips
+                                    .0 = tmp_skips.0
                             };
                             ui.label(",");
                             if ui
                                 .add(egui::DragValue::new(&mut tmp_skips.1).range(0..=512))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).skips.1 = tmp_skips.1
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .skips
+                                    .1 = tmp_skips.1
                             };
                         });
 
@@ -399,7 +417,9 @@ impl App for GuiApp {
                                 });
                             }
                             if changed {
-                                edited_seq.get_or_insert(seqs[sel].clone()).f = f;
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .f = f;
                             }
                         }
 
@@ -411,8 +431,9 @@ impl App for GuiApp {
                                 .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).beat_offset =
-                                    tmp_beat_offset;
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .beat_offset = tmp_beat_offset;
                             };
                         });
 
@@ -424,7 +445,9 @@ impl App for GuiApp {
                                 .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0).text("volume"))
                                 .changed()
                             {
-                                edited_seq.get_or_insert(seqs[sel].clone()).volume = tmp_volume;
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .volume = tmp_volume;
                             };
                         });
                     }
@@ -475,7 +498,7 @@ impl App for GuiApp {
             );
             let painter = ui.painter_at(rect);
 
-            let lanes = seqs.len().max(1);
+            let lanes = len.max(1);
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
@@ -495,7 +518,7 @@ impl App for GuiApp {
             }
 
             // sequences
-            for (idx, seq) in seqs.iter().enumerate() {
+            for (idx, seq) in seqs.lock().unwrap().iter().enumerate() {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
