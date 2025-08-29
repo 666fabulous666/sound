@@ -20,6 +20,7 @@ pub enum Message {
     NewSequence(Sequence),
     EditSequence(usize, Sequence),
     DeleteSequence(usize),
+    CloneSequence(usize, usize),
     SwapSequences(usize, usize),
 }
 
@@ -92,6 +93,12 @@ impl Scheduler {
                             let tk = { self.sequences.lock().unwrap()[a].token.clone() };
                             self.remove_seq(tk);
                             self.sequences.lock().unwrap().remove(a);
+                        }
+                        Ok(Message::CloneSequence(a, new_token)) => {
+                            let mut sequence = { self.sequences.lock().unwrap()[a].clone() };
+                            sequence.token = new_token;
+                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.sequences.lock().unwrap().push(sequence);
                         }
                         Ok(Message::SwapSequences(a, b)) => {
                             self.sequences.lock().unwrap().swap(a, b);

@@ -63,6 +63,7 @@ fn generate_wave(
         vibrato.1,
     );
     let f = |x: f64| match wave_type {
+        WaveType::Mute => 0.0,
         WaveType::Sine => x.sin(),
         WaveType::Square => {
             if x % (2.0 * PI) < PI {
@@ -77,7 +78,7 @@ fn generate_wave(
         }
         WaveType::Sawtooth => {
             let t = x / (2.0 * PI);
-            t - (0.5 + t).floor()
+            0.5 * (t - (0.5 + t).floor())
         } // WaveType::DistOrg => todo!(),
           // WaveType::Custom2 => todo!(),
           // WaveType::Droplet => todo!(),
@@ -86,7 +87,6 @@ fn generate_wave(
           // WaveType::Kick => todo!(),
           // WaveType::Snare => todo!(),
           // WaveType::Ride => todo!(),
-          // WaveType::Mute => todo!(),
           // WaveType::Xylo => todo!(),
     };
     let phase = 2.0 * PI * freq * time_bent;

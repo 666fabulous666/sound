@@ -14,7 +14,8 @@ use std::fs;
 use std::sync::atomic::Ordering;
 
 // list of all wave variants for the ComboBox
-const ALL_WAVES: [WaveType; 4] = [
+const ALL_WAVES: [WaveType; 5] = [
+    WaveType::Mute,
     WaveType::Sine,
     WaveType::Square,
     WaveType::Triangle,
@@ -27,7 +28,6 @@ const ALL_WAVES: [WaveType; 4] = [
     // WaveType::Kick,
     // WaveType::Snare,
     // WaveType::Ride,
-    // WaveType::Mute,
     // WaveType::Xylo,
 ];
 
@@ -199,7 +199,6 @@ impl App for GuiApp {
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let seq =
                         Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
-                    // seqs.push(seq);
                     self.messages.send(Message::NewSequence(seq)).unwrap();
                     self.selected = Some(idx);
                 }
@@ -228,6 +227,7 @@ impl App for GuiApp {
                 enum Action {
                     None,
                     Delete,
+                    Clone,
                     Up,
                     Down,
                 }
@@ -248,6 +248,9 @@ impl App for GuiApp {
                         ui.horizontal(|ui| {
                             if ui.button("Delete").clicked() {
                                 action = Action::Delete;
+                            }
+                            if ui.button("Clone").clicked() {
+                                action = Action::Clone;
                             }
                             if ui.button("move up").clicked() && can_up {
                                 action = Action::Up;
@@ -537,6 +540,16 @@ impl App for GuiApp {
                         if let Some(sel) = self.selected {
                             self.messages.send(Message::DeleteSequence(sel)).unwrap();
                             self.selected = if sel == 0 { None } else { Some(sel - 1) };
+                        }
+                    }
+                    Action::Clone => {
+                        let last_token = self
+                            .last_token
+                            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if let Some(sel) = self.selected {
+                            self.messages
+                                .send(Message::CloneSequence(sel, last_token))
+                                .unwrap();
                         }
                     }
                     Action::Up => {

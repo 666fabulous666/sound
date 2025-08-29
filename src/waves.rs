@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum WaveType {
+    Mute,
     Sine,
     Square,
     Triangle,
@@ -15,13 +16,13 @@ pub enum WaveType {
     // Kick,
     // Snare,
     // Ride,
-    // Mute,
     // Xylo,
 }
 
 impl ToString for &WaveType {
     fn to_string(&self) -> String {
         match self {
+            WaveType::Mute => "Mute".into(),
             WaveType::Sine => "Sine".into(),
             WaveType::Square => "Square".into(),
             WaveType::Triangle => "Triangle".into(),
@@ -34,7 +35,6 @@ impl ToString for &WaveType {
             // WaveType::Kick => "Kick".into(),
             // WaveType::Snare => "Snare".into(),
             // WaveType::Ride => "Ride".into(),
-            // WaveType::Mute => "Mute".into(),
             // WaveType::Xylo => "Xylo".into(),
         }
     }
