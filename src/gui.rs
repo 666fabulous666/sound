@@ -1,4 +1,4 @@
-use eframe::{egui, App, CreationContext, NativeOptions};
+use eframe::{egui, glow::READ_PIXELS, App, CreationContext, NativeOptions};
 // use serde_json as json;
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
@@ -297,158 +297,145 @@ impl App for GuiApp {
                         }
 
                         ui.separator();
-                        let mut attack_decay = seq.attack_decay;
-                        if ui
-                            .add(
+                        {
+                            let mut attack_decay = seq.attack_decay;
+                            let attack = ui.add(
                                 egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
                                     .text("attack")
                                     .logarithmic(true),
-                            )
-                            .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
-                                        .text("decay")
-                                        .logarithmic(true),
-                                )
-                                .changed()
-                        {
-                            edited_seq
-                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .attack_decay = attack_decay;
-                        };
-
+                            );
+                            let decay = ui.add(
+                                egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
+                                    .text("decay")
+                                    .logarithmic(true),
+                            );
+                            if ready_to_commit(&attack) || ready_to_commit(&decay) {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .attack_decay = attack_decay;
+                            };
+                        }
                         ui.separator();
-                        let mut attack_freq_modulation = seq.attack_freq_modulation;
-                        if ui
-                            .add(
+                        {
+                            let mut attack_freq_modulation = seq.attack_freq_modulation;
+                            let mag = ui.add(
                                 egui::Slider::new(&mut attack_freq_modulation.0, -0.01..=0.01)
                                     .text("attack freq mod mag"),
-                            )
-                            .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut attack_freq_modulation.1, 1.0..=100.0)
-                                        .text("attack freq mod speed")
-                                        .logarithmic(true),
-                                )
-                                .changed()
-                        {
-                            edited_seq
-                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .attack_freq_modulation = attack_freq_modulation;
-                        };
-
+                            );
+                            let speed = ui.add(
+                                egui::Slider::new(&mut attack_freq_modulation.1, 1.0..=100.0)
+                                    .text("attack freq mod speed")
+                                    .logarithmic(true),
+                            );
+                            if ready_to_commit(&mag) || ready_to_commit(&speed) {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .attack_freq_modulation = attack_freq_modulation;
+                            };
+                        }
                         ui.separator();
-                        let mut vibrato = seq.vibrato;
-                        let mut vibrato_mag_display = vibrato.0 * 1e6;
-                        if ui
-                            .add(
+                        {
+                            let mut vibrato = seq.vibrato;
+                            let mut vibrato_mag_display = vibrato.0 * 1e6;
+                            let mag = ui.add(
                                 egui::Slider::new(&mut vibrato_mag_display, 0.0..=500.0)
                                     .text("vibrato mag"),
-                            )
-                            .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
-                                        .text("vibrato fq")
-                                        .logarithmic(true),
-                                )
-                                .changed()
-                        {
-                            edited_seq
-                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
-                        };
+                            );
 
+                            let fq = ui.add(
+                                egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
+                                    .text("vibrato fq")
+                                    .logarithmic(true),
+                            );
+                            if ready_to_commit(&mag) || ready_to_commit(&fq) {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
+                            };
+                        }
                         ui.separator();
-                        let mut chorus = seq.chorus;
-                        if ui
-                            .add(
+                        {
+                            let mut chorus = seq.chorus;
+                            let n = ui.add(
                                 egui::Slider::new(&mut chorus.number_of_heads, 1..=10)
                                     .text("chorus n"),
-                            )
-                            .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut chorus.delta, 1e-4..=1e-2)
-                                        .text("chorus delta")
-                                        .logarithmic(true),
-                                )
-                                .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("symmetric"),
-                                )
-                                .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut chorus.asym, 0.0..=1.0)
-                                        .text("asymmetric"),
-                                )
-                                .changed()
-                            || ui
-                                .add(
-                                    egui::Slider::new(&mut chorus.time_dependency, -100.0..=100.0)
-                                        .text("time_dependency"),
-                                )
-                                .changed()
-                        {
-                            edited_seq
-                                .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .chorus = chorus;
-                        };
-
+                            );
+                            let delta = ui.add(
+                                egui::Slider::new(&mut chorus.delta, 1e-4..=1e-2)
+                                    .text("chorus delta")
+                                    .logarithmic(true),
+                            );
+                            let symmetric = ui.add(
+                                egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("symmetric"),
+                            );
+                            let asymmetric = ui.add(
+                                egui::Slider::new(&mut chorus.asym, 0.0..=1.0).text("asymmetric"),
+                            );
+                            let time_dep = ui.add(
+                                egui::Slider::new(&mut chorus.time_dependency, -50.0..=50.0)
+                                    .text("time_dependency"),
+                            );
+                            if [n, delta, symmetric, asymmetric, time_dep]
+                                .iter()
+                                .any(|x| ready_to_commit(x))
+                            {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .chorus = chorus;
+                            };
+                        }
                         ui.separator();
-                        // step
-                        ui.horizontal(|ui| {
-                            let mut tmp_step = seq.step.clone();
-                            ui.label("step:");
-                            if ui
-                                .add(egui::DragValue::new(&mut tmp_step.0).range(1..=128))
-                                .changed()
-                            {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .step
-                                    .0 = tmp_step.0
-                            };
-                            ui.label("/");
-                            if ui
-                                .add(egui::DragValue::new(&mut tmp_step.1).range(1..=128))
-                                .changed()
-                            {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .step
-                                    .1 = tmp_step.1
-                            };
-                        });
+                        {
+                            ui.horizontal(|ui| {
+                                let mut tmp_step = seq.step.clone();
+                                ui.label("step:");
+                                if ui
+                                    .add(egui::DragValue::new(&mut tmp_step.0).range(1..=128))
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .step
+                                        .0 = tmp_step.0
+                                };
+                                ui.label("/");
+                                if ui
+                                    .add(egui::DragValue::new(&mut tmp_step.1).range(1..=128))
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .step
+                                        .1 = tmp_step.1
+                                };
+                            });
+                        }
 
-                        // skips
-                        ui.horizontal(|ui| {
-                            let mut tmp_skips = seq.skips.clone();
-                            ui.label("skips:");
-                            if ui
-                                .add(egui::DragValue::new(&mut tmp_skips.0).range(0..=512))
-                                .changed()
-                            {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .skips
-                                    .0 = tmp_skips.0
-                            };
-                            ui.label(",");
-                            if ui
-                                .add(egui::DragValue::new(&mut tmp_skips.1).range(0..=512))
-                                .changed()
-                            {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .skips
-                                    .1 = tmp_skips.1
-                            };
-                        });
+                        {
+                            ui.horizontal(|ui| {
+                                let mut tmp_skips = seq.skips.clone();
+                                ui.label("skips:");
+                                if ui
+                                    .add(egui::DragValue::new(&mut tmp_skips.0).range(0..=512))
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .skips
+                                        .0 = tmp_skips.0
+                                };
+                                ui.label(",");
+                                if ui
+                                    .add(egui::DragValue::new(&mut tmp_skips.1).range(0..=512))
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .skips
+                                        .1 = tmp_skips.1
+                                };
+                            });
+                        }
 
                         {
                             let mut changed = false;
@@ -703,4 +690,8 @@ fn hash32(s: &str) -> u32 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut h);
     h.finish() as u32
+}
+
+fn ready_to_commit(r: &egui::Response) -> bool {
+    r.changed() && !r.dragged()
 }
