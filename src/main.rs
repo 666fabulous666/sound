@@ -65,11 +65,12 @@ fn generate_wave(
     let phase = 2.0 * PI * freq * time_bent;
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
+            let delta = chorus.delta * (chorus.time_dependency * time).exp2();
             let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
-            (sym_pow_k + asym_pow_k) * (phase * (1.0 + two_pow_k * chorus.delta)).sin()
-                + (sym_pow_k - asym_pow_k) * (phase * (1.0 - two_pow_k * chorus.delta)).sin()
+            (sym_pow_k + asym_pow_k) * (phase * (1.0 + two_pow_k * delta)).sin()
+                + (sym_pow_k - asym_pow_k) * (phase * (1.0 - two_pow_k * delta)).sin()
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();

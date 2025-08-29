@@ -46,15 +46,23 @@ pub struct ChorusParams {
     pub delta: f64,
     pub sym: f64,
     pub asym: f64,
+    pub time_dependency: f64,
 }
 
 impl ChorusParams {
-    pub fn new(number_of_heads: usize, delta: f64, sym: f64, asym: f64) -> Self {
+    pub fn new(
+        number_of_heads: usize,
+        delta: f64,
+        sym: f64,
+        asym: f64,
+        time_dependency: f64,
+    ) -> Self {
         Self {
             number_of_heads,
             delta,
             sym,
             asym,
+            time_dependency,
         }
     }
 }
@@ -96,7 +104,7 @@ impl Sequence {
             not_generate_until: None,
             attack_freq_modulation: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: ChorusParams::new(1, 1e-3, 0.5, 0.0),
+            chorus: ChorusParams::new(1, 1e-3, 0.5, 0.0, 0.0),
         }
     }
     pub fn draw(

@@ -296,6 +296,7 @@ impl App for GuiApp {
                                 .t_max = t_max;
                         }
 
+                        ui.separator();
                         let mut attack_decay = seq.attack_decay;
                         if ui
                             .add(
@@ -317,6 +318,7 @@ impl App for GuiApp {
                                 .attack_decay = attack_decay;
                         };
 
+                        ui.separator();
                         let mut attack_freq_modulation = seq.attack_freq_modulation;
                         if ui
                             .add(
@@ -327,7 +329,7 @@ impl App for GuiApp {
                             || ui
                                 .add(
                                     egui::Slider::new(&mut attack_freq_modulation.1, 1.0..=100.0)
-                                        .text("attack freq mod time")
+                                        .text("attack freq mod speed")
                                         .logarithmic(true),
                                 )
                                 .changed()
@@ -337,6 +339,7 @@ impl App for GuiApp {
                                 .attack_freq_modulation = attack_freq_modulation;
                         };
 
+                        ui.separator();
                         let mut vibrato = seq.vibrato;
                         let mut vibrato_mag_display = vibrato.0 * 1e6;
                         if ui
@@ -358,6 +361,7 @@ impl App for GuiApp {
                                 .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                         };
 
+                        ui.separator();
                         let mut chorus = seq.chorus;
                         if ui
                             .add(
@@ -374,16 +378,19 @@ impl App for GuiApp {
                                 .changed()
                             || ui
                                 .add(
-                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0)
-                                        .text("symmetric")
-                                        .logarithmic(true),
+                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("symmetric"),
                                 )
                                 .changed()
                             || ui
                                 .add(
                                     egui::Slider::new(&mut chorus.asym, 0.0..=1.0)
-                                        .text("asymmetric")
-                                        .logarithmic(true),
+                                        .text("asymmetric"),
+                                )
+                                .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut chorus.time_dependency, -100.0..=100.0)
+                                        .text("time_dependency"),
                                 )
                                 .changed()
                         {
@@ -392,6 +399,7 @@ impl App for GuiApp {
                                 .chorus = chorus;
                         };
 
+                        ui.separator();
                         // step
                         ui.horizontal(|ui| {
                             let mut tmp_step = seq.step.clone();
