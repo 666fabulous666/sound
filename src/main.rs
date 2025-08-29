@@ -62,6 +62,33 @@ fn generate_wave(
         vibrato.0,
         vibrato.1,
     );
+    let f = |x: f64| match wave_type {
+        WaveType::Sine => x.sin(),
+        WaveType::Square => {
+            if x % (2.0 * PI) < PI {
+                0.25
+            } else {
+                -0.25
+            }
+        }
+        WaveType::Triangle => {
+            let t = x / (2.0 * PI);
+            2.0 * (t - (t + 0.75).floor() + 0.25).abs() - 1.0
+        }
+        WaveType::Sawtooth => {
+            let t = x / (2.0 * PI);
+            t - (0.5 + t).floor()
+        } // WaveType::DistOrg => todo!(),
+          // WaveType::Custom2 => todo!(),
+          // WaveType::Droplet => todo!(),
+          // WaveType::DropletOct => todo!(),
+          // WaveType::HiHat => todo!(),
+          // WaveType::Kick => todo!(),
+          // WaveType::Snare => todo!(),
+          // WaveType::Ride => todo!(),
+          // WaveType::Mute => todo!(),
+          // WaveType::Xylo => todo!(),
+    };
     let phase = 2.0 * PI * freq * time_bent;
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
@@ -69,8 +96,8 @@ fn generate_wave(
             let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
-            (sym_pow_k + asym_pow_k) * (phase * (1.0 + two_pow_k * delta)).sin()
-                + (sym_pow_k - asym_pow_k) * (phase * (1.0 - two_pow_k * delta)).sin()
+            (sym_pow_k + asym_pow_k) * f(phase * (1.0 + two_pow_k * delta))
+                + (sym_pow_k - asym_pow_k) * f(phase * (1.0 - two_pow_k * delta))
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();

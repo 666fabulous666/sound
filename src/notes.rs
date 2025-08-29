@@ -97,7 +97,7 @@ impl Sequence {
             skips: (5, 10),
             beat_offset: default_beat_offset(),
             f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
-            w: WaveType::Xylo,
+            w: WaveType::Sine,
             volume: default_volume(),
             attack_decay: default_attack_decay(),
             token,

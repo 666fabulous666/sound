@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-pub mod basics;
+// pub mod basics;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum WaveType {
@@ -7,16 +7,16 @@ pub enum WaveType {
     Square,
     Triangle,
     Sawtooth,
-    DistOrg,
-    Custom2,
-    Droplet,
-    DropletOct,
-    HiHat,
-    Kick,
-    Snare,
-    Ride,
-    Mute,
-    Xylo,
+    // DistOrg,
+    // Custom2,
+    // Droplet,
+    // DropletOct,
+    // HiHat,
+    // Kick,
+    // Snare,
+    // Ride,
+    // Mute,
+    // Xylo,
 }
 
 impl ToString for &WaveType {
@@ -26,16 +26,16 @@ impl ToString for &WaveType {
             WaveType::Square => "Square".into(),
             WaveType::Triangle => "Triangle".into(),
             WaveType::Sawtooth => "Sawtooth".into(),
-            WaveType::DistOrg => "DistOrg".into(),
-            WaveType::Custom2 => "Custom2".into(),
-            WaveType::Droplet => "Droplet".into(),
-            WaveType::DropletOct => "DropletOct".into(),
-            WaveType::HiHat => "HiHat".into(),
-            WaveType::Kick => "Kick".into(),
-            WaveType::Snare => "Snare".into(),
-            WaveType::Ride => "Ride".into(),
-            WaveType::Mute => "Mute".into(),
-            WaveType::Xylo => "Xylo".into(),
+            // WaveType::DistOrg => "DistOrg".into(),
+            // WaveType::Custom2 => "Custom2".into(),
+            // WaveType::Droplet => "Droplet".into(),
+            // WaveType::DropletOct => "DropletOct".into(),
+            // WaveType::HiHat => "HiHat".into(),
+            // WaveType::Kick => "Kick".into(),
+            // WaveType::Snare => "Snare".into(),
+            // WaveType::Ride => "Ride".into(),
+            // WaveType::Mute => "Mute".into(),
+            // WaveType::Xylo => "Xylo".into(),
         }
     }
 }

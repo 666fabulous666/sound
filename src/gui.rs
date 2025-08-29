@@ -1,4 +1,4 @@
-use eframe::{egui, glow::READ_PIXELS, App, CreationContext, NativeOptions};
+use eframe::{egui, App, CreationContext, NativeOptions};
 // use serde_json as json;
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
@@ -14,21 +14,21 @@ use std::fs;
 use std::sync::atomic::Ordering;
 
 // list of all wave variants for the ComboBox
-const ALL_WAVES: [WaveType; 14] = [
+const ALL_WAVES: [WaveType; 4] = [
     WaveType::Sine,
     WaveType::Square,
     WaveType::Triangle,
     WaveType::Sawtooth,
-    WaveType::DistOrg,
-    WaveType::Custom2,
-    WaveType::Droplet,
-    WaveType::DropletOct,
-    WaveType::HiHat,
-    WaveType::Kick,
-    WaveType::Snare,
-    WaveType::Ride,
-    WaveType::Mute,
-    WaveType::Xylo,
+    // WaveType::DistOrg,
+    // WaveType::Custom2,
+    // WaveType::Droplet,
+    // WaveType::DropletOct,
+    // WaveType::HiHat,
+    // WaveType::Kick,
+    // WaveType::Snare,
+    // WaveType::Ride,
+    // WaveType::Mute,
+    // WaveType::Xylo,
 ];
 
 // ------------------------------------------------------------
