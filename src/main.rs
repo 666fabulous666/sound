@@ -14,7 +14,7 @@ mod notes;
 mod scheduler;
 mod waves;
 
-use waves::{basics::*, WaveType};
+use waves::WaveType;
 mod reverb;
 use reverb::Reverb;
 
@@ -65,9 +65,11 @@ fn generate_wave(
     let phase = 2.0 * PI * freq * time_bent;
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
-            (chorus.gamma).powi(k as i32)
-                * ((phase * (1.0 + 2.0f64.powi(k as i32) * chorus.delta)).sin()
-                    + (phase * (1.0 - 2.0f64.powi(k as i32) * chorus.delta)).sin())
+            let two_pow_k = 2f64.powi(k as i32);
+            let sym_pow_k = chorus.sym.powi(k as i32);
+            let asym_pow_k = chorus.asym.powi(k as i32);
+            (sym_pow_k + asym_pow_k) * (phase * (1.0 + two_pow_k * chorus.delta)).sin()
+                + (sym_pow_k - asym_pow_k) * (phase * (1.0 - two_pow_k * chorus.delta)).sin()
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();

@@ -374,8 +374,15 @@ impl App for GuiApp {
                                 .changed()
                             || ui
                                 .add(
-                                    egui::Slider::new(&mut chorus.gamma, 0.0..=1.0)
-                                        .text("chorus decay")
+                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0)
+                                        .text("symmetric")
+                                        .logarithmic(true),
+                                )
+                                .changed()
+                            || ui
+                                .add(
+                                    egui::Slider::new(&mut chorus.asym, 0.0..=1.0)
+                                        .text("asymmetric")
                                         .logarithmic(true),
                                 )
                                 .changed()
