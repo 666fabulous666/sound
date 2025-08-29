@@ -24,6 +24,7 @@ pub struct Sequence {
     pub attack_freq_modulation: (f64, f64),
     pub vibrato: (f64, f64),
     pub chorus: ChorusParams,
+    pub pow_fact: f64,
     pub token: usize,
     pub not_generate_until: Option<f64>,
 }
@@ -78,6 +79,7 @@ pub struct Note {
     pub attack_freq_modulation: (f64, f64),
     pub vibrato: (f64, f64),
     pub chorus: ChorusParams,
+    pub pow_fact: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -105,6 +107,7 @@ impl Sequence {
             attack_freq_modulation: (0.0, 32.0),
             vibrato: (0.0, 32.0),
             chorus: ChorusParams::new(1, 1e-3, 0.5, 0.0, 0.0),
+            pow_fact: 1.0,
         }
     }
     pub fn draw(
@@ -140,6 +143,7 @@ impl Sequence {
                 attack_freq_modulation: self.attack_freq_modulation,
                 vibrato: self.vibrato,
                 chorus: self.chorus.clone(),
+                pow_fact: self.pow_fact,
             })
             .map(|n| n.draw(notes, rng))
             .collect();

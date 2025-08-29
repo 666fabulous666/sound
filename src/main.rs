@@ -54,6 +54,7 @@ fn generate_wave(
     attack_freq_modulation: (f64, f64),
     vibrato: (f64, f64),
     chorus: &ChorusParams,
+    pow_fact: f64,
 ) -> f64 {
     let time_bent = time_bender(
         time,
@@ -101,6 +102,7 @@ fn generate_wave(
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();
+    let tmp = tmp.signum() * tmp.abs().min(1.0).powf(pow_fact);
     envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
     // * match wave_type {
     //     WaveType::Sine => sine_wave(freq, time_bent),
@@ -184,6 +186,7 @@ fn main() {
                                             note.attack_freq_modulation,
                                             note.vibrato,
                                             &note.chorus,
+                                            note.pow_fact,
                                         );
                                     true
                                 } else if elapsed > note.t + note.d + 1.0 {

@@ -389,6 +389,21 @@ impl App for GuiApp {
                         }
                         ui.separator();
                         {
+                            let mut pow_fact = seq.pow_fact;
+                            if ready_to_commit(
+                                &ui.add(
+                                    egui::Slider::new(&mut pow_fact, 0.01..=100.0)
+                                        .text("pow factor")
+                                        .logarithmic(true),
+                                ),
+                            ) {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .pow_fact = pow_fact;
+                            };
+                        }
+                        ui.separator();
+                        {
                             ui.horizontal(|ui| {
                                 let mut tmp_step = seq.step.clone();
                                 ui.label("step:");
