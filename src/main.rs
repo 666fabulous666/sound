@@ -1,4 +1,5 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use notes::ChorusParams;
 use scheduler::Scheduler;
 use std::{
     f64::consts::PI,
@@ -52,7 +53,7 @@ fn generate_wave(
     attack_decay: (f64, f64),
     attack_freq_modulation: (f64, f64),
     vibrato: (f64, f64),
-    chorus: (usize, f64, f64),
+    chorus: &ChorusParams,
 ) -> f64 {
     let time_bent = time_bender(
         time,
@@ -62,11 +63,11 @@ fn generate_wave(
         vibrato.1,
     );
     let phase = 2.0 * PI * freq * time_bent;
-    let tmp = (0..chorus.0)
+    let tmp = (0..chorus.number_of_heads)
         .map(|k| {
-            (chorus.2).powi(k as i32)
-                * ((phase * (1.0 + 2.0f64.powi(k as i32) * chorus.1)).sin()
-                    + (phase * (1.0 - 2.0f64.powi(k as i32) * chorus.1)).sin())
+            (chorus.gamma).powi(k as i32)
+                * ((phase * (1.0 + 2.0f64.powi(k as i32) * chorus.delta)).sin()
+                    + (phase * (1.0 - 2.0f64.powi(k as i32) * chorus.delta)).sin())
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();
@@ -152,7 +153,7 @@ fn main() {
                                             note.attack_decay,
                                             note.attack_freq_modulation,
                                             note.vibrato,
-                                            note.chorus,
+                                            &note.chorus,
                                         );
                                     true
                                 } else if elapsed > note.t + note.d + 1.0 {

@@ -23,7 +23,7 @@ pub struct Sequence {
     pub attack_decay: (f64, f64),
     pub attack_freq_modulation: (f64, f64),
     pub vibrato: (f64, f64),
-    pub chorus: (usize, f64, f64),
+    pub chorus: ChorusParams,
     pub token: usize,
     pub not_generate_until: Option<f64>,
 }
@@ -40,6 +40,23 @@ fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChorusParams {
+    pub number_of_heads: usize,
+    pub delta: f64,
+    pub gamma: f64,
+}
+
+impl ChorusParams {
+    pub fn new(number_of_heads: usize, delta: f64, gamma: f64) -> Self {
+        Self {
+            number_of_heads,
+            delta,
+            gamma,
+        }
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub struct Note {
     pub t: f64,
@@ -50,7 +67,7 @@ pub struct Note {
     pub attack_decay: (f64, f64),
     pub attack_freq_modulation: (f64, f64),
     pub vibrato: (f64, f64),
-    pub chorus: (usize, f64, f64),
+    pub chorus: ChorusParams,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -77,7 +94,7 @@ impl Sequence {
             not_generate_until: None,
             attack_freq_modulation: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: (1, 1e-3, 0.5),
+            chorus: ChorusParams::new(1, 1e-3, 0.5),
         }
     }
     pub fn draw(
@@ -112,7 +129,7 @@ impl Sequence {
                 attack_decay: self.attack_decay,
                 attack_freq_modulation: self.attack_freq_modulation,
                 vibrato: self.vibrato,
-                chorus: self.chorus,
+                chorus: self.chorus.clone(),
             })
             .map(|n| n.draw(notes, rng))
             .collect();
@@ -141,6 +158,7 @@ impl Note {
                 let degree = (0..*n).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap()) % 12;
                 Self {
                     f: Interval::Tempered(degree, *octave),
+                    chorus: self.chorus.clone(),
                     ..(*self)
                 }
             }

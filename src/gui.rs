@@ -320,7 +320,7 @@ impl App for GuiApp {
                         let mut attack_freq_modulation = seq.attack_freq_modulation;
                         if ui
                             .add(
-                                egui::Slider::new(&mut attack_freq_modulation.0, -0.1..=0.1)
+                                egui::Slider::new(&mut attack_freq_modulation.0, -0.01..=0.01)
                                     .text("attack freq mod mag"),
                             )
                             .changed()
@@ -360,18 +360,21 @@ impl App for GuiApp {
 
                         let mut chorus = seq.chorus;
                         if ui
-                            .add(egui::Slider::new(&mut chorus.0, 1..=10).text("chorus n"))
+                            .add(
+                                egui::Slider::new(&mut chorus.number_of_heads, 1..=10)
+                                    .text("chorus n"),
+                            )
                             .changed()
                             || ui
                                 .add(
-                                    egui::Slider::new(&mut chorus.1, 1e-4..=1e-2)
+                                    egui::Slider::new(&mut chorus.delta, 1e-4..=1e-2)
                                         .text("chorus delta")
                                         .logarithmic(true),
                                 )
                                 .changed()
                             || ui
                                 .add(
-                                    egui::Slider::new(&mut chorus.2, 0.0..=1.0)
+                                    egui::Slider::new(&mut chorus.gamma, 0.0..=1.0)
                                         .text("chorus decay")
                                         .logarithmic(true),
                                 )
