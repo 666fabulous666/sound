@@ -1,3 +1,4 @@
+use crate::waves::basics::{hi_hat, kick, snare};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use notes::ChorusParams;
 use scheduler::Scheduler;
@@ -23,8 +24,8 @@ use reverb::Reverb;
 // const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
 const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
 const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
-// const LEFT_DELAYS: [usize; 1] = [1];
-// const RIGHT_DELAYS: [usize; 1] = [1];
+// const LEFT_DELAYS: [usize; 5] = [1, 2, 7, 13, 19];
+// const RIGHT_DELAYS: [usize; 5] = [1, 3, 5, 11, 17];
 
 const LOOP_LEN: f64 = 32.0; // seconds
 
@@ -81,28 +82,40 @@ fn generate_wave(
             let t = x / (2.0 * PI);
             0.5 * (t - (0.5 + t).floor())
         } // WaveType::DistOrg => todo!(),
-          // WaveType::Custom2 => todo!(),
-          // WaveType::Droplet => todo!(),
-          // WaveType::DropletOct => todo!(),
-          // WaveType::HiHat => todo!(),
-          // WaveType::Kick => todo!(),
-          // WaveType::Snare => todo!(),
-          // WaveType::Ride => todo!(),
-          // WaveType::Xylo => todo!(),
+        // WaveType::Custom2 => todo!(),
+        // WaveType::Droplet => todo!(),
+        // WaveType::DropletOct => todo!(),
+        WaveType::HiHat => hi_hat(freq, time_bent),
+        WaveType::Kick => kick(freq, time_bent),
+        WaveType::Snare => snare(freq, time_bent),
+        // WaveType::Ride => todo!(),
+        // WaveType::Xylo => todo!(),
     };
     let phase = 2.0 * PI * freq * time_bent;
+    let pow_fact = pow_fact * time.tanh();
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
             let delta = chorus.delta * (chorus.time_dependency * time).exp2();
             let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
-            (sym_pow_k + asym_pow_k) * f(phase * (1.0 + two_pow_k * delta))
-                + (sym_pow_k - asym_pow_k) * f(phase * (1.0 - two_pow_k * delta))
+            let tmp1 = f(phase * (1.0 + two_pow_k * delta));
+            let tmp2 = f(phase * (1.0 - two_pow_k * delta));
+            let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(pow_fact);
+            let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(pow_fact);
+            // (sym_pow_k + asym_pow_k) * f(phase * (1.0 + two_pow_k * delta))
+            //     + (sym_pow_k - asym_pow_k) * f(phase * (1.0 - two_pow_k * delta))
+            // (sym_pow_k + asym_pow_k) * tmp1.signum() * tmp1.abs().powf(pow_fact)
+            //     + (sym_pow_k - asym_pow_k) * tmp2.signum() * tmp2.abs().powf(pow_fact)
+
+            let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
+            // tmp.signum() * tmp.abs().min(1.0).powf(pow_fact)
+            tmp
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();
-    let tmp = tmp.signum() * tmp.abs().min(1.0).powf(pow_fact);
+    // let tmp = tmp.signum() * tmp.abs().min(1.0).powf(pow_fact);
+    // let tmp = tmp.signum() * tmp.abs().min(1.0);
     envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
     // * match wave_type {
     //     WaveType::Sine => sine_wave(freq, time_bent),
@@ -171,7 +184,7 @@ fn main() {
                                 } else if elapsed <= note.t + note.d {
                                     let t = elapsed - note.t;
                                     let volume = note.volume // TODO: make this parameters
-                                    / (0.5
+                                    / (1.5
                                         + (0.5 * note.t).fract()
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()

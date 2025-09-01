@@ -14,7 +14,7 @@ use std::fs;
 use std::sync::atomic::Ordering;
 
 // list of all wave variants for the ComboBox
-const ALL_WAVES: [WaveType; 5] = [
+const ALL_WAVES: [WaveType; 8] = [
     WaveType::Mute,
     WaveType::Sine,
     WaveType::Square,
@@ -24,9 +24,9 @@ const ALL_WAVES: [WaveType; 5] = [
     // WaveType::Custom2,
     // WaveType::Droplet,
     // WaveType::DropletOct,
-    // WaveType::HiHat,
-    // WaveType::Kick,
-    // WaveType::Snare,
+    WaveType::HiHat,
+    WaveType::Kick,
+    WaveType::Snare,
     // WaveType::Ride,
     // WaveType::Xylo,
 ];
@@ -440,7 +440,7 @@ impl App for GuiApp {
                                     edited_seq
                                         .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                         .skips
-                                        .0 = tmp_skips.0
+                                        .0 = tmp_skips.0.min(tmp_skips.1)
                                 };
                                 ui.label(",");
                                 if ui
@@ -450,7 +450,7 @@ impl App for GuiApp {
                                     edited_seq
                                         .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                         .skips
-                                        .1 = tmp_skips.1
+                                        .1 = tmp_skips.1.max(tmp_skips.0)
                                 };
                             });
                         }

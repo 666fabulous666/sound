@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-// pub mod basics;
+pub mod basics;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum WaveType {
@@ -12,9 +12,9 @@ pub enum WaveType {
     // Custom2,
     // Droplet,
     // DropletOct,
-    // HiHat,
-    // Kick,
-    // Snare,
+    HiHat,
+    Kick,
+    Snare,
     // Ride,
     // Xylo,
 }
@@ -31,9 +31,9 @@ impl ToString for &WaveType {
             // WaveType::Custom2 => "Custom2".into(),
             // WaveType::Droplet => "Droplet".into(),
             // WaveType::DropletOct => "DropletOct".into(),
-            // WaveType::HiHat => "HiHat".into(),
-            // WaveType::Kick => "Kick".into(),
-            // WaveType::Snare => "Snare".into(),
+            WaveType::HiHat => "HiHat".into(),
+            WaveType::Kick => "Kick".into(),
+            WaveType::Snare => "Snare".into(),
             // WaveType::Ride => "Ride".into(),
             // WaveType::Xylo => "Xylo".into(),
         }
