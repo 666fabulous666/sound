@@ -364,7 +364,7 @@ impl App for GuiApp {
                                     .text("chorus n"),
                             );
                             let delta = ui.add(
-                                egui::Slider::new(&mut chorus.delta, 1e-4..=1e-2)
+                                egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
                                     .text("chorus delta")
                                     .logarithmic(true),
                             );
@@ -390,13 +390,9 @@ impl App for GuiApp {
                         ui.separator();
                         {
                             let mut pow_fact = seq.pow_fact;
-                            if ready_to_commit(
-                                &ui.add(
-                                    egui::Slider::new(&mut pow_fact, 0.01..=100.0)
-                                        .text("pow factor")
-                                        .logarithmic(true),
-                                ),
-                            ) {
+                            if ready_to_commit(&ui.add(
+                                egui::Slider::new(&mut pow_fact, -50.0..=50.0).text("pow factor"), // .logarithmic(true),
+                            )) {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                     .pow_fact = pow_fact;

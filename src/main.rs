@@ -92,7 +92,7 @@ fn generate_wave(
         // WaveType::Xylo => todo!(),
     };
     let phase = 2.0 * PI * freq * time_bent;
-    let pow_fact = pow_fact * time.tanh();
+    let pow_fact = (pow_fact * time).exp();
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
             let delta = chorus.delta * (chorus.time_dependency * time).exp2();

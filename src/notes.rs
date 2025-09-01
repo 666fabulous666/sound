@@ -106,8 +106,8 @@ impl Sequence {
             not_generate_until: None,
             attack_freq_modulation: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: ChorusParams::new(1, 1e-3, 0.5, 0.0, 0.0),
-            pow_fact: 1.0,
+            chorus: ChorusParams::new(1, 1e-2, 0.5, 0.0, 0.0),
+            pow_fact: 0.0,
         }
     }
     pub fn draw(
