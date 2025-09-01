@@ -227,26 +227,22 @@ impl App for GuiApp {
                     ui.label("Left Dealys");
                     let mut delays = self.score_params.delays.0.lock().unwrap();
                     ui.horizontal(|ui| {
-                        for d in delays.iter_mut() {
-                            ui.add(egui::DragValue::new(d));
+                        delays.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked());
+                        if ui.button("add").clicked() {
+                            delays.push(1);
                         }
                     });
-                    if ui.button("add").clicked() {
-                        delays.push(1);
-                    }
                 });
                 ui.separator();
                 ui.vertical(|ui| {
                     ui.label("Left Dealys");
                     let mut delays = self.score_params.delays.1.lock().unwrap();
                     ui.horizontal(|ui| {
-                        for d in delays.iter_mut() {
-                            ui.add(egui::DragValue::new(d));
+                        delays.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked());
+                        if ui.button("add").clicked() {
+                            delays.push(1);
                         }
                     });
-                    if ui.button("add").clicked() {
-                        delays.push(1);
-                    }
                 });
             });
         });
