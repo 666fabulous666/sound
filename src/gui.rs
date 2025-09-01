@@ -33,6 +33,18 @@ const ALL_WAVES: [WaveType; 8] = [
 
 // ------------------------------------------------------------
 
+pub struct ScoreParams {
+    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+}
+
+impl Default for ScoreParams {
+    fn default() -> Self {
+        Self {
+            delays: (Arc::new(Mutex::new(vec![])), Arc::new(Mutex::new(vec![]))),
+        }
+    }
+}
+
 pub struct GuiApp {
     seqs: Arc<Mutex<Vec<Sequence>>>,     // NEW: live shared sequences
     selected: Option<usize>,             // currently picked sequence index
@@ -40,6 +52,7 @@ pub struct GuiApp {
     fall_back_start: std::time::Instant, // for standalone demo
     last_token: AtomicUsize,
     messages: Sender<Message>,
+    score_params: ScoreParams,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -54,6 +67,7 @@ impl GuiApp {
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
         messages: Sender<Message>,
+        delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
     ) -> Self {
         *shared.lock().unwrap() = Vec::new();
 
@@ -65,6 +79,7 @@ impl GuiApp {
             last_token: 0.into(),
 
             messages,
+            score_params: ScoreParams { delays },
         }
     }
 
@@ -205,6 +220,34 @@ impl App for GuiApp {
                 save = ui.button("Save…").clicked();
                 load = ui.button("Load…").clicked();
                 exit = ui.button("Exit").clicked();
+            });
+            ui.separator();
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.label("Left Dealys");
+                    let mut delays = self.score_params.delays.0.lock().unwrap();
+                    ui.horizontal(|ui| {
+                        for d in delays.iter_mut() {
+                            ui.add(egui::DragValue::new(d));
+                        }
+                    });
+                    if ui.button("add").clicked() {
+                        delays.push(1);
+                    }
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label("Left Dealys");
+                    let mut delays = self.score_params.delays.1.lock().unwrap();
+                    ui.horizontal(|ui| {
+                        for d in delays.iter_mut() {
+                            ui.add(egui::DragValue::new(d));
+                        }
+                    });
+                    if ui.button("add").clicked() {
+                        delays.push(1);
+                    }
+                });
             });
         });
 
@@ -692,6 +735,7 @@ pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
     messages: Sender<Message>,
+    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
 ) {
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
@@ -703,6 +747,7 @@ pub fn run_gui(
                 clock.clone(),
                 shared.clone(),
                 messages,
+                delays,
             )))
         }),
     );

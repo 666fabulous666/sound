@@ -22,8 +22,8 @@ use reverb::Reverb;
 // // // // around 1/3 s
 // const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
 // const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
-const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
+// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
+// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
 // const LEFT_DELAYS: [usize; 5] = [1, 2, 7, 13, 19];
 // const RIGHT_DELAYS: [usize; 5] = [1, 3, 5, 11, 17];
 
@@ -156,8 +156,12 @@ fn main() {
     let running = Arc::new(AtomicBool::new(true));
     // let shared_seqs: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
-    let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, &LEFT_DELAYS);
-    let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, &RIGHT_DELAYS);
+    // let left_delays: Vec<usize> = vec![1, 14699, 22037, 7351];
+    // let right_delays: Vec<usize> = vec![1, 14713, 22051, 7349];
+    let (left_delays, right_delays) =
+        (Arc::new(Mutex::new(vec![1])), Arc::new(Mutex::new(vec![1])));
+    let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, left_delays.clone());
+    let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, right_delays.clone());
 
     // Start persistent audio stream
     let stream = {
@@ -240,6 +244,7 @@ fn main() {
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
         sender,
+        (left_delays.clone(), right_delays.clone()),
     );
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish

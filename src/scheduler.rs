@@ -61,7 +61,6 @@ impl Scheduler {
     pub fn sequences(&self) -> Arc<Mutex<Vec<Sequence>>> {
         self.sequences.clone()
     }
-
     pub fn run(mut self, running_sched: Arc<AtomicBool>) -> JoinHandle<()> {
         std::thread::spawn(move || {
             let mut rng = rand::thread_rng();

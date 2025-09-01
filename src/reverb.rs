@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use std::sync::{Arc, Mutex};
 
 struct RingBuff<const N: usize> {
     data: [f64; N],
@@ -25,27 +25,34 @@ impl<const N: usize> RingBuff<N> {
 }
 
 pub struct Reverb<const B: usize> {
-    delays: Vec<(f64, usize)>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
+    delays: Arc<Mutex<Vec<usize>>>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
     buffer: RingBuff<B>,
     dry_factor: f64,
+    wet_factor: f64,
 }
 
 impl<const B: usize> Reverb<B> {
-    pub fn new(dry_factor: f64, wet_factor: f64, delays: &[usize]) -> Self {
-        let a = wet_factor / delays.len() as f64;
+    pub fn new(dry_factor: f64, wet_factor: f64, delays: Arc<Mutex<Vec<usize>>>) -> Self {
+        let delays = delays;
+        // let len = { delays.lock().unwrap().len() };
+        // let a = wet_factor / len as f64;
 
         Self {
-            delays: delays.iter().map(|&d| (a, d)).collect_vec(),
+            delays,
             buffer: RingBuff::default(),
             dry_factor,
+            wet_factor,
+            // a,
         }
     }
 
     pub fn process(&mut self, dry: f64) -> f64 {
         let mut output = self.dry_factor * dry;
 
-        for &(a, d) in &self.delays {
-            output += a * self.buffer.backward(d);
+        let ds = self.delays.lock().unwrap();
+        let a = self.wet_factor / ds.len() as f64;
+        for d in ds.iter() {
+            output += a * self.buffer.backward(*d);
         }
 
         self.buffer.push(output);
