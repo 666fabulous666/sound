@@ -10,10 +10,7 @@ use std::{
 
 use rand::rngs::ThreadRng;
 
-use crate::{
-    notes::{Note, Sequence},
-    LOOP_LEN,
-};
+use crate::notes::{Note, Sequence};
 
 pub enum Message {
     NewScore,
@@ -74,19 +71,18 @@ impl Scheduler {
                             self.notes.lock().unwrap().clear();
                         }
                         Ok(Message::NewSequence(mut sequence)) => {
-                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer);
                             self.sequences.lock().unwrap().push(sequence);
                         }
                         Ok(Message::EditSequence(a, mut sequence)) => {
-                            self.regen_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.regen_seq(&mut sequence, &mut rng, &mut notes_buffer);
                             let len = {
                                 let mut seqs = self.sequences.lock().unwrap();
                                 seqs[a] = sequence;
                                 seqs.len()
                             };
-                            (a + 1..len).for_each(|k| {
-                                self.regen_seq_at(k, &mut rng, &mut notes_buffer, LOOP_LEN)
-                            });
+                            (a + 1..len)
+                                .for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
                         }
                         Ok(Message::DeleteSequence(a)) => {
                             let tk = { self.sequences.lock().unwrap()[a].token.clone() };
@@ -96,17 +92,16 @@ impl Scheduler {
                         Ok(Message::CloneSequence(a, new_token)) => {
                             let mut sequence = { self.sequences.lock().unwrap()[a].clone() };
                             sequence.token = new_token;
-                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer);
                             self.sequences.lock().unwrap().push(sequence);
                         }
                         Ok(Message::SwapSequences(a, b)) => {
                             self.sequences.lock().unwrap().swap(a, b);
-                            self.regen_seq_at(a, &mut rng, &mut notes_buffer, LOOP_LEN);
-                            self.regen_seq_at(b, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.regen_seq_at(a, &mut rng, &mut notes_buffer);
+                            self.regen_seq_at(b, &mut rng, &mut notes_buffer);
                             let len = self.sequences.lock().unwrap().len();
-                            (a.max(b) + 1..len).for_each(|k| {
-                                self.regen_seq_at(k, &mut rng, &mut notes_buffer, LOOP_LEN)
-                            });
+                            (a.max(b) + 1..len)
+                                .for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
                         }
                         Err(TryRecvError::Empty) => break, // no more messages this tick
                         Err(TryRecvError::Disconnected) => {
@@ -126,7 +121,7 @@ impl Scheduler {
                                 .as_ref()
                                 .is_some_and(|until| self.now() > *until)
                         {
-                            self.draw_seq(seq, &mut rng, &mut notes_buffer, LOOP_LEN);
+                            self.draw_seq(seq, &mut rng, &mut notes_buffer);
                         }
                     }
                 }
@@ -153,8 +148,8 @@ impl Scheduler {
         seq: &mut Sequence,
         rng: &mut ThreadRng,
         notes_buffer: &mut Vec<(usize, Vec<Note>)>,
-        loop_len: f64,
     ) {
+        let loop_len = seq.loop_len;
         let seq_start = (self.sched_start / loop_len).floor() * loop_len;
         seq.draw(notes_buffer, rng, seq_start);
         seq.not_generate_until = Some(seq_start + loop_len - 0.1);
@@ -167,19 +162,17 @@ impl Scheduler {
         seq: &mut Sequence,
         rng: &mut ThreadRng,
         notes_buffer: &mut Vec<(usize, Vec<Note>)>,
-        loop_len: f64,
     ) {
         self.remove_seq(seq.token);
-        self.draw_seq(seq, rng, notes_buffer, loop_len);
+        self.draw_seq(seq, rng, notes_buffer);
     }
     fn regen_seq_at(
         &self,
         a: usize,
         rng: &mut ThreadRng,
         notes_buffer: &mut Vec<(usize, Vec<Note>)>,
-        loop_len: f64,
     ) {
         let s = &mut self.sequences.lock().unwrap()[a];
-        self.regen_seq(s, rng, notes_buffer, loop_len);
+        self.regen_seq(s, rng, notes_buffer);
     }
 }

@@ -15,8 +15,8 @@ pub struct Sequence {
     pub skips: (usize, usize),
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize, // WARNING: relative to step
-    pub f: Interval,
-    pub w: WaveType,
+    pub interval: Interval,
+    pub wave_type: WaveType,
     #[serde(default = "default_volume")]
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
@@ -27,6 +27,7 @@ pub struct Sequence {
     pub pow_fact: f64,
     pub token: usize,
     pub not_generate_until: Option<f64>,
+    pub loop_len: f64,
 }
 
 fn default_beat_offset() -> usize {
@@ -98,8 +99,8 @@ impl Sequence {
             step: (1, 6),
             skips: (5, 10),
             beat_offset: default_beat_offset(),
-            f: Interval::RDTempered(2, vec![-7, 0, 7], 0),
-            w: WaveType::Sine,
+            interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
+            wave_type: WaveType::Sine,
             volume: default_volume(),
             attack_decay: default_attack_decay(),
             token,
@@ -108,6 +109,7 @@ impl Sequence {
             vibrato: (0.0, 32.0),
             chorus: ChorusParams::new(1, 1e-2, 0.5, 0.0, 0.0),
             pow_fact: 0.0,
+            loop_len: LOOP_LEN,
         }
     }
     pub fn draw(
@@ -136,8 +138,8 @@ impl Sequence {
             .map(|(t, d)| Note {
                 t: t + start_time,
                 d: *d,
-                f: self.f.clone(),
-                w: self.w,
+                f: self.interval.clone(),
+                w: self.wave_type,
                 volume: self.volume,
                 attack_decay: self.attack_decay,
                 attack_freq_modulation: self.attack_freq_modulation,

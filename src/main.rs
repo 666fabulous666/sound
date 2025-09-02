@@ -19,15 +19,7 @@ use waves::WaveType;
 mod reverb;
 use reverb::Reverb;
 
-// // // // around 1/3 s
-// const LEFT_DELAYS: [usize; 5] = [1, 14699, 14713, 14717, 14723];
-// const RIGHT_DELAYS: [usize; 5] = [1, 14633, 14651, 14657, 14669];
-// const LEFT_DELAYS: [usize; 4] = [1, 14699, 22037, 7351];
-// const RIGHT_DELAYS: [usize; 4] = [1, 14713, 22051, 7349];
-// const LEFT_DELAYS: [usize; 5] = [1, 2, 7, 13, 19];
-// const RIGHT_DELAYS: [usize; 5] = [1, 3, 5, 11, 17];
-
-const LOOP_LEN: f64 = 32.0; // seconds
+const LOOP_LEN: f64 = 64.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {

@@ -302,7 +302,7 @@ impl App for GuiApp {
                         ui.separator();
                         // ---- WaveType picker ----
                         // let mut w_choice = seq.w;
-                        let mut w_choice = seq.w;
+                        let mut w_choice = seq.wave_type;
 
                         egui::ComboBox::from_id_source("wave_type_combo")
                             .selected_text((&w_choice).to_string())
@@ -311,10 +311,10 @@ impl App for GuiApp {
                                     ui.selectable_value(&mut w_choice, *var, (&var).to_string());
                                 }
                             });
-                        if w_choice != seq.w {
+                        if w_choice != seq.wave_type {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .w = w_choice;
+                                .wave_type = w_choice;
                         }
 
                         ui.separator();
@@ -491,8 +491,23 @@ impl App for GuiApp {
                         }
 
                         {
+                            ui.horizontal(|ui| {
+                                let mut loop_len = seq.loop_len.clone();
+                                ui.label("loop_len:");
+                                if ui
+                                    .add(egui::DragValue::new(&mut loop_len).range(0.0..=512.0))
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .loop_len = loop_len.max(0.0)
+                                };
+                            });
+                        }
+
+                        {
                             let mut changed = false;
-                            let mut f = seq.f.clone();
+                            let mut f = seq.interval.clone();
                             if let Interval::RDTempered(
                                 ref mut nb_rd_steps,
                                 ref mut tones,
@@ -547,7 +562,7 @@ impl App for GuiApp {
                             if changed {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .f = f;
+                                    .interval = f;
                             }
                         }
 
@@ -660,8 +675,8 @@ impl App for GuiApp {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
-                let x0 = Self::t_to_x(rect, (seq.t_min - current_time).rem_euclid(LOOP_LEN));
-                let x1 = Self::t_to_x(rect, (seq.t_max - current_time).rem_euclid(LOOP_LEN));
+                let x0 = Self::t_to_x(rect, (seq.t_min - current_time).rem_euclid(seq.loop_len));
+                let x1 = Self::t_to_x(rect, (seq.t_max - current_time).rem_euclid(seq.loop_len));
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
                 let block_rect_l = egui::Rect::from_min_max(
@@ -670,13 +685,13 @@ impl App for GuiApp {
                 );
                 let block_rect_r = egui::Rect::from_min_max(
                     egui::pos2(x0, y0),
-                    egui::pos2(Self::t_to_x(rect, LOOP_LEN), y1),
+                    egui::pos2(Self::t_to_x(rect, seq.loop_len), y1),
                 );
                 let track_rect = egui::Rect::from_min_max(
                     egui::pos2(Self::t_to_x(rect, 0.0), y0),
-                    egui::pos2(Self::t_to_x(rect, LOOP_LEN), y1),
+                    egui::pos2(Self::t_to_x(rect, seq.loop_len), y1),
                 );
-                let mut col = Self::hash_color(&seq.w);
+                let mut col = Self::hash_color(&seq.wave_type);
                 if self.selected == Some(idx) {
                     col = Self::brighten(col);
                 }
