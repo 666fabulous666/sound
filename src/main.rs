@@ -19,7 +19,7 @@ use waves::WaveType;
 mod reverb;
 use reverb::Reverb;
 
-const LOOP_LEN: f64 = 64.0; // seconds
+const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {

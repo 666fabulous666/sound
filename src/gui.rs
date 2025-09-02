@@ -6,7 +6,6 @@ use crate::{
     notes::{Interval, Sequence},
     scheduler::Message,
     waves::WaveType,
-    LOOP_LEN,
 };
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
@@ -83,8 +82,8 @@ impl GuiApp {
         }
     }
 
-    fn t_to_x(rect: egui::Rect, t: f64) -> f32 {
-        rect.left() + t as f32 / LOOP_LEN as f32 * rect.width()
+    fn t_to_x(rect: egui::Rect, t: f64, loop_len: f64) -> f32 {
+        rect.left() + t as f32 / loop_len as f32 * rect.width()
     }
 
     fn brighten(col: egui::Color32) -> egui::Color32 {
@@ -322,11 +321,9 @@ impl App for GuiApp {
                         // ---- numeric fields ----
                         let mut t_min = seq.t_min;
                         let mut t_max = seq.t_max;
-                        ui.add(egui::Slider::new(&mut t_min, 0.0..=LOOP_LEN).text("t_min"));
-                        ui.add(egui::Slider::new(&mut t_max, 0.0..=LOOP_LEN).text("t_max"));
-                        if t_max < t_min {
-                            t_max = t_min;
-                        }
+                        ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
+                        ui.add(egui::Slider::new(&mut t_max, t_min..=seq.loop_len).text("t_max"));
+                        t_max = t_max.clamp(t_min, seq.loop_len);
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
@@ -655,10 +652,15 @@ impl App for GuiApp {
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
+            let loop_len = seqs
+                .lock()
+                .unwrap()
+                .iter()
+                .fold(0.0f64, |acc, seq| acc.max(seq.loop_len));
 
             // grid
             for s in (0..=16).map(|i| i as f64 * 4.0) {
-                let x = Self::t_to_x(rect, s);
+                let x = Self::t_to_x(rect, s, loop_len);
                 let col = if (s as i32) % 16 == 0 {
                     egui::Color32::from_gray(120)
                 } else {
@@ -675,21 +677,29 @@ impl App for GuiApp {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
-                let x0 = Self::t_to_x(rect, (seq.t_min - current_time).rem_euclid(seq.loop_len));
-                let x1 = Self::t_to_x(rect, (seq.t_max - current_time).rem_euclid(seq.loop_len));
+                let x0 = Self::t_to_x(
+                    rect,
+                    (seq.t_min - current_time).rem_euclid(seq.loop_len),
+                    loop_len,
+                );
+                let x1 = Self::t_to_x(
+                    rect,
+                    (seq.t_max - current_time).rem_euclid(seq.loop_len),
+                    loop_len,
+                );
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
                 let block_rect_l = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, 0.0), y0),
+                    egui::pos2(Self::t_to_x(rect, 0.0, loop_len), y0),
                     egui::pos2(x1, y1),
                 );
                 let block_rect_r = egui::Rect::from_min_max(
                     egui::pos2(x0, y0),
-                    egui::pos2(Self::t_to_x(rect, seq.loop_len), y1),
+                    egui::pos2(Self::t_to_x(rect, seq.loop_len, loop_len), y1),
                 );
                 let track_rect = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, 0.0), y0),
-                    egui::pos2(Self::t_to_x(rect, seq.loop_len), y1),
+                    egui::pos2(Self::t_to_x(rect, 0.0, loop_len), y0),
+                    egui::pos2(Self::t_to_x(rect, seq.loop_len, loop_len), y1),
                 );
                 let mut col = Self::hash_color(&seq.wave_type);
                 if self.selected == Some(idx) {

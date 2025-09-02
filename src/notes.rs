@@ -5,7 +5,7 @@ use std::iter::once;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{waves::WaveType, LOOP_LEN};
+use crate::{waves::WaveType, DEFAULT_LOOP_LEN};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
@@ -95,7 +95,7 @@ impl Sequence {
     pub fn new(token: usize) -> Self {
         Sequence {
             t_min: 0.0,
-            t_max: LOOP_LEN,
+            t_max: DEFAULT_LOOP_LEN,
             step: (1, 6),
             skips: (5, 10),
             beat_offset: default_beat_offset(),
@@ -109,7 +109,7 @@ impl Sequence {
             vibrato: (0.0, 32.0),
             chorus: ChorusParams::new(1, 1e-2, 0.5, 0.0, 0.0),
             pow_fact: 0.0,
-            loop_len: LOOP_LEN,
+            loop_len: DEFAULT_LOOP_LEN,
         }
     }
     pub fn draw(
