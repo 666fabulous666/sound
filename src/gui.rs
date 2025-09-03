@@ -648,9 +648,11 @@ impl App for GuiApp {
                 }
                 if let Some(edited_seq) = edited_seq {
                     if let Some(sel) = self.selected {
-                        self.messages
-                            .send(Message::EditSequence(sel, edited_seq))
-                            .unwrap();
+                        if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
+                            self.messages
+                                .send(Message::EditSequence(sel, edited_seq))
+                                .unwrap();
+                        }
                     }
                 }
             });
