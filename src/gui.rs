@@ -324,15 +324,16 @@ impl App for GuiApp {
                         ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
                         ui.add(egui::Slider::new(&mut t_max, t_min..=seq.loop_len).text("t_max"));
                         t_max = t_max.clamp(t_min, seq.loop_len);
+                        let step_f64 = seq.step.0 as f64 / seq.step.1 as f64;
                         if (t_min - seq.t_min).abs() > f64::EPSILON {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .t_min = t_min;
+                                .t_min = (t_min / step_f64).round() * step_f64;
                         }
                         if (t_max - seq.t_max).abs() > f64::EPSILON {
                             edited_seq
                                 .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                .t_max = t_max;
+                                .t_max = (t_max / step_f64).round() * step_f64;
                         }
 
                         ui.separator();

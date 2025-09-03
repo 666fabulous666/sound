@@ -183,7 +183,7 @@ fn main() {
                             frame[0] = left as f32;
                             frame[1] = right as f32;
                         } else {
-                            frame[0] = (left + right) as f32 * 0.5;
+                            frame[0] = (left + right) as f32;
                         }
 
                         buffer.push(left);
