@@ -28,6 +28,12 @@ pub struct Sequence {
     pub token: usize,
     pub not_generate_until: Option<f64>,
     pub loop_len: f64,
+    #[serde(default = "default_spacial")]
+    pub spacial: f64,
+}
+
+fn default_spacial() -> f64 {
+    0.5
 }
 
 fn default_beat_offset() -> usize {
@@ -81,6 +87,7 @@ pub struct Note {
     pub vibrato: (f64, f64),
     pub chorus: ChorusParams,
     pub pow_fact: f64,
+    pub spacial: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -110,6 +117,7 @@ impl Sequence {
             chorus: ChorusParams::new(1, 1e-2, 0.5, 0.0, 0.0),
             pow_fact: 0.0,
             loop_len: DEFAULT_LOOP_LEN,
+            spacial: 0.5,
         }
     }
     pub fn draw(
@@ -146,6 +154,7 @@ impl Sequence {
                 vibrato: self.vibrato,
                 chorus: self.chorus.clone(),
                 pow_fact: self.pow_fact,
+                spacial: self.spacial,
             })
             .map(|n| n.draw(notes, rng))
             .collect();

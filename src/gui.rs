@@ -590,6 +590,20 @@ impl App for GuiApp {
                                     .volume = tmp_volume;
                             };
                         });
+
+                        // spacial
+                        ui.horizontal(|ui| {
+                            let mut tmp_spacial = seq.spacial.clone();
+                            ui.label("spacial:");
+                            if ui
+                                .add(egui::Slider::new(&mut tmp_spacial, 0.0..=1.0).text("spacial"))
+                                .changed()
+                            {
+                                edited_seq
+                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                    .spacial = tmp_spacial.clamp(0.0, 1.0);
+                            };
+                        });
                     }
                 } else {
                     ui.label("Click a block to edit");

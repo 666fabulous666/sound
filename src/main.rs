@@ -73,15 +73,10 @@ fn generate_wave(
         WaveType::Sawtooth => {
             let t = x / (2.0 * PI);
             0.5 * (t - (0.5 + t).floor())
-        } // WaveType::DistOrg => todo!(),
-        // WaveType::Custom2 => todo!(),
-        // WaveType::Droplet => todo!(),
-        // WaveType::DropletOct => todo!(),
+        }
         WaveType::HiHat => hi_hat(freq, time_bent),
         WaveType::Kick => kick(freq, time_bent),
         WaveType::Snare => snare(freq, time_bent),
-        // WaveType::Ride => todo!(),
-        // WaveType::Xylo => todo!(),
     };
     let phase = 2.0 * PI * freq * time_bent;
     let pow_fact = (pow_fact * time).exp();
@@ -95,36 +90,12 @@ fn generate_wave(
             let tmp2 = f(phase * (1.0 - two_pow_k * delta));
             let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(pow_fact);
             let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(pow_fact);
-            // (sym_pow_k + asym_pow_k) * f(phase * (1.0 + two_pow_k * delta))
-            //     + (sym_pow_k - asym_pow_k) * f(phase * (1.0 - two_pow_k * delta))
-            // (sym_pow_k + asym_pow_k) * tmp1.signum() * tmp1.abs().powf(pow_fact)
-            //     + (sym_pow_k - asym_pow_k) * tmp2.signum() * tmp2.abs().powf(pow_fact)
-
             let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
-            // tmp.signum() * tmp.abs().min(1.0).powf(pow_fact)
             tmp
         })
         .sum::<f64>()
         / (freq / 440.0).sqrt();
-    // let tmp = tmp.signum() * tmp.abs().min(1.0).powf(pow_fact);
-    // let tmp = tmp.signum() * tmp.abs().min(1.0);
     envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
-    // * match wave_type {
-    //     WaveType::Sine => sine_wave(freq, time_bent),
-    //     WaveType::Square => square_wave(freq, time_bent),
-    //     WaveType::Triangle => triangle_wave(freq, time_bent),
-    //     WaveType::Sawtooth => sawtooth_wave(freq, time_bent),
-    //     WaveType::DistOrg => dist_org(freq, time_bent),
-    //     WaveType::Custom2 => custom2(freq, time_bent),
-    //     WaveType::Droplet => droplet_wave(freq, time_bent),
-    //     WaveType::DropletOct => droplet_oct_wave(freq, time_bent),
-    //     WaveType::HiHat => hi_hat(freq, time_bent),
-    //     WaveType::Kick => kick(freq, time_bent),
-    //     WaveType::Snare => snare(freq, time_bent),
-    //     WaveType::Ride => ride(freq, time_bent),
-    //     WaveType::Mute => mute_wave(freq, time_bent),
-    //     WaveType::Xylo => xylophone_wave(freq, time_bent),
-    // }
 }
 
 fn main() {
@@ -143,13 +114,9 @@ fn main() {
     let (scheduler, sender) = Scheduler::new(sample_clock.clone());
     let shared_seqs = scheduler.sequences();
     let note_queue = scheduler.notes();
-    // let note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let running = Arc::new(AtomicBool::new(true));
-    // let shared_seqs: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
-    // let left_delays: Vec<usize> = vec![1, 14699, 22037, 7351];
-    // let right_delays: Vec<usize> = vec![1, 14713, 22051, 7349];
     let (left_delays, right_delays) =
         (Arc::new(Mutex::new(vec![1])), Arc::new(Mutex::new(vec![1])));
     let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, left_delays.clone());
@@ -171,7 +138,8 @@ fn main() {
 
                     for frame in data.chunks_mut(channels as usize) {
                         let elapsed = *clock;
-                        let mut dry = 0.0;
+                        let mut dry_left = 0.0;
+                        let mut dry_right = 0.0;
 
                         for (_, notes_from_seq) in notes.iter_mut() {
                             notes_from_seq.retain(|note| {
@@ -185,7 +153,7 @@ fn main() {
                                         + (1.2 * note.t).fract()
                                         + (2.5 * note.t).fract()
                                         + (3.0 * note.t).fract());
-                                    dry += volume
+                                    let dry = volume
                                         * generate_wave(
                                             &note.w,
                                             freq0 * note.f.compute(),
@@ -197,6 +165,8 @@ fn main() {
                                             &note.chorus,
                                             note.pow_fact,
                                         );
+                                    dry_left += (1.0 - note.spacial) * dry;
+                                    dry_right += note.spacial * dry;
                                     true
                                 } else if elapsed > note.t + note.d + 1.0 {
                                     false
@@ -206,8 +176,8 @@ fn main() {
                             })
                         }
 
-                        let left = reverb_left.process(dry);
-                        let right = reverb_right.process(dry);
+                        let left = reverb_left.process(dry_left);
+                        let right = reverb_right.process(dry_right);
 
                         if channels >= 2 {
                             frame[0] = left as f32;
