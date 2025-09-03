@@ -143,22 +143,22 @@ fn main() {
 
                         for (_, notes_from_seq) in notes.iter_mut() {
                             notes_from_seq.retain(|note| {
-                                if elapsed < note.t {
+                                if elapsed < note.time {
                                     true
-                                } else if elapsed <= note.t + note.d {
-                                    let t = elapsed - note.t;
+                                } else if elapsed <= note.time + note.duration {
+                                    let t = elapsed - note.time;
                                     let volume = note.volume // TODO: make this parameters
                                     / (1.5
-                                        + (0.5 * note.t).fract()
-                                        + (1.2 * note.t).fract()
-                                        + (2.5 * note.t).fract()
-                                        + (3.0 * note.t).fract());
+                                        + (0.5 * note.time).fract()
+                                        + (1.2 * note.time).fract()
+                                        + (2.5 * note.time).fract()
+                                        + (3.0 * note.time).fract());
                                     let dry = volume
                                         * generate_wave(
-                                            &note.w,
-                                            freq0 * note.f.compute(),
+                                            &note.wave_type,
+                                            freq0 * note.interval.compute(),
                                             t,
-                                            note.d,
+                                            note.duration,
                                             note.attack_decay,
                                             note.attack_freq_modulation,
                                             note.vibrato,
@@ -168,7 +168,7 @@ fn main() {
                                     dry_left += (1.0 - note.spacial) * dry;
                                     dry_right += note.spacial * dry;
                                     true
-                                } else if elapsed > note.t + note.d + 1.0 {
+                                } else if elapsed > note.time + note.duration + 1.0 {
                                     false
                                 } else {
                                     true

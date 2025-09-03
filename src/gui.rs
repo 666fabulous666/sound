@@ -349,6 +349,7 @@ impl App for GuiApp {
                                 let attack = ui.add(
                                     egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
                                         .text("attack")
+                                        .show_value(true)
                                         .logarithmic(true),
                                 );
                                 let decay = ui.add(

@@ -77,10 +77,10 @@ impl ChorusParams {
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
-    pub t: f64,
-    pub d: f64,
-    pub f: Interval,
-    pub w: WaveType,
+    pub time: f64,
+    pub duration: f64,
+    pub interval: Interval,
+    pub wave_type: WaveType,
     pub volume: f64,
     pub attack_decay: (f64, f64),
     pub attack_freq_modulation: (f64, f64),
@@ -88,6 +88,8 @@ pub struct Note {
     pub chorus: ChorusParams,
     pub pow_fact: f64,
     pub spacial: f64,
+    // loop_len: f64,
+    // seq_start: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -124,7 +126,7 @@ impl Sequence {
         &self,
         notes: &mut Vec<(usize, Vec<Note>)>,
         rng: &mut rand::prelude::ThreadRng,
-        start_time: f64,
+        seq_start: f64,
     ) {
         let skips = sample(rng, self.skips.1, self.skips.0)
             .into_iter()
@@ -144,10 +146,10 @@ impl Sequence {
         let notes_from_seq: Vec<Note> = ts
             .zip(ds.iter())
             .map(|(t, d)| Note {
-                t: t + start_time,
-                d: *d,
-                f: self.interval.clone(),
-                w: self.wave_type,
+                time: t + seq_start,
+                duration: *d,
+                interval: self.interval.clone(),
+                wave_type: self.wave_type,
                 volume: self.volume,
                 attack_decay: self.attack_decay,
                 attack_freq_modulation: self.attack_freq_modulation,
@@ -155,6 +157,8 @@ impl Sequence {
                 chorus: self.chorus.clone(),
                 pow_fact: self.pow_fact,
                 spacial: self.spacial,
+                // loop_len: self.loop_len,
+                // seq_start,
             })
             .map(|n| n.draw(notes, rng))
             .collect();
@@ -164,14 +168,17 @@ impl Sequence {
 
 impl Note {
     pub fn draw(&self, notes: &[(usize, Vec<Note>)], rng: &mut rand::prelude::ThreadRng) -> Self {
-        match &self.f {
-            Interval::RDTempered(n, base, octave) => {
+        match &self.interval {
+            Interval::RDTempered(degree, base, octave) => {
                 let other_notes = notes
                     .iter()
                     .flat_map(|(_, n)| n)
-                    .filter(|n| ((n.t - self.t).abs() < n.d + self.d + 2.0))
+                    .filter(|n| ((n.time - self.time).abs() < n.duration + self.duration + 2.0))
+                    // .filter(|n| {
+                    //     ((n.t % n.loop_len) - (self.t % self.loop_len)).abs() < n.d + self.d
+                    // })
                     .filter_map(|n| {
-                        if let Interval::Tempered(d, _) = n.f {
+                        if let Interval::Tempered(d, _) = n.interval {
                             Some(d)
                         } else {
                             None
@@ -180,9 +187,9 @@ impl Note {
                     .collect_vec();
 
                 let tmp = other_notes.choose(rng).unwrap_or(&0);
-                let degree = (0..*n).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap()) % 12;
+                let degree = (0..*degree).fold(*tmp, |acc, _| acc + base.choose(rng).unwrap()) % 12;
                 Self {
-                    f: Interval::Tempered(degree, *octave),
+                    interval: Interval::Tempered(degree, *octave),
                     chorus: self.chorus.clone(),
                     ..(*self)
                 }
