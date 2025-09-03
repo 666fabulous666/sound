@@ -168,7 +168,7 @@ fn main() {
                                     dry_left += (1.0 - note.spacial) * dry;
                                     dry_right += note.spacial * dry;
                                     true
-                                } else if elapsed > note.time + note.duration + 1.0 {
+                                } else if elapsed > note.time + note.duration + 2.0 {
                                     false
                                 } else {
                                     true
