@@ -300,7 +300,6 @@ impl App for GuiApp {
 
                         ui.separator();
                         // ---- WaveType picker ----
-                        // let mut w_choice = seq.w;
                         let mut w_choice = seq.wave_type;
 
                         egui::ComboBox::from_id_source("wave_type_combo")
@@ -349,7 +348,7 @@ impl App for GuiApp {
                                     .text("decay")
                                     .logarithmic(true),
                             );
-                            if ready_to_commit(&attack) || ready_to_commit(&decay) {
+                            if attack.changed() || decay.changed() {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                     .attack_decay = attack_decay;
@@ -367,7 +366,7 @@ impl App for GuiApp {
                                     .text("attack freq mod speed")
                                     .logarithmic(true),
                             );
-                            if ready_to_commit(&mag) || ready_to_commit(&speed) {
+                            if mag.changed() || speed.changed() {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                     .attack_freq_modulation = attack_freq_modulation;
@@ -387,7 +386,7 @@ impl App for GuiApp {
                                     .text("vibrato fq")
                                     .logarithmic(true),
                             );
-                            if ready_to_commit(&mag) || ready_to_commit(&fq) {
+                            if mag.changed() || fq.changed() {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                     .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
@@ -417,7 +416,7 @@ impl App for GuiApp {
                             );
                             if [n, delta, symmetric, asymmetric, time_dep]
                                 .iter()
-                                .any(|x| ready_to_commit(x))
+                                .any(|x| x.changed())
                             {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
@@ -427,9 +426,13 @@ impl App for GuiApp {
                         ui.separator();
                         {
                             let mut pow_fact = seq.pow_fact;
-                            if ready_to_commit(&ui.add(
-                                egui::Slider::new(&mut pow_fact, -50.0..=50.0).text("pow factor"), // .logarithmic(true),
-                            )) {
+                            if ui
+                                .add(
+                                    egui::Slider::new(&mut pow_fact, -50.0..=50.0)
+                                        .text("pow factor"), // .logarithmic(true),
+                                )
+                                .changed()
+                            {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                     .pow_fact = pow_fact;
@@ -797,8 +800,4 @@ fn hash32(s: &str) -> u32 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut h);
     h.finish() as u32
-}
-
-fn ready_to_commit(r: &egui::Response) -> bool {
-    r.changed() && !r.dragged()
 }
