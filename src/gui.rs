@@ -503,6 +503,40 @@ impl App for GuiApp {
 
                             {
                                 ui.horizontal(|ui| {
+                                    let mut tmp_tolerance = seq.tolerance.clone();
+                                    ui.label("tolerance:");
+                                    ui.label("<-");
+                                    if ui
+                                        .add(
+                                            egui::DragValue::new(&mut tmp_tolerance.0)
+                                                .range(-4.0..=16.0),
+                                        )
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .tolerance
+                                            .0 = tmp_tolerance.0
+                                    };
+                                    ui.label(",");
+                                    if ui
+                                        .add(
+                                            egui::DragValue::new(&mut tmp_tolerance.1)
+                                                .range(-4.0..=16.0),
+                                        )
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .tolerance
+                                            .1 = tmp_tolerance.1
+                                    };
+                                    ui.label("->");
+                                });
+                            }
+
+                            {
+                                ui.horizontal(|ui| {
                                     let mut loop_len = seq.loop_len.clone();
                                     ui.label("loop_len:");
                                     if ui
