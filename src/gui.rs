@@ -20,15 +20,9 @@ const ALL_WAVES: [WaveType; 8] = [
     WaveType::Square,
     WaveType::Triangle,
     WaveType::Sawtooth,
-    // WaveType::DistOrg,
-    // WaveType::Custom2,
-    // WaveType::Droplet,
-    // WaveType::DropletOct,
     WaveType::HiHat,
     WaveType::Kick,
     WaveType::Snare,
-    // WaveType::Ride,
-    // WaveType::Xylo,
 ];
 
 // ------------------------------------------------------------
@@ -460,7 +454,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .step
-                                            .0 = tmp_step.0
+                                            .0 = tmp_step.0;
                                     };
                                     ui.label("/");
                                     if ui
@@ -470,7 +464,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .step
-                                            .1 = tmp_step.1
+                                            .1 = tmp_step.1;
                                     };
                                 });
                             }
@@ -486,7 +480,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .skips
-                                            .0 = tmp_skips.0.min(tmp_skips.1)
+                                            .0 = tmp_skips.0.min(tmp_skips.1);
                                     };
                                     ui.label(",");
                                     if ui
@@ -496,7 +490,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .skips
-                                            .1 = tmp_skips.1.max(tmp_skips.0)
+                                            .1 = tmp_skips.1.max(tmp_skips.0);
                                     };
                                 });
                             }
@@ -516,7 +510,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .tolerance
-                                            .0 = tmp_tolerance.0
+                                            .0 = tmp_tolerance.0;
                                     };
                                     ui.label(",");
                                     if ui
@@ -529,7 +523,7 @@ impl App for GuiApp {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .tolerance
-                                            .1 = tmp_tolerance.1
+                                            .1 = tmp_tolerance.1;
                                     };
                                     ui.label("->");
                                 });
@@ -539,13 +533,15 @@ impl App for GuiApp {
                                 ui.horizontal(|ui| {
                                     let mut loop_len = seq.loop_len.clone();
                                     ui.label("loop_len:");
-                                    if ui
-                                        .add(egui::DragValue::new(&mut loop_len).range(0.0..=512.0))
-                                        .changed()
-                                    {
-                                        edited_seq
-                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .loop_len = loop_len.max(0.0)
+                                    let slider = ui.add(
+                                        egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
+                                    );
+                                    if slider.changed() {
+                                        loop_len = loop_len.max(0.0);
+                                        let tmp_edited_seq = edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone());
+                                        tmp_edited_seq.loop_len = loop_len.max(0.0);
+                                        tmp_edited_seq.t_max = tmp_edited_seq.t_max.min(loop_len);
                                     };
                                 });
                             }

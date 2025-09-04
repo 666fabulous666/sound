@@ -152,7 +152,7 @@ impl Sequence {
         let ts = (0..)
             .filter(|i| skips.iter().all(|s| (i + 1 - self.beat_offset) % s != 0))
             .map(|i| self.t_min + i as f64 * step_as_time)
-            .take_while(|t| *t <= self.t_max);
+            .take_while(|t| *t <= self.t_max.min(self.loop_len));
         let ds = ts
             .clone()
             .chain(once(self.t_max))
