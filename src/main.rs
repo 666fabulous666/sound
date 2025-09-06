@@ -13,6 +13,7 @@ use std::{
 mod gui;
 mod notes;
 mod scheduler;
+mod time;
 mod waves;
 
 use waves::WaveType;
@@ -98,6 +99,7 @@ fn generate_wave(
     envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let freq0 = 440.0f64;
 
@@ -212,4 +214,8 @@ fn main() {
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
     handle.join().ok();
+}
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    // No-op: the web entry point is in src/lib.rs via #[wasm_bindgen(start)].
 }

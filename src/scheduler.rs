@@ -1,3 +1,4 @@
+use crate::time::*;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -5,7 +6,6 @@ use std::{
         Arc, Mutex,
     },
     thread::JoinHandle,
-    time::Duration,
 };
 
 use rand::rngs::ThreadRng;
@@ -188,5 +188,65 @@ impl Scheduler {
     ) {
         let s = &mut self.sequences.lock().unwrap()[a];
         self.regen_seq(s, rng, notes_buffer);
+    }
+}
+// near other impls
+impl Scheduler {
+    #[cfg(target_arch = "wasm32")]
+    pub fn tick_once(&mut self) {
+        use rand::Rng as _;
+        let mut rng = rand::thread_rng();
+
+        // 1) drain inbound messages (same as in run())
+        let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
+        loop {
+            match self.messages_rx.try_recv() {
+                Ok(Message::NewScore) => {
+                    self.sequences.lock().unwrap().clear();
+                    self.notes.lock().unwrap().clear();
+                }
+                Ok(Message::NewSequence(mut sequence)) => {
+                    self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer);
+                    self.sequences.lock().unwrap().push(sequence);
+                }
+                Ok(Message::EditSequence(a, mut sequence)) => {
+                    self.regen_seq(&mut sequence, &mut rng, &mut notes_buffer);
+                    let len = {
+                        let mut seqs = self.sequences.lock().unwrap();
+                        seqs[a] = sequence;
+                        seqs.len()
+                    };
+                    (a + 1..len).for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
+                }
+                Ok(Message::DeleteSequence(a)) => {
+                    self.sequences.lock().unwrap().remove(a);
+                    let len = self.sequences.lock().unwrap().len();
+                    (a..len).for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
+                }
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => break,
+                _ => todo!(),
+            }
+        }
+
+        // 2) draw/generate as needed (same as in run())
+        {
+            let mut seqs = self.sequences.lock().unwrap();
+            for seq in seqs.iter_mut() {
+                if seq.not_generate_until.is_none()
+                    || seq
+                        .not_generate_until
+                        .as_ref()
+                        .is_some_and(|until| self.now() > *until)
+                {
+                    self.draw_seq(seq, &mut rng, &mut notes_buffer);
+                }
+            }
+        }
+
+        // 3) append new notes
+        self.notes.lock().unwrap().extend(notes_buffer);
+
+        // (no sleeping on the web)
     }
 }

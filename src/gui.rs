@@ -1,6 +1,12 @@
-use eframe::{egui, App, CreationContext, NativeOptions};
-use egui::ScrollArea;
-// use serde_json as json;
+use eframe::{egui, App, CreationContext};
+
+#[cfg(not(target_arch = "wasm32"))]
+use eframe::NativeOptions;
+
+#[cfg(not(target_arch = "wasm32"))]
+use rfd::FileDialog;
+
+use serde::{Deserialize, Serialize};
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::{
@@ -8,8 +14,10 @@ use crate::{
     scheduler::Message,
     waves::WaveType,
 };
-use rfd::FileDialog;
-use serde::{Deserialize, Serialize};
+
+use egui::ScrollArea;
+// use serde_json as json;
+
 use std::fs;
 use std::sync::atomic::Ordering;
 
@@ -40,10 +48,10 @@ impl Default for ScoreParams {
 }
 
 pub struct GuiApp {
-    seqs: Arc<Mutex<Vec<Sequence>>>,     // NEW: live shared sequences
-    selected: Option<usize>,             // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
-    fall_back_start: std::time::Instant, // for standalone demo
+    seqs: Arc<Mutex<Vec<Sequence>>>,       // NEW: live shared sequences
+    selected: Option<usize>,               // currently picked sequence index
+    clock: Option<Arc<Mutex<f64>>>,        // shared play-head seconds from audio
+    fall_back_start: crate::time::Instant, // for standalone demo
     last_token: AtomicUsize,
     messages: Sender<Message>,
     score_params: ScoreParams,
@@ -69,7 +77,7 @@ impl GuiApp {
             seqs: shared,
             selected: None,
             clock,
-            fall_back_start: std::time::Instant::now(),
+            fall_back_start: crate::time::Instant::now(),
             last_token: 0.into(),
 
             messages,
@@ -113,6 +121,12 @@ impl GuiApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn save_state(&self) {
+        // Web TODO: show an egui modal to copy JSON; for now: do nothing or `ui.colored_label(...)`
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn save_state(&self) {
         // Choose where to save
         if let Some(path) = FileDialog::new()
@@ -138,6 +152,7 @@ impl GuiApp {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn load_state(&mut self) {
         // Pick a file to open
         if let Some(path) = FileDialog::new()
@@ -244,8 +259,13 @@ impl App for GuiApp {
         if save {
             self.save_state();
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if load {
             self.load_state();
+        }
+        #[cfg(target_arch = "wasm32")]
+        if load {
+            panic!("impossible to load in non-native mode");
         }
         if exit {
             self.exit(ctx);
@@ -818,12 +838,13 @@ impl App for GuiApp {
             }
         });
 
-        ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        ctx.request_repaint_after(crate::time::Duration::from_millis(16));
     }
 }
 
 // ------------------------------------------------------------
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
@@ -852,4 +873,16 @@ fn hash32(s: &str) -> u32 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut h);
     h.finish() as u32
+}
+
+impl GuiApp {
+    pub fn construct(
+        cc: &CreationContext<'_>,
+        clock: Option<Arc<Mutex<f64>>>,
+        shared: Arc<Mutex<Vec<Sequence>>>,
+        messages: Sender<Message>,
+        delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+    ) -> Self {
+        Self::new(cc, clock, shared, messages, delays)
+    }
 }

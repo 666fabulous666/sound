@@ -1,0 +1,4 @@
+# Minimal Trunk config to build/run an eframe+egui app for the web.
+[build]
+# Optional: set to true to use release optimizations for `trunk serve`
+release = false
