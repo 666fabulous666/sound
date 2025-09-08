@@ -4,10 +4,9 @@ const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
 
 mod app;
 mod engine;
-mod scheduler;
-mod time;
 
 use crate::engine::notes::{ChorusParams, Note};
+use crate::engine::scheduler::{self, Scheduler};
 use crate::engine::waves::generate_wave;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use eframe::egui;
@@ -15,8 +14,6 @@ use std::f64::consts::PI;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use wasm_bindgen::prelude::*;
-
-use scheduler::Scheduler;
 
 #[wasm_bindgen(start)]
 pub async fn start() -> Result<(), JsValue> {

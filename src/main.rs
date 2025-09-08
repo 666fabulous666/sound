@@ -1,8 +1,5 @@
 mod app;
 mod engine;
-mod reverb;
-mod scheduler;
-mod time;
 
 use crate::engine::waves::{
     basics::{hi_hat, kick, snare},
@@ -10,7 +7,6 @@ use crate::engine::waves::{
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use engine::notes::ChorusParams;
-use scheduler::Scheduler;
 use std::{
     f64::consts::PI,
     sync::{
@@ -19,13 +15,14 @@ use std::{
     },
 };
 
-use reverb::Reverb;
-
 const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    use crate::app::run_gui;
+    use crate::{
+        app::run_gui,
+        engine::{reverb::Reverb, scheduler::Scheduler},
+    };
 
     let freq0 = 440.0f64;
 

@@ -1,4 +1,4 @@
-use crate::time::*;
+use crate::engine::time::Duration;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},

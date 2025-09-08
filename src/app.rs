@@ -1,3 +1,4 @@
+use crate::engine::time::{Duration, Instant};
 use eframe::{egui, App, CreationContext};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -10,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::engine::notes::{Interval, Sequence};
-use crate::{engine::waves::WaveType, scheduler::Message};
+use crate::engine::scheduler::Message;
+use crate::engine::waves::WaveType;
 
 use egui::ScrollArea;
 // use serde_json as json;
@@ -45,10 +47,10 @@ impl Default for ScoreParams {
 }
 
 pub struct GuiApp {
-    seqs: Arc<Mutex<Vec<Sequence>>>,       // NEW: live shared sequences
-    selected: Option<usize>,               // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,        // shared play-head seconds from audio
-    fall_back_start: crate::time::Instant, // for standalone demo
+    seqs: Arc<Mutex<Vec<Sequence>>>, // NEW: live shared sequences
+    selected: Option<usize>,         // currently picked sequence index
+    clock: Option<Arc<Mutex<f64>>>,  // shared play-head seconds from audio
+    fall_back_start: Instant,        // for standalone demo
     last_token: AtomicUsize,
     messages: Sender<Message>,
     score_params: ScoreParams,
@@ -74,7 +76,7 @@ impl GuiApp {
             seqs: shared,
             selected: None,
             clock,
-            fall_back_start: crate::time::Instant::now(),
+            fall_back_start: Instant::now(),
             last_token: 0.into(),
 
             messages,
@@ -835,7 +837,7 @@ impl App for GuiApp {
             }
         });
 
-        ctx.request_repaint_after(crate::time::Duration::from_millis(16));
+        ctx.request_repaint_after(Duration::from_millis(16));
     }
 }
 
