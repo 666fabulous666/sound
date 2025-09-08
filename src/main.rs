@@ -1,6 +1,15 @@
-use crate::waves::basics::{hi_hat, kick, snare};
+mod app;
+mod engine;
+mod reverb;
+mod scheduler;
+mod time;
+
+use crate::engine::waves::{
+    basics::{hi_hat, kick, snare},
+    WaveType,
+};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::ChorusParams;
+use engine::notes::ChorusParams;
 use scheduler::Scheduler;
 use std::{
     f64::consts::PI,
@@ -10,20 +19,14 @@ use std::{
     },
 };
 
-mod gui;
-mod notes;
-mod scheduler;
-mod time;
-mod waves;
-
-use waves::WaveType;
-mod reverb;
 use reverb::Reverb;
 
 const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
+    use crate::app::run_gui;
+
     let freq0 = 440.0f64;
 
     let host = cpal::default_host();
@@ -71,6 +74,8 @@ fn main() {
                                 if elapsed < note.time {
                                     true
                                 } else if elapsed <= note.time + note.duration {
+                                    use crate::engine::waves::generate_wave;
+
                                     let t = elapsed - note.time;
                                     let volume = note.volume // TODO: make this parameters
                                     / (1.5
@@ -127,7 +132,7 @@ fn main() {
     let running_sched = running.clone();
     let handle = scheduler.run(running_sched);
 
-    gui::run_gui(
+    run_gui(
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
         sender,

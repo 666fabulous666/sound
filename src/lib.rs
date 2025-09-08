@@ -2,14 +2,13 @@
 
 const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
 
-mod gui;
-mod notes;
+mod app;
+mod engine;
 mod scheduler;
 mod time;
-mod waves;
 
-use crate::notes::ChorusParams;
-use crate::waves::generate_wave;
+use crate::engine::notes::{ChorusParams, Note};
+use crate::engine::waves::generate_wave;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use eframe::egui;
 use std::f64::consts::PI;
@@ -37,11 +36,11 @@ pub async fn start() -> Result<(), JsValue> {
 
     // ==== Web wrapper app: ticks scheduler + holds stream ====
     struct WebWrapper {
-        gui: gui::GuiApp,
+        gui: app::GuiApp,
         #[allow(dead_code)]
         stream: Option<cpal::Stream>,
         scheduler: scheduler::Scheduler, // single-threaded on the web
-        note_queue: Arc<Mutex<Vec<(usize, Vec<notes::Note>)>>>,
+        note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         sample_clock: Arc<Mutex<f64>>,
         audio_started: bool,
     }
@@ -83,7 +82,7 @@ pub async fn start() -> Result<(), JsValue> {
             web_options,
             Box::new(move |cc| {
                 Ok(Box::new(WebWrapper {
-                    gui: gui::GuiApp::construct(
+                    gui: app::GuiApp::construct(
                         cc,
                         Some(sample_clock.clone()),
                         shared_seqs.clone(),
@@ -104,11 +103,10 @@ pub async fn start() -> Result<(), JsValue> {
     Ok(())
 }
 
-use crate::waves::basics::{hi_hat, kick, snare};
-use waves::WaveType;
+use crate::engine::waves::basics::{hi_hat, kick, snare};
 
 fn start_cpal_web(
-    note_queue: Arc<Mutex<Vec<(usize, Vec<notes::Note>)>>>,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     sample_clock: Arc<Mutex<f64>>,
 ) -> cpal::Stream {
     use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};

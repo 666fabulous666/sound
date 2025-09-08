@@ -3,8 +3,8 @@ use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    notes::ChorusParams,
-    waves::basics::{hi_hat, kick, snare},
+    engine::notes::ChorusParams,
+    engine::waves::basics::{hi_hat, kick, snare},
 };
 pub mod basics;
 

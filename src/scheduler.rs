@@ -10,7 +10,7 @@ use std::{
 
 use rand::rngs::ThreadRng;
 
-use crate::notes::{Note, Sequence};
+use crate::engine::notes::{Note, Sequence};
 
 pub enum Message {
     NewScore,

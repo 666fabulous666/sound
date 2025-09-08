@@ -9,11 +9,8 @@ use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
-use crate::{
-    notes::{Interval, Sequence},
-    scheduler::Message,
-    waves::WaveType,
-};
+use crate::engine::notes::{Interval, Sequence};
+use crate::{engine::waves::WaveType, scheduler::Message};
 
 use egui::ScrollArea;
 // use serde_json as json;

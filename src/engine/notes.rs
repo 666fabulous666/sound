@@ -5,7 +5,7 @@ use std::iter::once;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{waves::WaveType, DEFAULT_LOOP_LEN};
+use crate::{engine::waves::WaveType, DEFAULT_LOOP_LEN};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
