@@ -143,28 +143,8 @@ impl Scheduler {
         })
     }
 
-    // fn draw_seq(
-    //     &self,
-    //     seq: &mut Sequence,
-    //     rng: &mut ThreadRng,
-    //     notes_buffer: &mut Vec<(usize, Vec<Note>)>,
-    // ) {
-    //     let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
-    //     seq.draw(notes_buffer, rng, seq_start);
-    //     seq.not_generate_until = Some(seq_start + seq.loop_len - 0.1);
-    // }
     fn draw_seq(&self, seq: &mut Sequence, rng: &mut ThreadRng, out: &mut Vec<(usize, Vec<Note>)>) {
         let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
-
-        // let context: Vec<(usize, Vec<Note>)> = {
-        //     let existing = self.notes.lock().unwrap();
-        //     let mut ctx = existing.clone();
-        //     ctx.extend(out.iter().cloned());
-        //     ctx
-        // };
-
-        // seq.draw_with_context(out, rng, seq_start, &context);
-
         seq.draw(out, rng, seq_start);
         seq.not_generate_until = Some(seq_start + seq.loop_len - 0.1);
     }

@@ -1,96 +1,14 @@
-use crate::waves::basics::{hi_hat, kick, snare};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use std::{
-    f64::consts::PI,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
 };
 use synth::{
-    engine::{notes::ChorusParams, reverb, scheduler::Scheduler, waves},
+    engine::{reverb, scheduler::Scheduler, waves::generate_wave},
     gui,
 };
 
 use reverb::Reverb;
-use waves::WaveType;
-
-fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
-    move |time: f64| {
-        let time_fraction = time / note_duration;
-        0.1 * (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64
-    }
-}
-fn time_bender(
-    time: f64,
-    attack_mag: f64,
-    attack_time: f64,
-    vibrato_mag: f64,
-    vibrato_freq: f64,
-) -> f64 {
-    time + attack_mag * (1.0 + time).powf(-attack_time)
-        + vibrato_mag * (2.0 * PI * time * vibrato_freq).sin()
-}
-
-fn generate_wave(
-    wave_type: &WaveType,
-    freq: f64,
-    time: f64,
-    duration: f64,
-    attack_decay: (f64, f64),
-    attack_freq_modulation: (f64, f64),
-    vibrato: (f64, f64),
-    chorus: &ChorusParams,
-    pow_fact: f64,
-) -> f64 {
-    let time_bent = time_bender(
-        time,
-        attack_freq_modulation.0,
-        attack_freq_modulation.1,
-        vibrato.0,
-        vibrato.1,
-    );
-    let f = |x: f64| match wave_type {
-        WaveType::Mute => 0.0,
-        WaveType::Sine => x.sin(),
-        WaveType::Square => {
-            if x % (2.0 * PI) < PI {
-                0.25
-            } else {
-                -0.25
-            }
-        }
-        WaveType::Triangle => {
-            let t = x / (2.0 * PI);
-            2.0 * (t - (t + 0.75).floor() + 0.25).abs() - 1.0
-        }
-        WaveType::Sawtooth => {
-            let t = x / (2.0 * PI);
-            0.5 * (t - (0.5 + t).floor())
-        }
-        WaveType::HiHat => hi_hat(freq, time_bent),
-        WaveType::Kick => kick(freq, time_bent),
-        WaveType::Snare => snare(freq, time_bent),
-    };
-    let phase = 2.0 * PI * freq * time_bent;
-    let pow_fact = (pow_fact * time).exp();
-    let tmp = (0..chorus.number_of_heads)
-        .map(|k| {
-            let delta = chorus.delta * (chorus.time_dependency * time).exp2();
-            let two_pow_k = 2f64.powi(k as i32);
-            let sym_pow_k = chorus.sym.powi(k as i32);
-            let asym_pow_k = chorus.asym.powi(k as i32);
-            let tmp1 = f(phase * (1.0 + two_pow_k * delta));
-            let tmp2 = f(phase * (1.0 - two_pow_k * delta));
-            let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(pow_fact);
-            let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(pow_fact);
-            let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
-            tmp
-        })
-        .sum::<f64>()
-        / (freq / 440.0).sqrt();
-    envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
-}
 
 fn main() {
     let freq0 = 440.0f64;
