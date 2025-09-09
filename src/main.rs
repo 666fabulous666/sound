@@ -1,10 +1,12 @@
+mod stream;
+use crate::stream::stream;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
 use synth::{
-    engine::{reverb, scheduler::Scheduler, waves::generate_wave},
+    engine::{reverb, scheduler::Scheduler},
     gui,
 };
 
@@ -31,83 +33,22 @@ fn main() {
 
     let (left_delays, right_delays) =
         (Arc::new(Mutex::new(vec![1])), Arc::new(Mutex::new(vec![1])));
-    let mut reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, left_delays.clone());
-    let mut reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, right_delays.clone());
+    let reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, left_delays.clone());
+    let reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, right_delays.clone());
 
     // Start persistent audio stream
-    let stream = {
-        let note_queue = note_queue.clone();
-        let recorded_samples = recorded_samples.clone();
-        let sample_clock = sample_clock.clone();
-
-        device
-            .build_output_stream(
-                &config,
-                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    let mut notes = note_queue.lock().unwrap();
-                    let mut buffer = recorded_samples.lock().unwrap();
-                    let mut clock = sample_clock.lock().unwrap();
-
-                    for frame in data.chunks_mut(channels as usize) {
-                        let elapsed = *clock;
-                        let mut dry_left = 0.0;
-                        let mut dry_right = 0.0;
-
-                        for (_, notes_from_seq) in notes.iter_mut() {
-                            notes_from_seq.retain(|note| {
-                                if elapsed < note.time {
-                                    true
-                                } else if elapsed <= note.time + note.duration {
-                                    let t = elapsed - note.time;
-                                    let volume = note.volume // TODO: make this parameters
-                                    / (1.5
-                                        + (0.5 * note.time).fract()
-                                        + (1.2 * note.time).fract()
-                                        + (2.5 * note.time).fract()
-                                        + (3.0 * note.time).fract());
-                                    let dry = volume
-                                        * generate_wave(
-                                            &note.wave_type,
-                                            freq0 * note.interval.compute(),
-                                            t,
-                                            note.duration,
-                                            note.attack_decay,
-                                            note.attack_freq_modulation,
-                                            note.vibrato,
-                                            &note.chorus,
-                                            note.pow_fact,
-                                        );
-                                    dry_left += (1.0 - note.spacial) * dry;
-                                    dry_right += note.spacial * dry;
-                                    true
-                                } else if elapsed > note.time + note.duration + 12.0 {
-                                    false
-                                } else {
-                                    true
-                                }
-                            })
-                        }
-
-                        let left = reverb_left.process(dry_left);
-                        let right = reverb_right.process(dry_right);
-
-                        if channels >= 2 {
-                            frame[0] = left as f32;
-                            frame[1] = right as f32;
-                        } else {
-                            frame[0] = (left + right) as f32;
-                        }
-
-                        buffer.push(left);
-                        buffer.push(right);
-                        *clock += sample_duration;
-                    }
-                },
-                |err| eprintln!("Stream error: {}", err),
-                None,
-            )
-            .unwrap()
-    };
+    let stream = stream(
+        freq0,
+        device,
+        config,
+        sample_duration,
+        channels,
+        &sample_clock,
+        note_queue,
+        recorded_samples,
+        reverb_left,
+        reverb_right,
+    );
 
     stream.play().unwrap();
 
