@@ -95,8 +95,6 @@ pub struct Note {
     pub pow_fact: f64,
     pub spacial: f64,
     pub tolerance: (f64, f64),
-    // loop_len: f64,
-    // seq_start: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -159,25 +157,6 @@ impl Sequence {
             .tuple_windows()
             .map(|(t1, t2)| t2 - t1)
             .collect::<Vec<_>>();
-        // let notes_from_seq: Vec<Note> = ts
-        //     .zip(ds.iter())
-        //     .map(|(t, d)| Note {
-        //         time: t + seq_start,
-        //         duration: *d,
-        //         interval: self.interval.clone(),
-        //         wave_type: self.wave_type,
-        //         volume: self.volume,
-        //         attack_decay: self.attack_decay,
-        //         attack_freq_modulation: self.attack_freq_modulation,
-        //         vibrato: self.vibrato,
-        //         chorus: self.chorus.clone(),
-        //         pow_fact: self.pow_fact,
-        //         spacial: self.spacial,
-        //         tolerance: self.tolerance,
-        //     })
-        //     .map(|n| n.draw_with_context(context, rng))
-        //     .collect();
-        // out.push((self.token, notes_from_seq));
         ts.zip(ds.iter())
             .map(|(t, d)| Note {
                 time: t + seq_start,

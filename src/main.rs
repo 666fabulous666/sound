@@ -8,13 +8,12 @@ use std::sync::{
 use synth::{
     app,
     engine::{reverb, scheduler::Scheduler},
+    F0, REVERB_BUFFER_LEN,
 };
 
 use reverb::Reverb;
 
 fn main() {
-    let freq0 = 440.0f64;
-
     let host = cpal::default_host();
     let device = host
         .default_output_device()
@@ -33,12 +32,12 @@ fn main() {
 
     let (left_delays, right_delays) =
         (Arc::new(Mutex::new(vec![1])), Arc::new(Mutex::new(vec![1])));
-    let reverb_left: Reverb<44100> = Reverb::new(0.5, 0.5, left_delays.clone());
-    let reverb_right: Reverb<44100> = Reverb::new(0.5, 0.5, right_delays.clone());
+    let reverb_left: Reverb<REVERB_BUFFER_LEN> = Reverb::new(0.5, 0.5, left_delays.clone());
+    let reverb_right: Reverb<REVERB_BUFFER_LEN> = Reverb::new(0.5, 0.5, right_delays.clone());
 
     // Start persistent audio stream
     let stream = stream(
-        freq0,
+        F0,
         device,
         config,
         sample_duration,

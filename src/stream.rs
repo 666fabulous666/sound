@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use synth::{
     engine::{reverb::Reverb, waves::generate_wave},
-    NOTE_LINGER_TIME,
+    NOTE_LINGER_TIME, REVERB_BUFFER_LEN,
 };
 
 pub fn stream(
@@ -15,8 +15,8 @@ pub fn stream(
     sample_clock: &Arc<Mutex<f64>>,
     note_queue: Arc<Mutex<Vec<(usize, Vec<synth::engine::notes::Note>)>>>,
     recorded_samples: Arc<Mutex<Vec<f64>>>,
-    mut reverb_left: Reverb<44100>,
-    mut reverb_right: Reverb<44100>,
+    mut reverb_left: Reverb<REVERB_BUFFER_LEN>,
+    mut reverb_right: Reverb<REVERB_BUFFER_LEN>,
 ) -> cpal::Stream {
     let stream = {
         let note_queue = note_queue.clone();
