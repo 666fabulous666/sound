@@ -6,8 +6,8 @@ use std::sync::{
     Arc, Mutex,
 };
 use synth::{
+    app,
     engine::{reverb, scheduler::Scheduler},
-    gui,
 };
 
 use reverb::Reverb;
@@ -55,7 +55,7 @@ fn main() {
     let running_sched = running.clone();
     let handle = scheduler.run(running_sched);
 
-    gui::run_gui(
+    app::run_gui(
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
         sender,
