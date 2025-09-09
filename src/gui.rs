@@ -4,9 +4,9 @@ use egui::ScrollArea;
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::{
-    notes::{Interval, Sequence},
-    scheduler::Message,
-    waves::WaveType,
+    engine::notes::{Interval, Sequence},
+    engine::scheduler::Message,
+    engine::waves::WaveType,
 };
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};

@@ -1,7 +1,5 @@
 use crate::waves::basics::{hi_hat, kick, snare};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use notes::ChorusParams;
-use scheduler::Scheduler;
 use std::{
     f64::consts::PI,
     sync::{
@@ -9,17 +7,13 @@ use std::{
         Arc, Mutex,
     },
 };
+use synth::{
+    engine::{notes::ChorusParams, reverb, scheduler::Scheduler, waves},
+    gui,
+};
 
-mod gui;
-mod notes;
-mod scheduler;
-mod waves;
-
-use waves::WaveType;
-mod reverb;
 use reverb::Reverb;
-
-const DEFAULT_LOOP_LEN: f64 = 16.0; // seconds
+use waves::WaveType;
 
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
