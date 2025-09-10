@@ -1,10 +1,7 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
 use egui::ScrollArea;
-use std::sync::{
-    atomic::{AtomicBool, AtomicUsize},
-    mpsc::Sender,
-    Arc, Mutex,
-};
+use rand::{rngs::ThreadRng, thread_rng};
+use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::engine::{
     notes::{Interval, Sequence},
@@ -47,8 +44,10 @@ pub struct GuiApp {
     clock: Option<Arc<Mutex<f64>>>,
     fall_back_start: std::time::Instant,
     last_token: AtomicUsize,
+    scheduler: Scheduler,
     messages: Sender<Message>,
     score_params: ScoreParams,
+    rng: ThreadRng,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -62,6 +61,7 @@ impl GuiApp {
         _cc: &CreationContext<'_>,
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
+        scheduler: Scheduler,
         messages: Sender<Message>,
         delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
     ) -> Self {
@@ -74,8 +74,10 @@ impl GuiApp {
             fall_back_start: std::time::Instant::now(),
             last_token: 0.into(),
 
+            scheduler,
             messages,
             score_params: ScoreParams { delays },
+            rng: thread_rng(),
         }
     }
 
@@ -821,6 +823,7 @@ impl App for GuiApp {
         });
 
         ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        self.scheduler.run_once(&mut self.rng)
     }
 }
 
@@ -829,12 +832,12 @@ impl App for GuiApp {
 pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
-    running_sched: Arc<AtomicBool>,
     scheduler: Scheduler,
     messages: Sender<Message>,
     delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
-) -> std::thread::JoinHandle<()> {
-    let handle = scheduler.run_thread(running_sched);
+) {
+    // ) -> std::thread::JoinHandle<()> {
+    // let handle = scheduler.run_thread(running_sched);
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
@@ -844,12 +847,13 @@ pub fn run_gui(
                 cc,
                 clock.clone(),
                 shared.clone(),
+                scheduler,
                 messages,
                 delays,
             )))
         }),
     );
-    handle
+    // handle
 }
 
 // simple deterministic hash for colour

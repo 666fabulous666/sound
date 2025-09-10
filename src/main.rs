@@ -54,10 +54,9 @@ fn main() {
     // let running_sched = running.clone();
     // let handle = scheduler.run_thread(running_sched);
 
-    let handle = app::run_gui(
+    let _ = app::run_gui(
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
-        running.clone(),
         scheduler,
         sender,
         (left_delays.clone(), right_delays.clone()),
@@ -65,5 +64,5 @@ fn main() {
 
     running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
 
-    handle.join().ok();
+    // handle.join().ok();
 }

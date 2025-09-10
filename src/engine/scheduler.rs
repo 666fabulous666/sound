@@ -65,29 +65,32 @@ impl Scheduler {
         }
     }
 
-    fn run_once(&mut self, rng: &mut ThreadRng) {
-        let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
-        // ---- handle inbound messages (drain channel) ----
-        self.drain_messages(rng, &mut notes_buffer);
+    pub fn run_once(&mut self, rng: &mut ThreadRng) {
+        if self.sched_start < self.now() {
+            let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
+            // ---- handle inbound messages (drain channel) ----
+            self.drain_messages(rng, &mut notes_buffer);
 
-        // ---- generate notes from sequences that need it ----
-        {
-            let mut seqs = self.sequences.lock().unwrap();
-            for seq in seqs.iter_mut() {
-                if seq.not_generate_until.is_none()
-                    || seq
-                        .not_generate_until
-                        .as_ref()
-                        .is_some_and(|until| self.now() > *until)
-                {
-                    self.draw_seq(seq, rng, &mut notes_buffer);
+            // ---- generate notes from sequences that need it ----
+            {
+                let mut seqs = self.sequences.lock().unwrap();
+                for seq in seqs.iter_mut() {
+                    if seq.not_generate_until.is_none()
+                        || seq
+                            .not_generate_until
+                            .as_ref()
+                            .is_some_and(|until| self.now() > *until)
+                    {
+                        self.draw_seq(seq, rng, &mut notes_buffer);
+                    }
                 }
             }
-        }
 
-        // Append new notes
-        {
-            self.notes.lock().unwrap().extend(notes_buffer);
+            // Append new notes
+            {
+                self.notes.lock().unwrap().extend(notes_buffer);
+            }
+            self.sched_start += 5e-2;
         }
     }
 
