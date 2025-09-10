@@ -10,7 +10,10 @@ use std::{
 
 use rand::rngs::ThreadRng;
 
-use crate::engine::notes::{Note, Sequence};
+use crate::{
+    engine::notes::{Note, Sequence},
+    SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
+};
 
 pub enum Message {
     NewScore,
@@ -66,7 +69,8 @@ impl Scheduler {
     }
 
     pub fn run_once(&mut self, rng: &mut ThreadRng) {
-        if self.sched_start < self.now() {
+        if self.sched_start < self.now() + SCHEDULER_WAKE_EARLY {
+            // WARNING: should it be a while?
             let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
             // ---- handle inbound messages (drain channel) ----
             self.drain_messages(rng, &mut notes_buffer);
@@ -90,7 +94,7 @@ impl Scheduler {
             {
                 self.notes.lock().unwrap().extend(notes_buffer);
             }
-            self.sched_start += 5e-2;
+            self.sched_start += SCHEDULER_STEP;
         }
     }
 
