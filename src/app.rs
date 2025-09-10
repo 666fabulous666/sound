@@ -1,11 +1,15 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
 use egui::ScrollArea;
-use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize},
+    mpsc::Sender,
+    Arc, Mutex,
+};
 
-use crate::{
-    engine::notes::{Interval, Sequence},
-    engine::scheduler::Message,
-    engine::waves::WaveType,
+use crate::engine::{
+    notes::{Interval, Sequence},
+    scheduler::{Message, Scheduler},
+    waves::WaveType,
 };
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
@@ -825,9 +829,12 @@ impl App for GuiApp {
 pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
+    running_sched: Arc<AtomicBool>,
+    scheduler: Scheduler,
     messages: Sender<Message>,
     delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
-) {
+) -> std::thread::JoinHandle<()> {
+    let handle = scheduler.run_thread(running_sched);
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
@@ -842,6 +849,7 @@ pub fn run_gui(
             )))
         }),
     );
+    handle
 }
 
 // simple deterministic hash for colour

@@ -51,12 +51,14 @@ fn main() {
 
     stream.play().unwrap();
 
-    let running_sched = running.clone();
-    let handle = scheduler.run_thread(running_sched);
+    // let running_sched = running.clone();
+    // let handle = scheduler.run_thread(running_sched);
 
-    app::run_gui(
+    let handle = app::run_gui(
         Some(Arc::clone(&sample_clock)),
         Arc::clone(&shared_seqs),
+        running.clone(),
+        scheduler,
         sender,
         (left_delays.clone(), right_delays.clone()),
     );
