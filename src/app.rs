@@ -1,6 +1,5 @@
 use eframe::{egui, App, CreationContext, NativeOptions};
 use egui::ScrollArea;
-// use serde_json as json;
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
 
 use crate::{
@@ -13,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::sync::atomic::Ordering;
 
-// list of all wave variants for the ComboBox
 const ALL_WAVES: [WaveType; 8] = [
     WaveType::Mute,
     WaveType::Sine,
@@ -40,10 +38,10 @@ impl Default for ScoreParams {
 }
 
 pub struct GuiApp {
-    seqs: Arc<Mutex<Vec<Sequence>>>,     // NEW: live shared sequences
-    selected: Option<usize>,             // currently picked sequence index
-    clock: Option<Arc<Mutex<f64>>>,      // shared play-head seconds from audio
-    fall_back_start: std::time::Instant, // for standalone demo
+    seqs: Arc<Mutex<Vec<Sequence>>>,
+    selected: Option<usize>,
+    clock: Option<Arc<Mutex<f64>>>,
+    fall_back_start: std::time::Instant,
     last_token: AtomicUsize,
     messages: Sender<Message>,
     score_params: ScoreParams,

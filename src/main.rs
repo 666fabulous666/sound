@@ -52,7 +52,7 @@ fn main() {
     stream.play().unwrap();
 
     let running_sched = running.clone();
-    let handle = scheduler.run(running_sched);
+    let handle = scheduler.run_thread(running_sched);
 
     app::run_gui(
         Some(Arc::clone(&sample_clock)),

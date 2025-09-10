@@ -58,88 +58,99 @@ impl Scheduler {
     pub fn sequences(&self) -> Arc<Mutex<Vec<Sequence>>> {
         self.sequences.clone()
     }
-    pub fn run(mut self, running_sched: Arc<AtomicBool>) -> JoinHandle<()> {
-        std::thread::spawn(move || {
-            let mut rng = rand::thread_rng();
-            while running_sched.load(Ordering::Relaxed) {
-                let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
-                // ---- handle inbound messages (drain channel) ----
-                loop {
-                    match self.messages_rx.try_recv() {
-                        Ok(Message::NewScore) => {
-                            self.sequences.lock().unwrap().clear();
-                            self.notes.lock().unwrap().clear();
-                        }
-                        Ok(Message::NewSequence(mut sequence)) => {
-                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer);
-                            self.sequences.lock().unwrap().push(sequence);
-                        }
-                        Ok(Message::EditSequence(a, mut sequence)) => {
-                            self.regen_seq(&mut sequence, &mut rng, &mut notes_buffer);
-                            let len = {
-                                let mut seqs = self.sequences.lock().unwrap();
-                                seqs[a] = sequence;
-                                seqs.len()
-                            };
-                            (a + 1..len)
-                                .for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
-                        }
-                        Ok(Message::DeleteSequence(a)) => {
-                            let tk = { self.sequences.lock().unwrap()[a].token.clone() };
-                            self.remove_seq(tk);
-                            self.sequences.lock().unwrap().remove(a);
-                        }
-                        Ok(Message::CloneSequence(a, new_token)) => {
-                            let mut sequence = { self.sequences.lock().unwrap()[a].clone() };
-                            sequence.token = new_token;
-                            self.draw_seq(&mut sequence, &mut rng, &mut notes_buffer);
-                            self.sequences.lock().unwrap().push(sequence);
-                        }
-                        Ok(Message::SwapSequences(a, b)) => {
-                            self.sequences.lock().unwrap().swap(a, b);
-                            self.regen_seq_at(a, &mut rng, &mut notes_buffer);
-                            self.regen_seq_at(b, &mut rng, &mut notes_buffer);
-                            let len = self.sequences.lock().unwrap().len();
-                            (a.max(b) + 1..len)
-                                .for_each(|k| self.regen_seq_at(k, &mut rng, &mut notes_buffer));
-                        }
-                        Err(TryRecvError::Empty) => break, // no more messages this tick
-                        Err(TryRecvError::Disconnected) => {
-                            // Sender dropped;
-                            break;
-                        }
-                    }
-                }
+    fn run_loop(&mut self, running_sched: Arc<AtomicBool>, mut rng: ThreadRng) {
+        while running_sched.load(Ordering::Relaxed) {
+            self.run_once(&mut rng);
+            self.sleep_for(5e-2);
+        }
+    }
 
-                // ---- generate notes from sequences that need it ----
+    fn run_once(&mut self, rng: &mut ThreadRng) {
+        let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
+        // ---- handle inbound messages (drain channel) ----
+        self.drain_messages(rng, &mut notes_buffer);
+
+        // ---- generate notes from sequences that need it ----
+        {
+            let mut seqs = self.sequences.lock().unwrap();
+            for seq in seqs.iter_mut() {
+                if seq.not_generate_until.is_none()
+                    || seq
+                        .not_generate_until
+                        .as_ref()
+                        .is_some_and(|until| self.now() > *until)
                 {
-                    let mut seqs = self.sequences.lock().unwrap();
-                    for seq in seqs.iter_mut() {
-                        if seq.not_generate_until.is_none()
-                            || seq
-                                .not_generate_until
-                                .as_ref()
-                                .is_some_and(|until| self.now() > *until)
-                        {
-                            self.draw_seq(seq, &mut rng, &mut notes_buffer);
-                        }
-                    }
-                }
-
-                // Append new notes
-                {
-                    self.notes.lock().unwrap().extend(notes_buffer);
-                }
-
-                // ---- sleep logic ----
-                let sched_start_increase = 5e-2;
-                self.sched_start += sched_start_increase;
-                let wake_early = sched_start_increase * 2.0; // WARINIG: isn't it supposed to be smaller than sched_start_increase?
-                if self.sched_start > self.now() {
-                    let sleep_s = (self.sched_start - self.now() - wake_early).max(0.0);
-                    std::thread::sleep(Duration::from_secs_f64(sleep_s));
+                    self.draw_seq(seq, rng, &mut notes_buffer);
                 }
             }
+        }
+
+        // Append new notes
+        {
+            self.notes.lock().unwrap().extend(notes_buffer);
+        }
+    }
+
+    fn sleep_for(&mut self, dt: f64) {
+        let sched_start_increase = dt;
+        self.sched_start += sched_start_increase;
+        let wake_early = sched_start_increase * 2.0; // WARINIG: isn't it supposed to be smaller than sched_start_increase?
+        if self.sched_start > self.now() {
+            let sleep_s = (self.sched_start - self.now() - wake_early).max(0.0);
+            std::thread::sleep(Duration::from_secs_f64(sleep_s));
+        }
+    }
+
+    fn drain_messages(&mut self, rng: &mut ThreadRng, notes_buffer: &mut Vec<(usize, Vec<Note>)>) {
+        loop {
+            match self.messages_rx.try_recv() {
+                Ok(Message::NewScore) => {
+                    self.sequences.lock().unwrap().clear();
+                    self.notes.lock().unwrap().clear();
+                }
+                Ok(Message::NewSequence(mut sequence)) => {
+                    self.draw_seq(&mut sequence, rng, notes_buffer);
+                    self.sequences.lock().unwrap().push(sequence);
+                }
+                Ok(Message::EditSequence(a, mut sequence)) => {
+                    self.regen_seq(&mut sequence, rng, notes_buffer);
+                    let len = {
+                        let mut seqs = self.sequences.lock().unwrap();
+                        seqs[a] = sequence;
+                        seqs.len()
+                    };
+                    (a + 1..len).for_each(|k| self.regen_seq_at(k, rng, notes_buffer));
+                }
+                Ok(Message::DeleteSequence(a)) => {
+                    let tk = { self.sequences.lock().unwrap()[a].token.clone() };
+                    self.remove_seq(tk);
+                    self.sequences.lock().unwrap().remove(a);
+                }
+                Ok(Message::CloneSequence(a, new_token)) => {
+                    let mut sequence = { self.sequences.lock().unwrap()[a].clone() };
+                    sequence.token = new_token;
+                    self.draw_seq(&mut sequence, rng, notes_buffer);
+                    self.sequences.lock().unwrap().push(sequence);
+                }
+                Ok(Message::SwapSequences(a, b)) => {
+                    self.sequences.lock().unwrap().swap(a, b);
+                    self.regen_seq_at(a, rng, notes_buffer);
+                    self.regen_seq_at(b, rng, notes_buffer);
+                    let len = self.sequences.lock().unwrap().len();
+                    (a.max(b) + 1..len).for_each(|k| self.regen_seq_at(k, rng, notes_buffer));
+                }
+                Err(TryRecvError::Empty) => break, // no more messages this tick
+                Err(TryRecvError::Disconnected) => {
+                    // Sender dropped;
+                    break;
+                }
+            }
+        }
+    }
+    pub fn run_thread(mut self, running_sched: Arc<AtomicBool>) -> JoinHandle<()> {
+        std::thread::spawn(move || {
+            let rng = rand::thread_rng();
+            self.run_loop(running_sched, rng)
         })
     }
 
