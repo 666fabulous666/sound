@@ -1,3 +1,9 @@
+use crate::{
+    engine::notes::{Note, Sequence},
+    SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
+};
+use instant::Duration;
+use rand::rngs::ThreadRng;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -5,14 +11,6 @@ use std::{
         Arc, Mutex,
     },
     thread::JoinHandle,
-    time::Duration,
-};
-
-use rand::rngs::ThreadRng;
-
-use crate::{
-    engine::notes::{Note, Sequence},
-    SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
 };
 
 pub enum Message {

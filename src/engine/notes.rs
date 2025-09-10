@@ -1,11 +1,8 @@
-use rand::{prelude::SliceRandom, seq::index::sample};
-// NEW (used for light-weight fingerprints)
-use std::iter::once;
-
-use itertools::Itertools;
-use serde::{Deserialize, Serialize};
-
 use crate::{engine::waves::WaveType, DEFAULT_LOOP_LEN};
+use itertools::Itertools;
+use rand::{prelude::SliceRandom, seq::index::sample};
+use serde::{Deserialize, Serialize};
+use std::iter::once;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {

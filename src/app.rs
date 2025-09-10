@@ -1,17 +1,21 @@
-use eframe::{egui, App, CreationContext, NativeOptions};
-use egui::ScrollArea;
-use rand::{rngs::ThreadRng, thread_rng};
-use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
-
 use crate::engine::{
     notes::{Interval, Sequence},
     scheduler::{Message, Scheduler},
     waves::WaveType,
 };
+use eframe::{egui, App, CreationContext, NativeOptions};
+use egui::ScrollArea;
+use rand::{rngs::ThreadRng, thread_rng};
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::sync::atomic::Ordering;
+use std::{
+    fs,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc::Sender,
+        Arc, Mutex,
+    },
+};
 
 const ALL_WAVES: [WaveType; 8] = [
     WaveType::Mute,

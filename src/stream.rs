@@ -1,8 +1,8 @@
 use cpal::traits::DeviceTrait;
 use std::sync::{Arc, Mutex};
 
-use synth::{
-    engine::{reverb::Reverb, waves::generate_wave},
+use crate::{
+    engine::{notes::Note, reverb::Reverb, waves::generate_wave},
     NOTE_LINGER_TIME, REVERB_BUFFER_LEN,
 };
 
@@ -13,10 +13,9 @@ pub fn stream(
     sample_duration: f64,
     channels: u16,
     sample_clock: &Arc<Mutex<f64>>,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<synth::engine::notes::Note>)>>>,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     recorded_samples: Arc<Mutex<Vec<f64>>>,
-    mut reverb_left: Reverb<REVERB_BUFFER_LEN>,
-    mut reverb_right: Reverb<REVERB_BUFFER_LEN>,
+    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
     let stream = {
         let note_queue = note_queue.clone();

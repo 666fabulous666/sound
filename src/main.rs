@@ -1,5 +1,3 @@
-mod stream;
-use crate::stream::stream;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -8,7 +6,8 @@ use std::sync::{
 use synth::{
     app,
     engine::{reverb, scheduler::Scheduler},
-    F0, REVERB_BUFFER_LEN,
+    stream::stream,
+    F0,
 };
 
 use reverb::Reverb;
@@ -29,13 +28,9 @@ fn main() {
     let note_queue = scheduler.notes();
     let recorded_samples = Arc::new(Mutex::new(Vec::new()));
     let running = Arc::new(AtomicBool::new(true));
-
     let (left_delays, right_delays) =
         (Arc::new(Mutex::new(vec![1])), Arc::new(Mutex::new(vec![1])));
-    let reverb_left: Reverb<REVERB_BUFFER_LEN> = Reverb::new(0.5, 0.5, left_delays.clone());
-    let reverb_right: Reverb<REVERB_BUFFER_LEN> = Reverb::new(0.5, 0.5, right_delays.clone());
 
-    // Start persistent audio stream
     let stream = stream(
         F0,
         device,
@@ -45,14 +40,13 @@ fn main() {
         &sample_clock,
         note_queue,
         recorded_samples,
-        reverb_left,
-        reverb_right,
+        (
+            Reverb::new(0.5, 0.5, left_delays.clone()),
+            Reverb::new(0.5, 0.5, right_delays.clone()),
+        ),
     );
 
     stream.play().unwrap();
-
-    // let running_sched = running.clone();
-    // let handle = scheduler.run_thread(running_sched);
 
     let _ = app::run_gui(
         Some(Arc::clone(&sample_clock)),
@@ -62,7 +56,5 @@ fn main() {
         (left_delays.clone(), right_delays.clone()),
     );
 
-    running.store(false, Ordering::Relaxed); // <- tell the scheduler to finish
-
-    // handle.join().ok();
+    running.store(false, Ordering::Relaxed);
 }
