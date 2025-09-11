@@ -26,18 +26,15 @@ pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
 
     use crate::engine::scheduler::Scheduler;
 
-    // shared sequences (empty to start)
-    let shared = Arc::new(Mutex::new(Vec::<engine::notes::Sequence>::new()));
-
     // left/right delay buffers (empty to start)
     let left_delays: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
     let right_delays: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
 
-    // scheduler + message channel:
     let sample_clock = Arc::new(Mutex::new(0f64));
     let (scheduler, sender) = Scheduler::new(sample_clock.clone());
+    let shared_seqs = scheduler.sequences();
+    // let note_queue = scheduler.notes();
 
-    // canvas in your index.html: <canvas id="the_canvas_id"></canvas>
     const CANVAS: &str = "the_canvas_id";
 
     let web_options = eframe::WebOptions::default();
@@ -49,9 +46,9 @@ pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
             Box::new(move |cc| {
                 Ok(app::make_app_for_web(
                     cc,
-                    None, // no audio clock on web (for now)
-                    Arc::clone(&shared),
-                    scheduler, // minimal scheduler (noop/default)
+                    Some(Arc::clone(&sample_clock)),
+                    Arc::clone(&shared_seqs),
+                    scheduler,
                     sender.clone(),
                     (Arc::clone(&left_delays), Arc::clone(&right_delays)),
                 ))

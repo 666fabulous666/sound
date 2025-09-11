@@ -86,7 +86,8 @@ pub fn stream(
         device
             .build_output_stream(
                 &config,
-                callback,
+                // callback,
+                move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
                 |err| eprintln!("Stream error: {}", err),
                 None,
             )
