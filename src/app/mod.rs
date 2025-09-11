@@ -47,7 +47,7 @@ impl Default for ScoreParams {
 
 pub struct GuiApp {
     seqs: Arc<Mutex<Vec<Sequence>>>,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     selected: Option<usize>,
     clock: Option<Arc<Mutex<f64>>>,
     fall_back_start: Instant,
@@ -72,17 +72,17 @@ impl GuiApp {
         _cc: &CreationContext<'_>,
         device: Device,
         clock: Option<Arc<Mutex<f64>>>,
-        shared: Arc<Mutex<Vec<Sequence>>>,
-        note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+        seqs: Arc<Mutex<Vec<Sequence>>>,
+        notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         scheduler: Scheduler,
         messages: Sender<Message>,
         delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
     ) -> Self {
-        *shared.lock().unwrap() = Vec::new();
+        *seqs.lock().unwrap() = Vec::new();
 
         Self {
-            seqs: shared,
-            note_queue,
+            seqs,
+            notes,
             selected: None,
             clock,
             fall_back_start: Instant::now(),
@@ -177,8 +177,8 @@ impl App for GuiApp {
 pub fn run_gui(
     device: Device,
     clock: Option<Arc<Mutex<f64>>>,
-    shared: Arc<Mutex<Vec<Sequence>>>,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    seqs: Arc<Mutex<Vec<Sequence>>>,
+    notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     scheduler: Scheduler,
     messages: Sender<Message>,
     // delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
@@ -196,8 +196,8 @@ pub fn run_gui(
                 cc,
                 device,
                 clock.clone(),
-                shared.clone(),
-                note_queue,
+                seqs.clone(),
+                notes,
                 scheduler,
                 messages,
                 delays,

@@ -80,7 +80,7 @@ impl GuiApp {
             440.0,
             &self.device,
             clock.expect("no sample clock").clone(),
-            self.note_queue.clone(),
+            self.notes.clone(),
             (
                 Reverb::new(0.5, 0.5, self.score_params.delays.0.clone()),
                 Reverb::new(0.5, 0.5, self.score_params.delays.1.clone()),
