@@ -53,7 +53,7 @@ pub struct GuiApp {
     fall_back_start: Instant,
     last_token: AtomicUsize,
     scheduler: Scheduler,
-    messages: Sender<Message>,
+    sender: Sender<Message>,
     score_params: ScoreParams,
     rng: ThreadRng,
     stream: Option<Stream>,
@@ -75,7 +75,7 @@ impl GuiApp {
         seqs: Arc<Mutex<Vec<Sequence>>>,
         notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         scheduler: Scheduler,
-        messages: Sender<Message>,
+        sender: Sender<Message>,
         delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
     ) -> Self {
         *seqs.lock().unwrap() = Vec::new();
@@ -89,7 +89,7 @@ impl GuiApp {
             last_token: 0.into(),
 
             scheduler,
-            messages,
+            sender,
             score_params: ScoreParams { delays },
             rng: thread_rng(),
             stream: None,
@@ -180,7 +180,7 @@ pub fn run_gui(
     // seqs: Arc<Mutex<Vec<Sequence>>>,
     // notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     scheduler: Scheduler,
-    messages: Sender<Message>,
+    sender: Sender<Message>,
     // delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
 ) {
     let delays = (
@@ -199,7 +199,7 @@ pub fn run_gui(
                 scheduler.sequences(),
                 scheduler.notes(),
                 scheduler,
-                messages,
+                sender,
                 delays,
             )))
         }),

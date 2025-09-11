@@ -19,11 +19,11 @@ impl GuiApp {
                 Ok(text) => match serde_json::from_str::<GuiState>(&text) {
                     Ok(state) => {
                         // Clear current score on the audio side
-                        let _ = self.messages.send(Message::NewScore);
+                        let _ = self.sender.send(Message::NewScore);
 
                         // Send each sequence to the scheduler
                         for seq in &state.seqs {
-                            let _ = self.messages.send(Message::NewSequence(seq.clone()));
+                            let _ = self.sender.send(Message::NewSequence(seq.clone()));
                         }
 
                         // Update the shared mirror immediately so the UI reflects it right away

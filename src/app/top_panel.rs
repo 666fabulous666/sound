@@ -17,7 +17,7 @@ impl GuiApp {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    self.messages.send(Message::NewScore).unwrap();
+                    self.sender.send(Message::NewScore).unwrap();
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
@@ -26,7 +26,7 @@ impl GuiApp {
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     let seq =
                         Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
-                    self.messages.send(Message::NewSequence(seq)).unwrap();
+                    self.sender.send(Message::NewSequence(seq)).unwrap();
                     self.selected = Some(idx);
                     self.start_stream(clock.clone());
                 }

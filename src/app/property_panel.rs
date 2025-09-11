@@ -433,7 +433,7 @@ impl GuiApp {
                         Action::None => {}
                         Action::Delete => {
                             if let Some(sel) = self.selected {
-                                self.messages.send(Message::DeleteSequence(sel)).unwrap();
+                                self.sender.send(Message::DeleteSequence(sel)).unwrap();
                                 self.selected = if sel == 0 { None } else { Some(sel - 1) };
                             }
                         }
@@ -442,14 +442,14 @@ impl GuiApp {
                                 .last_token
                                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                             if let Some(sel) = self.selected {
-                                self.messages
+                                self.sender
                                     .send(Message::CloneSequence(sel, last_token))
                                     .unwrap();
                             }
                         }
                         Action::Up => {
                             if let Some(sel) = self.selected {
-                                self.messages
+                                self.sender
                                     .send(Message::SwapSequences(sel, sel - 1))
                                     .unwrap();
                                 self.selected = Some(sel - 1);
@@ -457,7 +457,7 @@ impl GuiApp {
                         }
                         Action::Down => {
                             if let Some(sel) = self.selected {
-                                self.messages
+                                self.sender
                                     .send(Message::SwapSequences(sel, sel + 1))
                                     .unwrap();
                                 self.selected = Some(sel + 1);
@@ -467,7 +467,7 @@ impl GuiApp {
                     if let Some(edited_seq) = edited_seq {
                         if let Some(sel) = self.selected {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                self.messages
+                                self.sender
                                     .send(Message::EditSequence(sel, edited_seq))
                                     .unwrap();
                             }

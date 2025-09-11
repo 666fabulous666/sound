@@ -26,7 +26,7 @@ pub struct Scheduler {
     notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     sequences: Arc<Mutex<Vec<Sequence>>>,
     sample_clock: Arc<Mutex<f64>>,
-    messages_rx: Receiver<Message>,
+    receiver: Receiver<Message>,
     sched_start: f64,
 }
 
@@ -35,13 +35,13 @@ impl Scheduler {
         let notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>> = Arc::new(Mutex::new(Vec::new()));
         let sequences: Arc<Mutex<Vec<Sequence>>> = Arc::new(Mutex::new(Vec::new()));
 
-        let (messages_tx, messages_rx) = mpsc::channel();
+        let (messages_tx, receiver) = mpsc::channel();
 
         let sched = Self {
             notes,
             sequences,
             sample_clock,
-            messages_rx,
+            receiver,
             sched_start: 0.0,
         };
 
@@ -108,7 +108,7 @@ impl Scheduler {
 
     fn drain_messages(&mut self, rng: &mut ThreadRng, notes_buffer: &mut Vec<(usize, Vec<Note>)>) {
         loop {
-            match self.messages_rx.try_recv() {
+            match self.receiver.try_recv() {
                 Ok(Message::NewScore) => {
                     self.sequences.lock().unwrap().clear();
                     self.notes.lock().unwrap().clear();
