@@ -8,23 +8,24 @@ use crate::{
 
 pub fn stream(
     freq0: f64,
-    device: cpal::Device,
-    config: cpal::StreamConfig,
-    sample_duration: f64,
-    channels: u16,
-    sample_clock: &Arc<Mutex<f64>>,
+    device: &cpal::Device,
+    sample_clock: Arc<Mutex<f64>>,
     note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
-    recorded_samples: Arc<Mutex<Vec<f64>>>,
+    // recorded_samples: Arc<Mutex<Vec<f64>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
+    let config = device.default_output_config().unwrap().config();
+    let sample_rate = config.sample_rate.0 as f64;
+    let sample_duration = 1.0 / sample_rate;
+    let channels = config.channels;
     let stream = {
         let note_queue = note_queue.clone();
-        let recorded_samples = recorded_samples.clone();
+        // let recorded_samples = recorded_samples.clone();
         let sample_clock = sample_clock.clone();
 
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let mut note_queue = note_queue.lock().unwrap();
-            let mut recorded_samples = recorded_samples.lock().unwrap();
+            // let mut recorded_samples = recorded_samples.lock().unwrap();
             let mut sample_clock = sample_clock.lock().unwrap();
 
             for frame in data.chunks_mut(channels as usize) {
@@ -77,8 +78,8 @@ pub fn stream(
                     frame[0] = (left + right) as f32;
                 }
 
-                recorded_samples.push(left);
-                recorded_samples.push(right);
+                // recorded_samples.push(left);
+                // recorded_samples.push(right);
                 *sample_clock += sample_duration;
             }
         };
@@ -86,8 +87,8 @@ pub fn stream(
         device
             .build_output_stream(
                 &config,
-                // callback,
-                move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
+                callback,
+                // move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
                 |err| eprintln!("Stream error: {}", err),
                 None,
             )

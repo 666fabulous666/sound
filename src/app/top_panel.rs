@@ -1,6 +1,7 @@
 use crate::{
     app::GuiApp,
-    engine::{notes::Sequence, scheduler::Message},
+    engine::{notes::Sequence, reverb::Reverb, scheduler::Message},
+    stream::stream,
 };
 
 impl GuiApp {
@@ -12,6 +13,7 @@ impl GuiApp {
         load: &mut bool,
         exit: &mut bool,
     ) {
+        let clock = self.clock.clone();
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
@@ -26,10 +28,26 @@ impl GuiApp {
                         Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
                     self.messages.send(Message::NewSequence(seq)).unwrap();
                     self.selected = Some(idx);
+                    self.start_stream(clock.clone());
                 }
                 *save = ui.button("Save…").clicked();
                 *load = ui.button("Load…").clicked();
                 *exit = ui.button("Exit").clicked();
+                if ui
+                    .add(egui::Button::new(if self.is_playing {
+                        "⏸"
+                    } else {
+                        "▶"
+                    }))
+                    .clicked()
+                {
+                    if self.stream.is_some() {
+                        self.stream = None
+                    } else {
+                        self.start_stream(clock.clone());
+                    }
+                    self.is_playing = !self.is_playing;
+                }
             });
             ui.separator();
             ui.columns(2, |cols| {
@@ -55,5 +73,18 @@ impl GuiApp {
                 });
             });
         });
+    }
+
+    fn start_stream(&mut self, clock: Option<std::sync::Arc<std::sync::Mutex<f64>>>) {
+        self.stream = Some(stream(
+            440.0,
+            &self.device,
+            clock.expect("no sample clock").clone(),
+            self.note_queue.clone(),
+            (
+                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone()),
+                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone()),
+            ),
+        ))
     }
 }

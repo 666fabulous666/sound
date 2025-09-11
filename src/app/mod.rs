@@ -5,10 +5,13 @@ mod timeline_panel;
 mod top_panel;
 
 use crate::engine::{
-    notes::Sequence,
+    notes::{Note, Sequence},
     scheduler::{Message, Scheduler},
     waves::WaveType,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use cpal::Device;
+use cpal::Stream;
 #[cfg(not(target_arch = "wasm32"))]
 use eframe::NativeOptions;
 use eframe::{egui, App, CreationContext};
@@ -44,6 +47,7 @@ impl Default for ScoreParams {
 
 pub struct GuiApp {
     seqs: Arc<Mutex<Vec<Sequence>>>,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     selected: Option<usize>,
     clock: Option<Arc<Mutex<f64>>>,
     fall_back_start: Instant,
@@ -52,6 +56,9 @@ pub struct GuiApp {
     messages: Sender<Message>,
     score_params: ScoreParams,
     rng: ThreadRng,
+    stream: Option<Stream>,
+    is_playing: bool,
+    device: Device,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -63,8 +70,10 @@ struct GuiState {
 impl GuiApp {
     pub fn new(
         _cc: &CreationContext<'_>,
+        device: Device,
         clock: Option<Arc<Mutex<f64>>>,
         shared: Arc<Mutex<Vec<Sequence>>>,
+        note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         scheduler: Scheduler,
         messages: Sender<Message>,
         delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
@@ -73,6 +82,7 @@ impl GuiApp {
 
         Self {
             seqs: shared,
+            note_queue,
             selected: None,
             clock,
             fall_back_start: Instant::now(),
@@ -82,6 +92,9 @@ impl GuiApp {
             messages,
             score_params: ScoreParams { delays },
             rng: thread_rng(),
+            stream: None,
+            is_playing: false,
+            device: device,
         }
     }
 
@@ -162,12 +175,18 @@ impl App for GuiApp {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run_gui(
+    device: Device,
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
+    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     scheduler: Scheduler,
     messages: Sender<Message>,
-    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+    // delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
 ) {
+    let delays = (
+        Arc::new(Mutex::new(Vec::new())),
+        Arc::new(Mutex::new(Vec::new())),
+    );
     let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "Notes GUI",
@@ -175,8 +194,10 @@ pub fn run_gui(
         Box::new(move |cc| {
             Ok(Box::new(GuiApp::new(
                 cc,
+                device,
                 clock.clone(),
                 shared.clone(),
+                note_queue,
                 scheduler,
                 messages,
                 delays,
