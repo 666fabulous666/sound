@@ -1,11 +1,11 @@
-use std::fs;
-
-use rfd::FileDialog;
-
 use crate::app::{GuiApp, GuiState};
 
 impl GuiApp {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_state(&self) {
+        use rfd::FileDialog;
+        use std::fs;
+
         // Choose where to save
         if let Some(path) = FileDialog::new()
             .set_title("Save session as JSON")
@@ -28,5 +28,9 @@ impl GuiApp {
                 Err(e) => eprintln!("[save_state] Failed to serialize: {e}"),
             }
         }
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub fn save_state(&self) {
+        todo!()
     }
 }

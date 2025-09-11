@@ -1,14 +1,14 @@
-use std::{fs, sync::atomic::Ordering};
-
-use rfd::FileDialog;
-
 use crate::{
     app::{GuiApp, GuiState},
     engine::scheduler::Message,
 };
 
 impl GuiApp {
-    pub fn load(&mut self) {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load_state(&mut self) {
+        use rfd::FileDialog;
+        use std::{fs, sync::atomic::Ordering};
+
         // Pick a file to open
         if let Some(path) = FileDialog::new()
             .set_title("Load session from JSON")
@@ -55,5 +55,9 @@ impl GuiApp {
                 Err(e) => eprintln!("[load_state] Failed to read file: {e}"),
             }
         }
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub fn load_state(&self) {
+        todo!()
     }
 }

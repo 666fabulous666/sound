@@ -9,7 +9,10 @@ use crate::engine::{
     scheduler::{Message, Scheduler},
     waves::WaveType,
 };
-use eframe::{egui, App, CreationContext, NativeOptions};
+#[cfg(not(target_arch = "wasm32"))]
+use eframe::NativeOptions;
+use eframe::{egui, App, CreationContext};
+use instant::{Duration, Instant};
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
@@ -43,7 +46,7 @@ pub struct GuiApp {
     seqs: Arc<Mutex<Vec<Sequence>>>,
     selected: Option<usize>,
     clock: Option<Arc<Mutex<f64>>>,
-    fall_back_start: std::time::Instant,
+    fall_back_start: Instant,
     last_token: AtomicUsize,
     scheduler: Scheduler,
     messages: Sender<Message>,
@@ -72,7 +75,7 @@ impl GuiApp {
             seqs: shared,
             selected: None,
             clock,
-            fall_back_start: std::time::Instant::now(),
+            fall_back_start: Instant::now(),
             last_token: 0.into(),
 
             scheduler,
@@ -115,7 +118,11 @@ impl GuiApp {
     }
 
     fn exit(&self, ctx: &egui::Context) {
+        #[cfg(not(target_arch = "wasm32"))]
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+
+        #[cfg(target_arch = "wasm32")]
+        todo!()
     }
 }
 
@@ -134,7 +141,7 @@ impl App for GuiApp {
             self.save_state();
         }
         if load {
-            self.load();
+            self.load_state();
         }
         if exit {
             self.exit(ctx);
@@ -146,13 +153,14 @@ impl App for GuiApp {
 
         self.timeline_panel(ctx, current_time, len, seqs);
 
-        ctx.request_repaint_after(std::time::Duration::from_millis(16));
+        ctx.request_repaint_after(Duration::from_millis(16));
         self.scheduler.run_once(&mut self.rng)
     }
 }
 
 // ------------------------------------------------------------
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run_gui(
     clock: Option<Arc<Mutex<f64>>>,
     shared: Arc<Mutex<Vec<Sequence>>>,
@@ -175,6 +183,18 @@ pub fn run_gui(
             )))
         }),
     );
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn make_app_for_web(
+    cc: &CreationContext<'_>,
+    clock: Option<Arc<Mutex<f64>>>,
+    shared: Arc<Mutex<Vec<Sequence>>>,
+    scheduler: Scheduler,
+    messages: Sender<Message>,
+    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+) -> Box<dyn App> {
+    Box::new(GuiApp::new(cc, clock, shared, scheduler, messages, delays))
 }
 
 // simple deterministic hash for colour

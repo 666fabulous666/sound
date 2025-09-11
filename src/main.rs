@@ -12,6 +12,7 @@ use synth::{
 
 use reverb::Reverb;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let host = cpal::default_host();
     let device = host
@@ -58,3 +59,6 @@ fn main() {
 
     running.store(false, Ordering::Relaxed);
 }
+
+#[cfg(target_arch = "wasm32")]
+fn main() {}
