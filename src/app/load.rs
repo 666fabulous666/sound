@@ -1,7 +1,4 @@
-use crate::{
-    app::{GuiApp, GuiState},
-    engine::scheduler::Message,
-};
+use crate::app::GuiApp;
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
@@ -15,10 +12,14 @@ impl GuiApp {
             .add_filter("JSON", &["json"])
             .pick_file()
         {
+            use crate::app::GuiState;
+
             match fs::read_to_string(&path) {
                 Ok(text) => match serde_json::from_str::<GuiState>(&text) {
                     Ok(state) => {
                         // Clear current score on the audio side
+
+                        use crate::engine::scheduler::Message;
                         let _ = self.sender.send(Message::NewScore);
 
                         // Send each sequence to the scheduler

@@ -1,12 +1,13 @@
-use cpal::traits::HostTrait;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
-use synth::engine::scheduler::Scheduler;
-
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    };
+
+    use cpal::traits::HostTrait;
+    use synth::engine::scheduler::Scheduler;
+
     let host = cpal::default_host();
     let device = host
         .default_output_device()

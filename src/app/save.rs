@@ -1,4 +1,4 @@
-use crate::app::{GuiApp, GuiState};
+use crate::app::GuiApp;
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
@@ -13,6 +13,8 @@ impl GuiApp {
             .save_file()
         {
             // Snapshot current state
+
+            use crate::app::GuiState;
             let seqs = self.seqs.lock().unwrap().clone();
             let state = GuiState {
                 seqs,
