@@ -13,19 +13,10 @@ fn main() {
         .expect("Failed to get default output device");
     let sample_clock = Arc::new(Mutex::new(0f64));
     let (scheduler, sender) = Scheduler::new(sample_clock.clone());
-    let seqs = scheduler.sequences();
-    let notes = scheduler.notes();
     // let recorded_samples = Arc::new(Mutex::new(Vec::<f64>::new()));
     let running = Arc::new(AtomicBool::new(true));
 
-    let _ = app::run_gui(
-        device,
-        Some(Arc::clone(&sample_clock)),
-        Arc::clone(&seqs),
-        notes.clone(),
-        scheduler,
-        sender,
-    );
+    let _ = app::run_gui(device, Some(Arc::clone(&sample_clock)), scheduler, sender);
 
     running.store(false, Ordering::Relaxed);
 }

@@ -31,7 +31,13 @@ impl GuiApp {
                     self.start_stream(clock.clone());
                 }
                 *save = ui.button("Save…").clicked();
-                *load = ui.button("Load…").clicked();
+                *load = if ui.button("Load…").clicked() {
+                    self.stream = None;
+                    self.is_playing = false;
+                    true
+                } else {
+                    false
+                };
                 *exit = ui.button("Exit").clicked();
                 if ui
                     .add(egui::Button::new(if self.is_playing {
