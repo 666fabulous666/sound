@@ -9,11 +9,8 @@ use crate::engine::{
     scheduler::{Message, Scheduler},
     waves::WaveType,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use cpal::Device;
 use cpal::Stream;
-#[cfg(not(target_arch = "wasm32"))]
-use eframe::NativeOptions;
 use eframe::{egui, App, CreationContext};
 use instant::{Duration, Instant};
 use rand::{rngs::ThreadRng, thread_rng};
@@ -173,50 +170,47 @@ impl App for GuiApp {
 
 // ------------------------------------------------------------
 
-#[cfg(not(target_arch = "wasm32"))]
-pub fn run_gui(
-    device: Device,
-    clock: Option<Arc<Mutex<f64>>>,
-    // seqs: Arc<Mutex<Vec<Sequence>>>,
-    // notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
-    scheduler: Scheduler,
-    sender: Sender<Message>,
-    // delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
-) {
-    let delays = (
-        Arc::new(Mutex::new(Vec::new())),
-        Arc::new(Mutex::new(Vec::new())),
-    );
-    let native_options = NativeOptions::default();
-    let _ = eframe::run_native(
-        "Notes GUI",
-        native_options,
-        Box::new(move |cc| {
-            Ok(Box::new(GuiApp::new(
-                cc,
-                device,
-                clock.clone(),
-                scheduler.sequences(),
-                scheduler.notes(),
-                scheduler,
-                sender,
-                delays,
-            )))
-        }),
-    );
-}
+// #[cfg(not(target_arch = "wasm32"))]
+// pub fn run_gui_native(
+//     device: Device,
+//     clock: Option<Arc<Mutex<f64>>>,
+//     scheduler: Scheduler,
+//     sender: Sender<Message>,
+// ) {
+//     let delays = (
+//         Arc::new(Mutex::new(Vec::new())),
+//         Arc::new(Mutex::new(Vec::new())),
+//     );
+//     let native_options = NativeOptions::default();
+//     let _ = eframe::run_native(
+//         "Notes GUI",
+//         native_options,
+//         Box::new(move |cc| {
+//             Ok(Box::new(GuiApp::new(
+//                 cc,
+//                 device,
+//                 clock.clone(),
+//                 scheduler.sequences(),
+//                 scheduler.notes(),
+//                 scheduler,
+//                 sender,
+//                 delays,
+//             )))
+//         }),
+//     );
+// }
 
-#[cfg(target_arch = "wasm32")]
-pub fn make_app_for_web(
-    cc: &CreationContext<'_>,
-    clock: Option<Arc<Mutex<f64>>>,
-    shared: Arc<Mutex<Vec<Sequence>>>,
-    scheduler: Scheduler,
-    messages: Sender<Message>,
-    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
-) -> Box<dyn App> {
-    Box::new(GuiApp::new(cc, clock, shared, scheduler, messages, delays))
-}
+// #[cfg(target_arch = "wasm32")]
+// pub fn make_app_for_web(
+//     cc: &CreationContext<'_>,
+//     clock: Option<Arc<Mutex<f64>>>,
+//     shared: Arc<Mutex<Vec<Sequence>>>,
+//     scheduler: Scheduler,
+//     messages: Sender<Message>,
+//     delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+// ) -> Box<dyn App> {
+//     Box::new(GuiApp::new(cc, clock, shared, scheduler, messages, delays))
+// }
 
 // simple deterministic hash for colour
 fn hash32(s: &str) -> u32 {

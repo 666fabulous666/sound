@@ -3,7 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use synth::{app, engine::scheduler::Scheduler};
+use synth::engine::scheduler::Scheduler;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
@@ -16,7 +16,34 @@ fn main() {
     // let recorded_samples = Arc::new(Mutex::new(Vec::<f64>::new()));
     let running = Arc::new(AtomicBool::new(true));
 
-    let _ = app::run_gui(device, Some(Arc::clone(&sample_clock)), scheduler, sender);
+    let _ = {
+        use eframe::NativeOptions;
+
+        let clock = Some(Arc::clone(&sample_clock));
+        let delays = (
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+        let native_options = NativeOptions::default();
+        let _ = eframe::run_native(
+            "Notes GUI",
+            native_options,
+            Box::new(move |cc| {
+                use synth::app::GuiApp;
+
+                Ok(Box::new(GuiApp::new(
+                    cc,
+                    device,
+                    clock.clone(),
+                    scheduler.sequences(),
+                    scheduler.notes(),
+                    scheduler,
+                    sender,
+                    delays,
+                )))
+            }),
+        );
+    };
 
     running.store(false, Ordering::Relaxed);
 }

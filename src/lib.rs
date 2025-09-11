@@ -15,43 +15,43 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]
 pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
-    // nicer panics in the browser console
-    console_error_panic_hook::set_once();
-
-    // (optional) basic logging in browser; remove if you don't use `log`
-    let _ = eframe::WebLogger::init(log::LevelFilter::Info);
-
-    // --- minimal state so the UI can run on web (audio/threads omitted) ---
-    use std::sync::{Arc, Mutex};
+    use cpal::traits::HostTrait;
 
     use crate::engine::scheduler::Scheduler;
+    use std::sync::{Arc, Mutex};
+    const CANVAS: &str = "the_canvas_id";
 
-    // left/right delay buffers (empty to start)
-    let left_delays: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
-    let right_delays: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
-
+    let host = cpal::default_host();
+    let device = host
+        .default_output_device()
+        .expect("Failed to get default output device");
     let sample_clock = Arc::new(Mutex::new(0f64));
     let (scheduler, sender) = Scheduler::new(sample_clock.clone());
-    let shared_seqs = scheduler.sequences();
-    // let note_queue = scheduler.notes();
-
-    const CANVAS: &str = "the_canvas_id";
 
     let web_options = eframe::WebOptions::default();
 
+    let clock = Some(Arc::clone(&sample_clock));
+    let delays = (
+        Arc::new(Mutex::new(Vec::new())),
+        Arc::new(Mutex::new(Vec::new())),
+    );
     eframe::WebRunner::new()
         .start(
             CANVAS,
             web_options,
             Box::new(move |cc| {
-                Ok(app::make_app_for_web(
+                use crate::app::GuiApp;
+
+                Ok(Box::new(GuiApp::new(
                     cc,
-                    Some(Arc::clone(&sample_clock)),
-                    Arc::clone(&shared_seqs),
+                    device,
+                    clock.clone(),
+                    scheduler.sequences(),
+                    scheduler.notes(),
                     scheduler,
-                    sender.clone(),
-                    (Arc::clone(&left_delays), Arc::clone(&right_delays)),
-                ))
+                    sender,
+                    delays,
+                )))
             }),
         )
         .await
