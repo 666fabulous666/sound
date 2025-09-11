@@ -15,7 +15,7 @@ fn main() {
     let sample_clock = Arc::new(Mutex::new(0f64));
     let (scheduler, sender) = Scheduler::new(sample_clock.clone());
     // let recorded_samples = Arc::new(Mutex::new(Vec::<f64>::new()));
-    let running = Arc::new(AtomicBool::new(true));
+    // let running = Arc::new(AtomicBool::new(true));
 
     let _ = {
         use eframe::NativeOptions;
@@ -46,7 +46,7 @@ fn main() {
         );
     };
 
-    running.store(false, Ordering::Relaxed);
+    // running.store(false, Ordering::Relaxed);
 }
 
 #[cfg(target_arch = "wasm32")]

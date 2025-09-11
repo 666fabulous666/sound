@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use crate::{
     app::GuiApp,
     engine::{notes::Sequence, reverb::Reverb, scheduler::Message},
@@ -54,6 +56,11 @@ impl GuiApp {
                     }
                     self.is_playing = !self.is_playing;
                 }
+
+                if self.stream.is_some() {
+                    // TODO: when removing it, replace is_playing with just testing for self.stream.is_some()
+                    ui.label("stream");
+                }
             });
             ui.separator();
             ui.columns(2, |cols| {
@@ -85,12 +92,8 @@ impl GuiApp {
         self.stream = Some(stream(
             440.0,
             &self.device,
-            clock.expect("no sample clock").clone(),
+            clock.unwrap_or(Arc::new(Mutex::new(0.0))),
             self.notes.clone(),
-            (
-                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone()),
-                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone()),
-            ),
         ))
     }
 }

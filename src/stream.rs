@@ -12,7 +12,7 @@ pub fn stream(
     sample_clock: Arc<Mutex<f64>>,
     note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     // recorded_samples: Arc<Mutex<Vec<f64>>>,
-    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
+    // (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap().config();
     let sample_rate = config.sample_rate.0 as f64;
@@ -68,15 +68,19 @@ pub fn stream(
                     })
                 }
 
-                let left = reverb_left.process(dry_left);
-                let right = reverb_right.process(dry_right);
+                // let left = reverb_left.process(dry_left);
+                // let right = reverb_right.process(dry_right);
+                let left = dry_left;
+                let right = dry_right;
 
-                if channels >= 2 {
-                    frame[0] = left as f32;
-                    frame[1] = right as f32;
-                } else {
-                    frame[0] = (left + right) as f32;
-                }
+                // if channels >= 2 {
+                //     frame[0] = left as f32;
+                //     frame[1] = right as f32;
+                // } else {
+                //     frame[0] = (left + right) as f32;
+                // }
+
+                frame[0] = (*sample_clock * 440.0).sin() as f32;
 
                 // recorded_samples.push(left);
                 // recorded_samples.push(right);
