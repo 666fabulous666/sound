@@ -202,7 +202,9 @@ impl Note {
                     .collect::<Vec<_>>();
 
                 let seed = *others.choose(rng).unwrap_or(&0);
-                let degree = (0..*degree).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12;
+                let degree =
+                    (((0..*degree).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12) + 12)
+                        % 12;
 
                 Self {
                     interval: Interval::Tempered(degree, *octave),

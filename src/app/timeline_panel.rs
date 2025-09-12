@@ -123,8 +123,9 @@ impl GuiApp {
                     .for_each(|n| {
                         if let Interval::Tempered(degree, _) = n.interval {
                             let dy = track_rect.top() - track_rect.bottom();
-                            let y = 0.5 * (track_rect.bottom() + track_rect.top())
-                                + dy * degree as f32 / 24.0; // FIXME: why 24?
+                            // let y = 0.5 * (track_rect.bottom() + track_rect.top())
+                            //     + dy * degree as f32 / 24.0; // FIXME: why 24?
+                            let y = track_rect.bottom() + dy * (degree as f32 + 0.5) / 12.0; // FIXME: why 24?
                             painter.line_segment(
                                 [
                                     egui::pos2(

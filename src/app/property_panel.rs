@@ -443,7 +443,7 @@ impl GuiApp {
                                 .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                             if let Some(sel) = self.selected {
                                 self.sender
-                                    .send(Message::CloneSequence(sel, last_token))
+                                    .send(Message::CloneSequence(sel, last_token + 1))
                                     .unwrap();
                             }
                         }
