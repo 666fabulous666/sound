@@ -71,11 +71,23 @@ impl GuiApp {
                 );
                 let track_rect = egui::Rect::from_min_max(
                     egui::pos2(Self::t_to_x(rect, 0.0, loop_len), y0),
-                    egui::pos2(Self::t_to_x(rect, seq.loop_len, loop_len), y1),
+                    egui::pos2(Self::t_to_x(rect, loop_len, loop_len), y1),
                 );
                 let mut col = Self::hash_color(&seq.wave_type);
                 if self.selected == Some(idx) {
                     col = Self::brighten(col);
+                    for k in -16..16 {
+                        let tmp = (30 + k) as f32;
+                        painter.rect_filled(
+                            track_rect.expand2(egui::Vec2 {
+                                x: 0.0,
+                                y: k as f32,
+                            }),
+                            tmp.sqrt(),
+                            // egui::Color32::from_rgba_unmultiplied(200, 225, 255, 1),
+                            col.gamma_multiply(1.0 / tmp),
+                        );
+                    }
                 }
 
                 if x0 < x1 {
