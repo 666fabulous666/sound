@@ -162,7 +162,7 @@ impl Scheduler {
     fn draw_seq(&self, seq: &mut Sequence, rng: &mut ThreadRng, out: &mut Vec<(usize, Vec<Note>)>) {
         let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
         seq.draw(out, rng, seq_start);
-        seq.not_generate_until = Some(seq_start + seq.loop_len - 0.1);
+        seq.not_generate_until = Some(seq_start + seq.t_min + seq.loop_len - 0.1);
     }
     fn remove_seq(&self, tk: usize) {
         self.notes.lock().unwrap().retain(|(token, _)| *token != tk);
