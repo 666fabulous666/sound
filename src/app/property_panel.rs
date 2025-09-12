@@ -5,7 +5,7 @@ use egui::ScrollArea;
 use crate::{
     app::{GuiApp, ALL_WAVES},
     engine::{
-        notes::{Interval, Sequence},
+        notes::{Interval, Rythm, Sequence},
         scheduler::Message,
     },
 };
@@ -234,29 +234,53 @@ impl GuiApp {
                             }
 
                             {
-                                ui.horizontal(|ui| {
-                                    let mut tmp_skips = seq.skips.clone();
-                                    ui.label("skips:");
-                                    if ui
-                                        .add(egui::DragValue::new(&mut tmp_skips.0).range(0..=512))
-                                        .changed()
-                                    {
-                                        edited_seq
-                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .skips
-                                            .0 = tmp_skips.0.min(tmp_skips.1);
-                                    };
-                                    ui.label(",");
-                                    if ui
-                                        .add(egui::DragValue::new(&mut tmp_skips.1).range(0..=512))
-                                        .changed()
-                                    {
-                                        edited_seq
-                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .skips
-                                            .1 = tmp_skips.1.max(tmp_skips.0);
-                                    };
-                                });
+                                let mut tmp_skips = seq.skips.clone();
+                                match tmp_skips {
+                                    Rythm::Rd(ref mut rd_rythm) => {
+                                        ui.horizontal(|ui| {
+                                            let mut tmp_skips = seq.skips.clone();
+                                            ui.label("skips:");
+                                            if ui
+                                                .add(
+                                                    egui::DragValue::new(&mut rd_rythm.amount)
+                                                        .range(0..=512),
+                                                )
+                                                .changed()
+                                            {
+                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .skips
+                                                {
+                                                    edited_rd_rythm.amount =
+                                                        rd_rythm.amount.min(rd_rythm.length);
+                                                }
+                                            };
+                                            ui.label(",");
+                                            if ui
+                                                .add(
+                                                    egui::DragValue::new(&mut rd_rythm.length)
+                                                        .range(0..=512),
+                                                )
+                                                .changed()
+                                            {
+                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .skips
+                                                {
+                                                    edited_rd_rythm.length =
+                                                        rd_rythm.length.max(rd_rythm.amount);
+                                                }
+                                            };
+                                        });
+                                    }
+                                    Rythm::Det(det_rythm) => todo!(),
+                                }
                             }
 
                             {

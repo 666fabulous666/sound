@@ -5,11 +5,26 @@ use serde::{Deserialize, Serialize};
 use std::iter::once;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct RdRythm {
+    pub amount: usize,
+    pub length: usize,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct DetRythm {
+    pub generators: Vec<usize>,
+}
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub enum Rythm {
+    Rd(RdRythm),
+    Det(DetRythm),
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
     pub step: (usize, usize),
-    pub skips: (usize, usize),
+    pub skips: Rythm,
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize, // WARNING: relative to step
     pub interval: Interval,
@@ -116,7 +131,10 @@ impl Sequence {
             t_min: 0.0,
             t_max: DEFAULT_LOOP_LEN,
             step: (1, 6),
-            skips: (5, 10),
+            skips: Rythm::Rd(RdRythm {
+                amount: 5,
+                length: 10,
+            }),
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
@@ -139,10 +157,13 @@ impl Sequence {
         rng: &mut rand::prelude::ThreadRng,
         seq_start: f64,
     ) {
-        let skips = sample(rng, self.skips.1, self.skips.0)
-            .into_iter()
-            .map(|k| k + 2)
-            .collect_vec();
+        let skips = match &self.skips {
+            Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount),
+            Rythm::Det(det_rythm) => todo!(),
+        }
+        .into_iter()
+        .map(|k| k + 2)
+        .collect_vec();
         let step_as_time = self.step.0 as f64 / self.step.1 as f64;
         let ts = (0..)
             .filter(|i| skips.iter().all(|s| (i + 1 - self.beat_offset) % s != 0))
