@@ -112,6 +112,43 @@ impl GuiApp {
                     );
                 }
 
+                self.notes
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|(token, _)| *token == seq.token)
+                    .flat_map(|(_, ns)| ns.iter())
+                    .collect::<Vec<_>>()
+                    .iter()
+                    .for_each(|n| {
+                        if let Interval::Tempered(degree, _) = n.interval {
+                            let dy = track_rect.top() - track_rect.bottom();
+                            let y = 0.5 * (track_rect.bottom() + track_rect.top())
+                                + dy * degree as f32 / 24.0; // FIXME: why 24?
+                            painter.line_segment(
+                                [
+                                    egui::pos2(
+                                        Self::t_to_x(
+                                            track_rect,
+                                            n.time - self.current_time(),
+                                            loop_len,
+                                        ) + 1.0,
+                                        y,
+                                    ),
+                                    egui::pos2(
+                                        Self::t_to_x(
+                                            track_rect,
+                                            n.time + n.duration - self.current_time(),
+                                            loop_len,
+                                        ) - 1.0,
+                                        y,
+                                    ),
+                                ],
+                                egui::Stroke::new(5.0, egui::Color32::BLACK),
+                            );
+                        }
+                    });
+
                 if ui
                     .interact(track_rect, egui::Id::new(idx), egui::Sense::click())
                     .clicked()
