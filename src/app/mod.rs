@@ -112,11 +112,10 @@ impl GuiApp {
     fn hash_color(w: &WaveType) -> egui::Color32 {
         let txt = format!("{:?}", w.to_string());
         let hash = hash32(&txt);
-        egui::Color32::from_rgb(
-            (hash & 0xFF) as u8,
-            ((hash >> 8) & 0xFF) as u8,
-            ((hash >> 16) & 0xFF) as u8,
-        )
+        let a = (hash & 0xFF) as u8;
+        let b = ((hash >> 8) & 0xFF) as u8;
+        let c = ((hash >> 16) & 0xFF) as u8;
+        egui::Color32::from_rgb(a / 4 * 3, b / 7 * 3, c / 5 * 3)
     }
 
     fn current_time(&self) -> f64 {

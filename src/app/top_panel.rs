@@ -94,6 +94,10 @@ impl GuiApp {
             &self.device,
             clock.unwrap_or(Arc::new(Mutex::new(0.0))),
             self.notes.clone(),
+            (
+                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone()),
+                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone()),
+            ),
         ))
     }
 }

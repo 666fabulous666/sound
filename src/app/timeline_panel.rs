@@ -1,6 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use crate::{app::GuiApp, engine::notes::Sequence};
+use crate::{
+    app::GuiApp,
+    engine::notes::{Interval, Sequence},
+};
 
 impl GuiApp {
     pub fn timeline_panel(
@@ -106,10 +109,22 @@ impl GuiApp {
 
                 // lane label
                 painter.text(
-                    egui::pos2(rect.left() + 4.0, rect.top() + idx as f32 * lane_h + 4.0),
-                    egui::Align2::LEFT_TOP,
-                    format!("Track {}", idx + 1),
-                    egui::TextStyle::Small.resolve(ui.style()),
+                    egui::pos2(
+                        rect.right() - 4.0,
+                        rect.top() + (idx as f32 + 0.5) * lane_h + 4.0,
+                    ),
+                    egui::Align2::RIGHT_CENTER,
+                    format!(
+                        "{} oct {}",
+                        (&seq.wave_type).to_string(),
+                        if let Interval::RDTempered(_nb_rd_steps, _tones, octave) = &seq.interval {
+                            octave
+                        } else {
+                            todo!()
+                        },
+                        // idx + 1,
+                    ),
+                    egui::TextStyle::Body.resolve(ui.style()),
                     egui::Color32::WHITE,
                 );
             }
