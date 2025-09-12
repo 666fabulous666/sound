@@ -5,7 +5,7 @@ use egui::ScrollArea;
 use crate::{
     app::{GuiApp, ALL_WAVES},
     engine::{
-        notes::{Interval, Rythm, Sequence},
+        notes::{DetRythm, Interval, RdRythm, Rythm, Sequence},
         scheduler::Message,
     },
 };
@@ -235,11 +235,23 @@ impl GuiApp {
 
                             {
                                 let mut tmp_skips = seq.skips.clone();
+                                if let Rythm::Rd(_) = tmp_skips {
+                                    if ui.button("go deterministic").clicked() {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .skips = Rythm::Det(DetRythm::default());
+                                    }
+                                } else {
+                                    if ui.button("go random").clicked() {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .skips = Rythm::Rd(RdRythm::default());
+                                    }
+                                }
                                 match tmp_skips {
                                     Rythm::Rd(ref mut rd_rythm) => {
                                         ui.horizontal(|ui| {
-                                            let mut tmp_skips = seq.skips.clone();
-                                            ui.label("skips:");
+                                            ui.label("random skips:");
                                             if ui
                                                 .add(
                                                     egui::DragValue::new(&mut rd_rythm.amount)
@@ -279,7 +291,26 @@ impl GuiApp {
                                             };
                                         });
                                     }
-                                    Rythm::Det(det_rythm) => todo!(),
+                                    Rythm::Det(det_rythm) => {
+                                        ui.horizontal(|ui| {
+                                            ui.label("deterministic skips:");
+                                            let mut gens = det_rythm.generators;
+                                            let old_val = gens.clone();
+                                            Self::edit_vec(ui, &mut gens, "", 5);
+                                            if gens != old_val {
+                                                // TODO: do better
+                                                if let Rythm::Det(ref mut edited_det_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .skips
+                                                {
+                                                    edited_det_rythm.generators = gens;
+                                                }
+                                            }
+                                        });
+                                    }
                                 }
                             }
 

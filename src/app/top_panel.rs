@@ -64,26 +64,18 @@ impl GuiApp {
             });
             ui.separator();
             ui.columns(2, |cols| {
-                cols[0].vertical(|ui| {
-                    ui.label("Left Dealys");
-                    let mut delays = self.score_params.delays.0.lock().unwrap();
-                    ui.horizontal(|ui| {
-                        delays.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked());
-                        if ui.button("add").clicked() {
-                            delays.push(1);
-                        }
-                    });
-                });
-                cols[1].vertical(|ui| {
-                    ui.label("Right Dealys");
-                    let mut delays = self.score_params.delays.1.lock().unwrap();
-                    ui.horizontal(|ui| {
-                        delays.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked());
-                        if ui.button("add").clicked() {
-                            delays.push(1);
-                        }
-                    });
-                });
+                Self::edit_vec(
+                    &mut cols[0],
+                    self.score_params.delays.0.lock().unwrap(),
+                    "Left Delays",
+                    1,
+                );
+                Self::edit_vec(
+                    &mut cols[1],
+                    self.score_params.delays.1.lock().unwrap(),
+                    "Right Delays",
+                    1,
+                );
             });
         });
     }

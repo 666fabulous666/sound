@@ -12,10 +12,14 @@ use crate::engine::{
 use cpal::Device;
 use cpal::Stream;
 use eframe::{egui, App, CreationContext};
+use egui::WidgetText;
 use instant::{Duration, Instant};
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
-use std::sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex};
+use std::{
+    ops::DerefMut,
+    sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex},
+};
 
 const ALL_WAVES: [WaveType; 8] = [
     WaveType::Mute,
@@ -132,6 +136,23 @@ impl GuiApp {
 
         #[cfg(target_arch = "wasm32")]
         todo!()
+    }
+    fn edit_vec<T: egui::emath::Numeric>(
+        ui: &mut egui::Ui,
+        mut vec: impl DerefMut<Target = Vec<T>>,
+        label: impl Into<WidgetText>,
+        default_value: T,
+    ) {
+        ui.vertical(|ui| {
+            ui.label(label);
+            ui.horizontal(|ui| {
+                vec.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked()); // TODO: return true
+                if ui.button("add").clicked() {
+                    vec.push(default_value);
+                } else {
+                }
+            });
+        });
     }
 }
 

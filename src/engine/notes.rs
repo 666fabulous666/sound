@@ -13,6 +13,19 @@ pub struct RdRythm {
 pub struct DetRythm {
     pub generators: Vec<usize>,
 }
+impl Default for DetRythm {
+    fn default() -> Self {
+        Self { generators: vec![] }
+    }
+}
+impl Default for RdRythm {
+    fn default() -> Self {
+        Self {
+            amount: 5,
+            length: 10,
+        }
+    }
+}
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum Rythm {
     Rd(RdRythm),
@@ -131,10 +144,7 @@ impl Sequence {
             t_min: 0.0,
             t_max: DEFAULT_LOOP_LEN,
             step: (1, 6),
-            skips: Rythm::Rd(RdRythm {
-                amount: 5,
-                length: 10,
-            }),
+            skips: Rythm::Rd(RdRythm::default()),
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
@@ -158,8 +168,8 @@ impl Sequence {
         seq_start: f64,
     ) {
         let skips = match &self.skips {
-            Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount),
-            Rythm::Det(det_rythm) => todo!(),
+            Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount).into_vec(),
+            Rythm::Det(det_rythm) => det_rythm.generators.clone(), // TODO: remove this clone if possible
         }
         .into_iter()
         .map(|k| k + 2)
