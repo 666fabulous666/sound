@@ -234,15 +234,95 @@ impl GuiApp {
                             }
 
                             {
+                                let mut tmp_puts = seq.puts.clone();
+                                if let Rythm::Rd(_) = tmp_puts {
+                                    if ui.button("go deterministic puts").clicked() {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .puts = Rythm::Det(DetRythm::default());
+                                    }
+                                } else {
+                                    if ui.button("go random puts").clicked() {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .puts = Rythm::Rd(RdRythm::default());
+                                    }
+                                }
+                                match tmp_puts {
+                                    Rythm::Rd(ref mut rd_rythm) => {
+                                        ui.horizontal(|ui| {
+                                            ui.label("random puts:");
+                                            if ui
+                                                .add(
+                                                    egui::DragValue::new(&mut rd_rythm.amount)
+                                                        .range(0..=512),
+                                                )
+                                                .changed()
+                                            {
+                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .puts
+                                                {
+                                                    edited_rd_rythm.amount =
+                                                        rd_rythm.amount.min(rd_rythm.length);
+                                                }
+                                            };
+                                            ui.label(",");
+                                            if ui
+                                                .add(
+                                                    egui::DragValue::new(&mut rd_rythm.length)
+                                                        .range(0..=512),
+                                                )
+                                                .changed()
+                                            {
+                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .puts
+                                                {
+                                                    edited_rd_rythm.length =
+                                                        rd_rythm.length.max(rd_rythm.amount);
+                                                }
+                                            };
+                                        });
+                                    }
+                                    Rythm::Det(det_rythm) => {
+                                        ui.horizontal(|ui| {
+                                            ui.label("deterministic puts:");
+                                            let mut gens = det_rythm.generators;
+                                            let old_val = gens.clone();
+                                            Self::edit_vec(ui, &mut gens, "", 2);
+                                            if gens != old_val {
+                                                // TODO: do better
+                                                if let Rythm::Det(ref mut edited_det_rythm) =
+                                                    edited_seq
+                                                        .get_or_insert(
+                                                            seqs.lock().unwrap()[sel].clone(),
+                                                        )
+                                                        .puts
+                                                {
+                                                    edited_det_rythm.generators = gens;
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                            {
                                 let mut tmp_skips = seq.skips.clone();
                                 if let Rythm::Rd(_) = tmp_skips {
-                                    if ui.button("go deterministic").clicked() {
+                                    if ui.button("go deterministic skips").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .skips = Rythm::Det(DetRythm::default());
                                     }
                                 } else {
-                                    if ui.button("go random").clicked() {
+                                    if ui.button("go random skips").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .skips = Rythm::Rd(RdRythm::default());
@@ -296,7 +376,7 @@ impl GuiApp {
                                             ui.label("deterministic skips:");
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
-                                            Self::edit_vec(ui, &mut gens, "", 5);
+                                            Self::edit_vec(ui, &mut gens, "", 2);
                                             if gens != old_val {
                                                 // TODO: do better
                                                 if let Rythm::Det(ref mut edited_det_rythm) =
@@ -306,7 +386,10 @@ impl GuiApp {
                                                         )
                                                         .skips
                                                 {
-                                                    edited_det_rythm.generators = gens;
+                                                    edited_det_rythm.generators = gens
+                                                        .into_iter()
+                                                        .filter(|g| *g > 1)
+                                                        .collect();
                                                 }
                                             }
                                         });
