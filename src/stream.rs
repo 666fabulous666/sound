@@ -1,4 +1,5 @@
-use cpal::traits::DeviceTrait;
+use core::panic;
+use cpal::traits::{DeviceTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
 
 use crate::{
@@ -12,9 +13,14 @@ pub fn stream(
     sample_clock: Arc<Mutex<f64>>,
     note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
     // recorded_samples: Arc<Mutex<Vec<f64>>>,
-    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
+    // (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
-    let config = device.default_output_config().unwrap().config();
+    let config = device.default_output_config().unwrap();
+    if config.sample_format() != cpal::SampleFormat::F32 {
+        log::log!(log::Level::Error, "not f32");
+        panic!("not f32")
+    }
+    let config = config.config();
     let sample_rate = config.sample_rate.0 as f64;
     let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
@@ -68,10 +74,10 @@ pub fn stream(
                     })
                 }
 
-                let left = reverb_left.process(dry_left);
-                let right = reverb_right.process(dry_right);
-                // let left = dry_left;
-                // let right = dry_right;
+                // let left = reverb_left.process(dry_left);
+                // let right = reverb_right.process(dry_right);
+                let left = dry_left;
+                let right = dry_right;
 
                 if channels >= 2 {
                     frame[0] = left as f32;
@@ -88,15 +94,24 @@ pub fn stream(
             }
         };
 
-        device
-            .build_output_stream(
-                &config,
-                callback,
-                // move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
-                |err| eprintln!("Stream error: {}", err),
-                None,
-            )
-            .unwrap()
+        let stream = match device.build_output_stream(
+            &config,
+            callback,
+            // move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
+            |err| eprintln!("Stream error: {}", err),
+            None,
+        ) {
+            Err(err) => {
+                log::log!(log::Level::Error, "{err}");
+                panic!("{err}")
+            }
+            Ok(stream) => stream,
+        };
+        if let Err(err) = stream.play() {
+            log::log!(log::Level::Error, "{err}");
+            panic!("{err}")
+        }
+        stream
     };
     stream
 }
