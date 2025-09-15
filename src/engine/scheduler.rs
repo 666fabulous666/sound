@@ -67,8 +67,8 @@ impl Scheduler {
     }
 
     pub fn run_once(&mut self, rng: &mut ThreadRng) {
-        if self.sched_start < self.now() + SCHEDULER_WAKE_EARLY {
-            // if self.sched_start < self.now() + SCHEDULER_STEP {
+        // if self.sched_start < self.now() + SCHEDULER_WAKE_EARLY {
+        while self.sched_start < self.now() + SCHEDULER_WAKE_EARLY {
             // WARNING: should it be a while?
             let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new();
             // ---- handle inbound messages (drain channel) ----
