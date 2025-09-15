@@ -5,5 +5,5 @@ open = false
 
 [build]
 dist = "docs"
-public_url = "/"
+public_url = "https://666fabulous666.github.io/sound"
 release = true
