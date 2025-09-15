@@ -1,14 +1,14 @@
 use std::sync::{Arc, Mutex};
 
 struct RingBuff<const N: usize> {
-    data: [f64; N],
+    data: Vec<f64>,
     head: usize,
 }
 
 impl<const N: usize> Default for RingBuff<N> {
     fn default() -> Self {
         Self {
-            data: [0.0; N],
+            data: [0.0; N].to_vec(),
             head: 0,
         }
     }
@@ -32,19 +32,19 @@ pub struct Reverb<const B: usize> {
 }
 
 impl<const B: usize> Reverb<B> {
-    // pub fn new(dry_factor: f64, wet_factor: f64, delays: Arc<Mutex<Vec<usize>>>) -> Self {
-    //     let delays = delays;
-    //     // let len = { delays.lock().unwrap().len() };
-    //     // let a = wet_factor / len as f64;
+    pub fn new(dry_factor: f64, wet_factor: f64, delays: Arc<Mutex<Vec<usize>>>) -> Self {
+        let delays = delays;
+        // let len = { delays.lock().unwrap().len() };
+        // let a = wet_factor / len as f64;
 
-    //     Self {
-    //         delays,
-    //         buffer: RingBuff::default(),
-    //         dry_factor,
-    //         wet_factor,
-    //         // a,
-    //     }
-    // }
+        Self {
+            delays,
+            buffer: RingBuff::default(),
+            dry_factor,
+            wet_factor,
+            // a,
+        }
+    }
 
     pub fn process(&mut self, dry: f64) -> f64 {
         let mut output = self.dry_factor * dry;
