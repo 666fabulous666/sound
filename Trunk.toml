@@ -5,4 +5,5 @@ open = false
 
 [build]
 dist = "docs"
-public_url = "https://666fabulous666.github.io/synth"
+public_url = "/"
+release = true
