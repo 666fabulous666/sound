@@ -1,0 +1,8 @@
+[serve]
+addresses = ["0.0.0.0"]   # listen on your LAN, not just localhost
+port = 8080               # pick any open port
+open = false
+
+[build]
+dist = "docs"
+public_url = "https://666fabulous666.github.io/synth"
