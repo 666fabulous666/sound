@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <base href="https://666fabulous666.github.io/sound/" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>synth (web)</title>
@@ -24,7 +25,6 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       #fallback{position:fixed;top:8px;left:12px;font:14px system-ui;opacity:.6;pointer-events:none}
     </style>
   <link rel="modulepreload" href="https://666fabulous666.github.io/sound/synth-8989fc6b8e4c9d2e.js" crossorigin="anonymous" integrity="sha384-VeEtByhbK20VRdZMCZbPR1/FZ5N5nFjaUxue7fbRVP9NwbAQ4MEZGeBhzgIufoKt"><link rel="preload" href="https://666fabulous666.github.io/sound/synth-8989fc6b8e4c9d2e_bg.wasm" crossorigin="anonymous" integrity="sha384-XadsX9Qkp9MY+acaH/uT+n0xnoIOoFTB8LWXN2VXUJQWNf2n7YShiNT4kEBnMOF/" as="fetch" type="application/wasm"></head>
-  <base data-trunk-public-url/>
   <body>
     <!-- <div id="fallback">If you see this but not the UI, WASM didn't start.</div> -->
     <canvas id="the_canvas_id"></canvas>
