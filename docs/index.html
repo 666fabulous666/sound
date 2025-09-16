@@ -8,8 +8,8 @@
     <!-- tell Trunk to build the wasm library target -->
     
 <script type="module">
-import init, * as bindings from '/sound/synth-8989fc6b8e4c9d2e.js';
-const wasm = await init({ module_or_path: '/sound/synth-8989fc6b8e4c9d2e_bg.wasm' });
+import init, * as bindings from '/sound/synth-3eb583baa826c454.js';
+const wasm = await init({ module_or_path: '/sound/synth-3eb583baa826c454_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -24,7 +24,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       canvas#the_canvas_id{display:block;width:100vw;height:100vh}
       #fallback{position:fixed;top:8px;left:12px;font:14px system-ui;opacity:.6;pointer-events:none}
     </style>
-  <link rel="modulepreload" href="/sound/synth-8989fc6b8e4c9d2e.js" crossorigin="anonymous" integrity="sha384-VeEtByhbK20VRdZMCZbPR1/FZ5N5nFjaUxue7fbRVP9NwbAQ4MEZGeBhzgIufoKt"><link rel="preload" href="/sound/synth-8989fc6b8e4c9d2e_bg.wasm" crossorigin="anonymous" integrity="sha384-XadsX9Qkp9MY+acaH/uT+n0xnoIOoFTB8LWXN2VXUJQWNf2n7YShiNT4kEBnMOF/" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/sound/synth-3eb583baa826c454.js" crossorigin="anonymous" integrity="sha384-wU0ppwCZixh4Eq4iN5hk4RYt1ByLgs7Ox7TqrTX6GuPzN3neYb1ThuqKKwavb+dA"><link rel="preload" href="/sound/synth-3eb583baa826c454_bg.wasm" crossorigin="anonymous" integrity="sha384-OaTF68rSo52svtWrQkbWuBZlFob/Eki8FD9RqYNXU5IN/uLSedaywdVkGI1fOByc" as="fetch" type="application/wasm"></head>
   <body>
     <!-- <div id="fallback">If you see this but not the UI, WASM didn't start.</div> -->
     <canvas id="the_canvas_id"></canvas>
