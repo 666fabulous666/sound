@@ -38,9 +38,9 @@ pub enum Rythm {
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
-    pub step: (usize, usize),
-    pub puts: Rythm,
-    pub skips: Rythm,
+    pub time_quantum: (usize, usize),
+    pub inclusions: Rythm,
+    pub exclusions: Rythm,
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize, // WARNING: relative to step
     pub interval: Interval,
@@ -146,9 +146,9 @@ impl Sequence {
         Sequence {
             t_min: 0.0,
             t_max: DEFAULT_LOOP_LEN,
-            step: (1, 6),
-            skips: Rythm::Rd(RdRythm::default()),
-            puts: Rythm::Rd(RdRythm::default()),
+            time_quantum: (1, 6),
+            exclusions: Rythm::Rd(RdRythm::default()),
+            inclusions: Rythm::Rd(RdRythm::default()),
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
@@ -171,7 +171,7 @@ impl Sequence {
         rng: &mut rand::prelude::ThreadRng,
         seq_start: f64,
     ) {
-        let puts = match &self.puts {
+        let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
                 .map(|k| k + 1)
@@ -180,7 +180,7 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let skips = match &self.skips {
+        let exclusions = match &self.exclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
                 .map(|k| k + 2)
@@ -189,10 +189,14 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let step_as_time = self.step.0 as f64 / self.step.1 as f64;
+        let step_as_time = self.time_quantum.0 as f64 / self.time_quantum.1 as f64;
         let ts = (0..)
-            .filter(|i| puts.iter().any(|p| (i - self.beat_offset) % p == 0))
-            .filter(|i| skips.iter().all(|s| (i + 1 - self.beat_offset) % s != 0))
+            .filter(|i| inclusions.iter().any(|p| (i - self.beat_offset) % p == 0))
+            .filter(|i| {
+                exclusions
+                    .iter()
+                    .all(|s| (i + 1 - self.beat_offset) % s != 0)
+            })
             .map(|i| self.t_min + i as f64 * step_as_time)
             .take_while(|t| *t <= self.t_max.min(self.loop_len));
         let ds = ts

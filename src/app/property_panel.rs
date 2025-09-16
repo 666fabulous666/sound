@@ -89,7 +89,7 @@ impl GuiApp {
                                 egui::Slider::new(&mut t_max, t_min..=seq.loop_len).text("t_max"),
                             );
                             t_max = t_max.clamp(t_min, seq.loop_len);
-                            let step_f64 = seq.step.0 as f64 / seq.step.1 as f64;
+                            let step_f64 = seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
                             if (t_min - seq.t_min).abs() > f64::EPSILON {
                                 edited_seq
                                     .get_or_insert(seqs.lock().unwrap()[sel].clone())
@@ -209,94 +209,130 @@ impl GuiApp {
                             ui.separator();
                             {
                                 ui.horizontal(|ui| {
-                                    let mut tmp_step = seq.step.clone();
-                                    ui.label("step:");
+                                    let mut tmp_quantum = seq.time_quantum.clone();
+                                    ui.label("Time quantum:");
+                                    ui.small_button("?").on_hover_text(
+                                        "Duration of the base time unit for beats.\n\
+                                         \n\
+                                         Rhythm inclusions and exclusions are tested\n\
+                                         for divisibility against this quantum.",
+                                    );
                                     if ui
-                                        .add(egui::DragValue::new(&mut tmp_step.0).range(1..=128))
+                                        .add(
+                                            egui::DragValue::new(&mut tmp_quantum.0).range(1..=128),
+                                        )
                                         .changed()
                                     {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .step
-                                            .0 = tmp_step.0;
+                                            .time_quantum
+                                            .0 = tmp_quantum.0;
                                     };
                                     ui.label("/");
                                     if ui
-                                        .add(egui::DragValue::new(&mut tmp_step.1).range(1..=128))
+                                        .add(
+                                            egui::DragValue::new(&mut tmp_quantum.1).range(1..=128),
+                                        )
                                         .changed()
                                     {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .step
-                                            .1 = tmp_step.1;
+                                            .time_quantum
+                                            .1 = tmp_quantum.1;
                                     };
                                 });
                             }
-
+                            ui.separator();
                             {
-                                let mut tmp_puts = seq.puts.clone();
-                                if let Rythm::Rd(_) = tmp_puts {
-                                    if ui.button("go deterministic puts").clicked() {
+                                ui.label("Rythm inclusions:");
+                                let mut tmp_inclusions = seq.inclusions.clone();
+                                if let Rythm::Rd(_) = tmp_inclusions {
+                                    if ui.button("Use deterministic inclusion generators").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .puts = Rythm::Det(DetRythm::default());
+                                            .inclusions = Rythm::Det(DetRythm::default());
                                     }
                                 } else {
-                                    if ui.button("go random puts").clicked() {
+                                    if ui.button("Use random inclusion generators").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .puts = Rythm::Rd(RdRythm::default());
+                                            .inclusions = Rythm::Rd(RdRythm::default());
                                     }
                                 }
-                                match tmp_puts {
+                                match tmp_inclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
-                                        ui.horizontal(|ui| {
-                                            ui.label("random puts:");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut rd_rythm.amount)
-                                                        .range(0..=512),
-                                                )
-                                                .changed()
-                                            {
-                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                    edited_seq
-                                                        .get_or_insert(
-                                                            seqs.lock().unwrap()[sel].clone(),
-                                                        )
-                                                        .puts
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui|{
+                                                ui.label("Random inclusion generators:");
+                                                ui.small_button("?").on_hover_text(
+                                                    "Rules that randomly place beats.\n\
+                                                     \n\
+                                                     A set of n inclusion generators is picked\n\
+                                                     randomly from [1, N].\n\
+                                                     \n\
+                                                     Any beat whose time unit is a multiple of\n\
+                                                     one of these values will be included."
+                                                );
+                                            });
+                                            ui.horizontal(|ui|{
+                                                ui.label("n:");
+                                                if ui
+                                                    .add(
+                                                        egui::DragValue::new(&mut rd_rythm.amount)
+                                                            .range(0..=rd_rythm.length),
+                                                    )
+                                                    .changed()
                                                 {
-                                                    edited_rd_rythm.amount =
-                                                        rd_rythm.amount.min(rd_rythm.length);
-                                                }
-                                            };
-                                            ui.label(",");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut rd_rythm.length)
-                                                        .range(0..=512),
-                                                )
-                                                .changed()
-                                            {
-                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                    edited_seq
-                                                        .get_or_insert(
-                                                            seqs.lock().unwrap()[sel].clone(),
-                                                        )
-                                                        .puts
+                                                    if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                        edited_seq
+                                                            .get_or_insert(
+                                                                seqs.lock().unwrap()[sel].clone(),
+                                                            )
+                                                            .inclusions
+                                                    {
+                                                        edited_rd_rythm.amount =
+                                                            rd_rythm.amount.min(rd_rythm.length);
+                                                    }
+                                                };
+                                                ui.label("N:");
+                                                if ui
+                                                    .add(
+                                                        egui::DragValue::new(&mut rd_rythm.length)
+                                                            .range(rd_rythm.amount..=512),
+                                                    )
+                                                    .changed()
                                                 {
-                                                    edited_rd_rythm.length =
-                                                        rd_rythm.length.max(rd_rythm.amount);
-                                                }
-                                            };
+                                                    if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                        edited_seq
+                                                            .get_or_insert(
+                                                                seqs.lock().unwrap()[sel].clone(),
+                                                            )
+                                                            .inclusions
+                                                    {
+                                                        edited_rd_rythm.length =
+                                                            rd_rythm.length.max(rd_rythm.amount);
+                                                    }
+                                                };
+                                            });
                                         });
                                     }
                                     Rythm::Det(det_rythm) => {
-                                        ui.horizontal(|ui| {
-                                            ui.label("deterministic puts:");
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.label("Deterministic inclusion generators:");
+                                                ui.small_button("?").on_hover_text(
+                                                    "Rules that deterministically place beats.\n\
+                                                     \n\
+                                                     Choose inclusion generators: any beat whose\n\
+                                                     time unit is a multiple of one of these values\n\
+                                                     will be included.\n\
+                                                     \n\
+                                                     Generators ≤ 1 are ignored; use values > 1.",
+                                                );
+                                            });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
-                                            Self::edit_vec(ui, &mut gens, "", 2);
+                                            Self::edit_vec(ui, &mut gens, <Option<&str>>::None, 2);
                                             if gens != old_val {
                                                 // TODO: do better
                                                 if let Rythm::Det(ref mut edited_det_rythm) =
@@ -304,79 +340,117 @@ impl GuiApp {
                                                         .get_or_insert(
                                                             seqs.lock().unwrap()[sel].clone(),
                                                         )
-                                                        .puts
+                                                        .inclusions
                                                 {
-                                                    edited_det_rythm.generators = gens;
+                                                    edited_det_rythm.generators = gens
+                                                        .into_iter()
+                                                        .filter(|g| *g > 1)
+                                                        .collect();
+                                                    // edited_det_rythm.generators = gens;
                                                 }
                                             }
                                         });
                                     }
                                 }
                             }
+                            ui.separator();
                             {
-                                let mut tmp_skips = seq.skips.clone();
-                                if let Rythm::Rd(_) = tmp_skips {
-                                    if ui.button("go deterministic skips").clicked() {
+                                let mut tmp_exclusions = seq.exclusions.clone();
+                                if let Rythm::Rd(_) = tmp_exclusions {
+                                    ui.label("Rythm exclusions:");
+                                    if ui.button("Use deterministic exclusion generators").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .skips = Rythm::Det(DetRythm::default());
+                                            .exclusions = Rythm::Det(DetRythm::default());
                                     }
                                 } else {
-                                    if ui.button("go random skips").clicked() {
+                                    if ui.button("Use random exclusion generators").clicked() {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                            .skips = Rythm::Rd(RdRythm::default());
+                                            .exclusions = Rythm::Rd(RdRythm::default());
                                     }
                                 }
-                                match tmp_skips {
+                                match tmp_exclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
-                                        ui.horizontal(|ui| {
-                                            ui.label("random skips:");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut rd_rythm.amount)
-                                                        .range(0..=512),
-                                                )
-                                                .changed()
-                                            {
-                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                    edited_seq
-                                                        .get_or_insert(
-                                                            seqs.lock().unwrap()[sel].clone(),
-                                                        )
-                                                        .skips
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui|{
+                                                ui.label("Random exclusion generators:");
+                                                ui.small_button("?").on_hover_text(
+                                                    "Rules that randomly skip beats.\n\
+                                                     \n\
+                                                     A set of n exclusion generators is picked\n\
+                                                     randomly from [2, N+1].\n\
+                                                     \n\
+                                                     Any beat whose time unit shifted forward by 1 is\n\
+                                                     a multiple of one of these values will be excluded,\n\
+                                                     ensuring the first beat is never excluded..\n\
+                                                     \n\
+                                                     (Generator 1 is not allowed, as it would exclude every beat.)"
+                                                );
+                                            });
+                                            ui.horizontal(|ui|{
+                                                ui.label("n:");
+                                                if ui
+                                                    .add(
+                                                        egui::DragValue::new(&mut rd_rythm.amount)
+                                                            .range(0..=512),
+                                                    )
+                                                    .changed()
                                                 {
-                                                    edited_rd_rythm.amount =
-                                                        rd_rythm.amount.min(rd_rythm.length);
-                                                }
-                                            };
-                                            ui.label(",");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut rd_rythm.length)
-                                                        .range(0..=512),
-                                                )
-                                                .changed()
-                                            {
-                                                if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                    edited_seq
-                                                        .get_or_insert(
-                                                            seqs.lock().unwrap()[sel].clone(),
-                                                        )
-                                                        .skips
+                                                    if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                        edited_seq
+                                                            .get_or_insert(
+                                                                seqs.lock().unwrap()[sel].clone(),
+                                                            )
+                                                            .exclusions
+                                                    {
+                                                        edited_rd_rythm.amount =
+                                                            rd_rythm.amount.min(rd_rythm.length);
+                                                    }
+                                                };
+                                                ui.label("N:");
+                                                if ui
+                                                    .add(
+                                                        egui::DragValue::new(&mut rd_rythm.length)
+                                                            .range(0..=512),
+                                                    )
+                                                    .changed()
                                                 {
-                                                    edited_rd_rythm.length =
-                                                        rd_rythm.length.max(rd_rythm.amount);
-                                                }
-                                            };
+                                                    if let Rythm::Rd(ref mut edited_rd_rythm) =
+                                                        edited_seq
+                                                            .get_or_insert(
+                                                                seqs.lock().unwrap()[sel].clone(),
+                                                            )
+                                                            .exclusions
+                                                    {
+                                                        edited_rd_rythm.length =
+                                                            rd_rythm.length.max(rd_rythm.amount);
+                                                    }
+                                                };
+                                            });
                                         });
                                     }
                                     Rythm::Det(det_rythm) => {
-                                        ui.horizontal(|ui| {
-                                            ui.label("deterministic skips:");
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.label("Deterministic exclusion generators:");
+                                                ui.small_button("?").on_hover_text(
+                                                    "Rules that deterministically skip beats.\n\
+                                                     \n\
+                                                     Choose exclusion generators: any beat whose\n\
+                                                     time unit shifted forward by 1 is a multiple\n\
+                                                     of one of these values will be excluded.\n\
+                                                     \n\
+                                                     Beats are tested with their time unit\n\
+                                                     shifted forward by 1, ensuring the first beat\n\
+                                                     is never excluded.\n\
+                                                     \n\
+                                                     Generators ≤ 1 are ignored; use values > 1."
+                                                );
+                                            });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
-                                            Self::edit_vec(ui, &mut gens, "", 2);
+                                            Self::edit_vec(ui, &mut gens, <Option<&str>>::None, 2);
                                             if gens != old_val {
                                                 // TODO: do better
                                                 if let Rythm::Det(ref mut edited_det_rythm) =
@@ -384,7 +458,7 @@ impl GuiApp {
                                                         .get_or_insert(
                                                             seqs.lock().unwrap()[sel].clone(),
                                                         )
-                                                        .skips
+                                                        .exclusions
                                                 {
                                                     edited_det_rythm.generators = gens
                                                         .into_iter()
@@ -396,7 +470,7 @@ impl GuiApp {
                                     }
                                 }
                             }
-
+                            ui.separator();
                             {
                                 ui.horizontal(|ui| {
                                     let mut tmp_tolerance = seq.tolerance.clone();

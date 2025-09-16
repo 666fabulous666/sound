@@ -140,11 +140,13 @@ impl GuiApp {
     fn edit_vec<T: egui::emath::Numeric>(
         ui: &mut egui::Ui,
         mut vec: impl DerefMut<Target = Vec<T>>,
-        label: impl Into<WidgetText>,
+        label: Option<impl Into<WidgetText>>,
         default_value: T,
     ) {
         ui.vertical(|ui| {
-            ui.label(label);
+            if let Some(label) = label {
+                ui.label(label);
+            }
             ui.horizontal(|ui| {
                 vec.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked()); // TODO: return true
                 if ui.button("add").clicked() {
@@ -158,6 +160,10 @@ impl GuiApp {
 
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut style: egui::Style = (*ctx.style()).clone();
+        style.interaction.tooltip_delay = 0.01;
+        ctx.set_style(style);
+
         let current_time = self.current_time();
         let len = self.seqs.lock().unwrap().len();
         // -------- top bar --------

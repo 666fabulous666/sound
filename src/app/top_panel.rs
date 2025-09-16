@@ -67,13 +67,13 @@ impl GuiApp {
                 Self::edit_vec(
                     &mut cols[0],
                     self.score_params.delays.0.lock().unwrap(),
-                    "Left Delays",
+                    Some("Left Delays"),
                     1,
                 );
                 Self::edit_vec(
                     &mut cols[1],
                     self.score_params.delays.1.lock().unwrap(),
-                    "Right Delays",
+                    Some("Right Delays"),
                     1,
                 );
             });
