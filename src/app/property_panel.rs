@@ -80,39 +80,43 @@ impl GuiApp {
                             }
 
                             ui.separator();
-
-                            // ---- numeric fields ----
-                            let mut t_min = seq.t_min;
-                            let mut t_max = seq.t_max;
-                            ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
-                            ui.add(
-                                egui::Slider::new(&mut t_max, t_min..=seq.loop_len).text("t_max"),
-                            );
-                            t_max = t_max.clamp(t_min, seq.loop_len);
-                            let step_f64 = seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
-                            if (t_min - seq.t_min).abs() > f64::EPSILON {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .t_min = (t_min / step_f64).round() * step_f64;
-                            }
-                            if (t_max - seq.t_max).abs() > f64::EPSILON {
-                                edited_seq
-                                    .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                    .t_max = (t_max / step_f64).round() * step_f64;
+                            {
+                                ui.label("Sequence's position");
+                                let mut t_min = seq.t_min;
+                                let mut t_max = seq.t_max;
+                                ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
+                                ui.add(
+                                    egui::Slider::new(&mut t_max, t_min..=seq.loop_len)
+                                        .text("t_max"),
+                                );
+                                t_max = t_max.clamp(t_min, seq.loop_len);
+                                let step_f64 =
+                                    seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
+                                if (t_min - seq.t_min).abs() > f64::EPSILON {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .t_min = (t_min / step_f64).round() * step_f64;
+                                }
+                                if (t_max - seq.t_max).abs() > f64::EPSILON {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .t_max = (t_max / step_f64).round() * step_f64;
+                                }
                             }
 
                             ui.separator();
                             {
+                                ui.label("Envelope");
                                 let mut attack_decay = seq.attack_decay;
                                 let attack = ui.add(
                                     egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
-                                        .text("attack")
+                                        .text("Attack")
                                         .show_value(true)
                                         .logarithmic(true),
                                 );
                                 let decay = ui.add(
                                     egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
-                                        .text("decay")
+                                        .text("Decay")
                                         .logarithmic(true),
                                 );
                                 if attack.changed() || decay.changed() {
@@ -123,34 +127,35 @@ impl GuiApp {
                             }
                             ui.separator();
                             {
-                                let mut attack_freq_modulation = seq.attack_freq_modulation;
+                                ui.label("Bend");
+                                let mut bend = seq.bend;
                                 let mag = ui.add(
-                                    egui::Slider::new(&mut attack_freq_modulation.0, -0.01..=0.01)
-                                        .text("attack freq mod mag"),
+                                    egui::Slider::new(&mut bend.0, -0.01..=0.01).text("Magnitude"),
                                 );
                                 let speed = ui.add(
-                                    egui::Slider::new(&mut attack_freq_modulation.1, 1.0..=100.0)
-                                        .text("attack freq mod speed")
+                                    egui::Slider::new(&mut bend.1, 1.0..=1000.0)
+                                        .text("Speed")
                                         .logarithmic(true),
                                 );
                                 if mag.changed() || speed.changed() {
                                     edited_seq
                                         .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .attack_freq_modulation = attack_freq_modulation;
+                                        .bend = bend;
                                 };
                             }
                             ui.separator();
                             {
+                                ui.label("Vibrato");
                                 let mut vibrato = seq.vibrato;
                                 let mut vibrato_mag_display = vibrato.0 * 1e6;
                                 let mag = ui.add(
-                                    egui::Slider::new(&mut vibrato_mag_display, 0.0..=500.0)
-                                        .text("vibrato mag"),
+                                    egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
+                                        .text("Magnitude"),
                                 );
 
                                 let fq = ui.add(
                                     egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
-                                        .text("vibrato fq")
+                                        .text("Frequency")
                                         .logarithmic(true),
                                 );
                                 if mag.changed() || fq.changed() {
@@ -211,12 +216,12 @@ impl GuiApp {
                                 ui.horizontal(|ui| {
                                     let mut tmp_quantum = seq.time_quantum.clone();
                                     ui.label("Time quantum:");
-                                    ui.small_button("?").on_hover_text(
-                                        "Duration of the base time unit for beats.\n\
-                                         \n\
-                                         Rhythm inclusions and exclusions are tested\n\
-                                         for divisibility against this quantum.",
-                                    );
+                                    ui.small_button("?").on_hover_text(concat!(
+                                        "Duration of the base time unit for beats.\n",
+                                        "\n",
+                                        "Rhythm inclusions and exclusions are tested\n",
+                                        "for divisibility against this quantum."
+                                    ));
                                     if ui
                                         .add(
                                             egui::DragValue::new(&mut tmp_quantum.0).range(1..=128),
@@ -247,7 +252,10 @@ impl GuiApp {
                                 ui.label("Rythm inclusions:");
                                 let mut tmp_inclusions = seq.inclusions.clone();
                                 if let Rythm::Rd(_) = tmp_inclusions {
-                                    if ui.button("Use deterministic inclusion generators").clicked() {
+                                    if ui
+                                        .button("Use deterministic inclusion generators")
+                                        .clicked()
+                                    {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .inclusions = Rythm::Det(DetRythm::default());
@@ -262,19 +270,19 @@ impl GuiApp {
                                 match tmp_inclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui|{
+                                            ui.horizontal(|ui| {
                                                 ui.label("Random inclusion generators:");
-                                                ui.small_button("?").on_hover_text(
-                                                    "Rules that randomly place beats.\n\
-                                                     \n\
-                                                     A set of n inclusion generators is picked\n\
-                                                     randomly from [1, N].\n\
-                                                     \n\
-                                                     Any beat whose time unit is a multiple of\n\
-                                                     one of these values will be included."
-                                                );
+                                                ui.small_button("?").on_hover_text(concat!(
+                                                    "Rules that randomly place beats.\n",
+                                                    "\n",
+                                                    "A set of n inclusion generators is picked\n",
+                                                    "randomly from [1, N].\n",
+                                                    "\n",
+                                                    "Any beat whose time unit is a multiple of\n",
+                                                    "one of these values will be included."
+                                                ));
                                             });
-                                            ui.horizontal(|ui|{
+                                            ui.horizontal(|ui| {
                                                 ui.label("n:");
                                                 if ui
                                                     .add(
@@ -320,15 +328,15 @@ impl GuiApp {
                                         ui.vertical(|ui| {
                                             ui.horizontal(|ui| {
                                                 ui.label("Deterministic inclusion generators:");
-                                                ui.small_button("?").on_hover_text(
-                                                    "Rules that deterministically place beats.\n\
-                                                     \n\
-                                                     Choose inclusion generators: any beat whose\n\
-                                                     time unit is a multiple of one of these values\n\
-                                                     will be included.\n\
-                                                     \n\
-                                                     Generators ≤ 1 are ignored; use values > 1.",
-                                                );
+                                                ui.small_button("?").on_hover_text(concat!(
+                                                    "Rules that deterministically place beats.\n",
+                                                    "\n",
+                                                    "Choose inclusion generators: any beat whose\n",
+                                                    "time unit is a multiple of one of these\n",
+                                                    "values will be included.\n",
+                                                    "\n",
+                                                    "Generators ≤ 1 are ignored; use values > 1.",
+                                                ));
                                             });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
@@ -358,7 +366,10 @@ impl GuiApp {
                                 let mut tmp_exclusions = seq.exclusions.clone();
                                 if let Rythm::Rd(_) = tmp_exclusions {
                                     ui.label("Rythm exclusions:");
-                                    if ui.button("Use deterministic exclusion generators").clicked() {
+                                    if ui
+                                        .button("Use deterministic exclusion generators")
+                                        .clicked()
+                                    {
                                         edited_seq
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone())
                                             .exclusions = Rythm::Det(DetRythm::default());
@@ -373,22 +384,24 @@ impl GuiApp {
                                 match tmp_exclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui|{
+                                            ui.horizontal(|ui| {
                                                 ui.label("Random exclusion generators:");
-                                                ui.small_button("?").on_hover_text(
-                                                    "Rules that randomly skip beats.\n\
-                                                     \n\
-                                                     A set of n exclusion generators is picked\n\
-                                                     randomly from [2, N+1].\n\
-                                                     \n\
-                                                     Any beat whose time unit shifted forward by 1 is\n\
-                                                     a multiple of one of these values will be excluded,\n\
-                                                     ensuring the first beat is never excluded..\n\
-                                                     \n\
-                                                     (Generator 1 is not allowed, as it would exclude every beat.)"
-                                                );
+                                                ui.small_button("?").on_hover_text(concat!(
+                                                    "Rules that randomly skip beats.\n",
+                                                    "\n",
+                                                    "A set of n exclusion generators is picked\n",
+                                                    "randomly from [2, N+1].\n",
+                                                    "\n",
+                                                    "Any beat whose time unit shifted forward\n",
+                                                    "by 1 is a multiple of one of these\n",
+                                                    "values will be excluded, ensuring the\n",
+                                                    "first beat is never excluded..\n",
+                                                    "\n",
+                                                    "(Generator 1 is not allowed,\n",
+                                                    "as it would exclude every beat.)"
+                                                ));
                                             });
-                                            ui.horizontal(|ui|{
+                                            ui.horizontal(|ui| {
                                                 ui.label("n:");
                                                 if ui
                                                     .add(
@@ -434,19 +447,20 @@ impl GuiApp {
                                         ui.vertical(|ui| {
                                             ui.horizontal(|ui| {
                                                 ui.label("Deterministic exclusion generators:");
-                                                ui.small_button("?").on_hover_text(
-                                                    "Rules that deterministically skip beats.\n\
-                                                     \n\
-                                                     Choose exclusion generators: any beat whose\n\
-                                                     time unit shifted forward by 1 is a multiple\n\
-                                                     of one of these values will be excluded.\n\
-                                                     \n\
-                                                     Beats are tested with their time unit\n\
-                                                     shifted forward by 1, ensuring the first beat\n\
-                                                     is never excluded.\n\
-                                                     \n\
-                                                     Generators ≤ 1 are ignored; use values > 1."
-                                                );
+                                                ui.small_button("?").on_hover_text(concat!(
+                                                    "Rules that deterministically skip beats.\n",
+                                                    "\n",
+                                                    "Choose exclusion generators: any beat whose\n",
+                                                    "time unit shifted forward by 1 is\n",
+                                                    "a multiple of one of these/n",
+                                                    " values will be excluded.\n",
+                                                    "\n",
+                                                    "Beats are tested with their time unit\n",
+                                                    "shifted forward by 1, ensuring\n",
+                                                    "the first beat is never excluded.\n",
+                                                    "\n",
+                                                    "Generators ≤ 1 are ignored; use values > 1."
+                                                ));
                                             });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();

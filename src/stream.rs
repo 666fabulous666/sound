@@ -58,7 +58,7 @@ pub fn stream(
                                     t,
                                     note.duration,
                                     note.attack_decay,
-                                    note.attack_freq_modulation,
+                                    note.bend,
                                     note.vibrato,
                                     &note.chorus,
                                     note.pow_fact,

@@ -38,18 +38,12 @@ pub fn generate_wave(
     time: f64,
     duration: f64,
     attack_decay: (f64, f64),
-    attack_freq_modulation: (f64, f64),
+    bend: (f64, f64),
     vibrato: (f64, f64),
     chorus: &ChorusParams,
     pow_fact: f64,
 ) -> f64 {
-    let time_bent = time_bender(
-        time,
-        attack_freq_modulation.0,
-        attack_freq_modulation.1,
-        vibrato.0,
-        vibrato.1,
-    );
+    let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     let f = |x: f64| match wave_type {
         WaveType::Mute => 0.0,
         WaveType::Sine => x.sin(),
@@ -68,11 +62,11 @@ pub fn generate_wave(
             let t = x / (2.0 * PI);
             0.5 * (t - (0.5 + t).floor())
         }
-        WaveType::HiHat => drums::hi_hat(freq, time_bent),
-        WaveType::Kick => drums::kick(freq, time_bent),
-        WaveType::Snare => drums::snare(freq, time_bent),
+        WaveType::HiHat => drums::hi_hat(freq, bend_vib_time),
+        WaveType::Kick => drums::kick(freq, bend_vib_time),
+        WaveType::Snare => drums::snare(freq, bend_vib_time),
     };
-    let phase = 2.0 * PI * freq * time_bent;
+    let phase = 2.0 * PI * freq * bend_vib_time;
     let pow_fact = (pow_fact * time).exp();
     let tmp = (0..chorus.number_of_heads)
         .map(|k| {
@@ -97,13 +91,13 @@ fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 
         0.1 * (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64
     }
 }
-fn time_bender(
+fn time_bend_vibrato(
     time: f64,
-    attack_mag: f64,
-    attack_time: f64,
+    bend_mag: f64,
+    bend_speed: f64,
     vibrato_mag: f64,
     vibrato_freq: f64,
 ) -> f64 {
-    time + attack_mag * (1.0 + time).powf(-attack_time)
+    time + bend_mag * (1.0 + time).powf(-bend_speed)
         + vibrato_mag * (2.0 * PI * time * vibrato_freq).sin()
 }
