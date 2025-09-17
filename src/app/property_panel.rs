@@ -83,7 +83,7 @@ impl GuiApp {
 
                             ui.separator();
                             {
-                                ui.label("Sequence's position");
+                                ui.label("Sequence position");
                                 let mut t_min = seq.t_min;
                                 let mut t_max = seq.t_max;
                                 ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
@@ -189,26 +189,28 @@ impl GuiApp {
                             }
                             ui.separator();
                             {
+                                ui.label("Chorus");
                                 let mut chorus = seq.chorus;
                                 let n = ui.add(
-                                    egui::Slider::new(&mut chorus.number_of_heads, 1..=10)
-                                        .text("chorus n"),
+                                    egui::Slider::new(&mut chorus.voices, 1..=10).text("Voices"),
                                 );
                                 let delta = ui.add(
                                     egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
-                                        .text("chorus delta")
+                                        .text("Detune")
                                         .logarithmic(true),
                                 );
+
+                                ui.label("Attenuation coefficients");
                                 let symmetric = ui.add(
-                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("symmetric"),
+                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("Symmetric"),
                                 );
                                 let asymmetric = ui.add(
                                     egui::Slider::new(&mut chorus.asym, 0.0..=1.0)
-                                        .text("asymmetric"),
+                                        .text("Asymmetric"),
                                 );
                                 let time_dep = ui.add(
-                                    egui::Slider::new(&mut chorus.time_dependency, -50.0..=50.0)
-                                        .text("time_dependency"),
+                                    egui::Slider::new(&mut chorus.time_dependency, -5.0..=5.0)
+                                        .text("Time dependency"),
                                 );
                                 if [n, delta, symmetric, asymmetric, time_dep]
                                     .iter()

@@ -84,7 +84,7 @@ fn default_attack_decay() -> (f64, f64) {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChorusParams {
-    pub number_of_heads: usize,
+    pub voices: usize,
     pub delta: f64,
     pub sym: f64,
     pub asym: f64,
@@ -100,7 +100,7 @@ impl ChorusParams {
         time_dependency: f64,
     ) -> Self {
         Self {
-            number_of_heads,
+            voices: number_of_heads,
             delta,
             sym,
             asym,

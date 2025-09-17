@@ -68,7 +68,7 @@ pub fn generate_wave(
     };
     let phase = 2.0 * PI * freq * bend_vib_time;
     let pow_fact = (pow_fact * time).exp();
-    let tmp = (0..chorus.number_of_heads)
+    let tmp = (0..chorus.voices)
         .map(|k| {
             let delta = chorus.delta * (chorus.time_dependency * time).exp2();
             let two_pow_k = 2f64.powi(k as i32);
