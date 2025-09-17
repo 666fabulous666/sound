@@ -96,6 +96,7 @@ impl GuiApp {
                         block_rect,
                         4.0,
                         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                        egui::StrokeKind::Middle,
                     );
                 } else {
                     painter.rect_filled(block_rect_l, 4.0, col);
@@ -103,12 +104,14 @@ impl GuiApp {
                         block_rect_l,
                         4.0,
                         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                        egui::StrokeKind::Middle,
                     );
                     painter.rect_filled(block_rect_r, 4.0, col);
                     painter.rect_stroke(
                         block_rect_r,
                         4.0,
                         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                        egui::StrokeKind::Middle,
                     );
                 }
 

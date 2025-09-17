@@ -1,9 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    use std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    };
+    use std::sync::{Arc, Mutex};
 
     use cpal::traits::HostTrait;
     use synth::engine::scheduler::Scheduler;

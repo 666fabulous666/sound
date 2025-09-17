@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use egui::ScrollArea;
+// use egui_double_slider::DoubleSlider;
 
 use crate::{
     app::{GuiApp, ALL_WAVES},
@@ -8,6 +9,7 @@ use crate::{
         notes::{DetRythm, Interval, RdRythm, Rythm, Sequence},
         scheduler::Message,
     },
+    // range_slider::*,
 };
 
 impl GuiApp {
@@ -62,7 +64,7 @@ impl GuiApp {
                             // ---- WaveType picker ----
                             let mut w_choice = seq.wave_type;
 
-                            egui::ComboBox::from_id_source("wave_type_combo")
+                            egui::ComboBox::from_id_salt("wave_type_combo")
                                 .selected_text((&w_choice).to_string())
                                 .show_ui(ui, |ui| {
                                     for var in ALL_WAVES.iter() {
@@ -103,6 +105,27 @@ impl GuiApp {
                                         .t_max = (t_max / step_f64).round() * step_f64;
                                 }
                             }
+                            // {
+                            //     ui.label("Sequence's position");
+
+                            //     // If you keep a draft sequence somewhere, prefer it here to avoid resets
+                            //     let mut t_min = seq.t_min;
+                            //     let mut t_max = seq.t_max;
+
+                            //     let step = seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
+
+                            //     let resp = ui.add(DoubleSlider::new(
+                            //         &mut t_min,
+                            //         &mut t_max,
+                            //         0.0..=seq.loop_len,
+                            //     ));
+                            //     if resp.changed() {
+                            //         let e =
+                            //             edited_seq.get_or_insert(seqs.lock().unwrap()[sel].clone());
+                            //         e.t_min = t_min;
+                            //         e.t_max = t_max;
+                            //     }
+                            // }
 
                             ui.separator();
                             {
@@ -198,17 +221,18 @@ impl GuiApp {
                             }
                             ui.separator();
                             {
-                                let mut pow_fact = seq.pow_fact;
+                                let mut pow_fact =
+                                    seq.pow_fact.signum() * seq.pow_fact.abs().sqrt();
                                 if ui
                                     .add(
-                                        egui::Slider::new(&mut pow_fact, -50.0..=50.0)
+                                        egui::Slider::new(&mut pow_fact, -10.0..=10.0)
                                             .text("pow factor"), // .logarithmic(true),
                                     )
                                     .changed()
                                 {
                                     edited_seq
                                         .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .pow_fact = pow_fact;
+                                        .pow_fact = pow_fact.signum() * pow_fact * pow_fact;
                                 };
                             }
                             ui.separator();
@@ -395,7 +419,7 @@ impl GuiApp {
                                                     "Any beat whose time unit shifted forward\n",
                                                     "by 1 is a multiple of one of these\n",
                                                     "values will be excluded, ensuring the\n",
-                                                    "first beat is never excluded..\n",
+                                                    "first beat is never excluded.\n",
                                                     "\n",
                                                     "(Generator 1 is not allowed,\n",
                                                     "as it would exclude every beat.)"
@@ -452,8 +476,8 @@ impl GuiApp {
                                                     "\n",
                                                     "Choose exclusion generators: any beat whose\n",
                                                     "time unit shifted forward by 1 is\n",
-                                                    "a multiple of one of these/n",
-                                                    " values will be excluded.\n",
+                                                    "a multiple of one of these\n",
+                                                    "values will be excluded.\n",
                                                     "\n",
                                                     "Beats are tested with their time unit\n",
                                                     "shifted forward by 1, ensuring\n",

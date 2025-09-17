@@ -38,7 +38,7 @@ pub enum Rythm {
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
-    pub time_quantum: (usize, usize),
+    pub time_quantum: (usize, usize), // TODO: use proper fractions
     pub inclusions: Rythm,
     pub exclusions: Rythm,
     #[serde(default = "default_beat_offset")]

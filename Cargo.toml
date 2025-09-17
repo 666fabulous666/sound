@@ -18,8 +18,9 @@ winit = "0.28.0"
 rand = "0.8"
 itertools = "0.14.0"
 hound = "3.5.0"  # For writing .wav files
-egui = "0.28"
-eframe = { version = "0.28", default-features = false, features = ["glow", "default_fonts"] }
+egui = "0.32"
+egui_double_slider = "0.9.0"
+eframe = { version = "0.32", default-features = false, features = ["glow", "default_fonts"] }
 anyhow = "1"
 rfd = "0.14"
 instant = "0.1.13"
