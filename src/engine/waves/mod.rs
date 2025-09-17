@@ -68,6 +68,7 @@ pub fn generate_wave(
     };
     let phase = 2.0 * PI * freq * bend_vib_time;
     let pow_fact = (pow_fact * time).exp();
+    let mut norm = 0.0;
     let tmp = (0..chorus.voices)
         .map(|k| {
             let delta = chorus.delta * (chorus.time_dependency * time).exp2();
@@ -78,10 +79,13 @@ pub fn generate_wave(
             let tmp2 = f(phase * (1.0 - two_pow_k * delta));
             let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(pow_fact);
             let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(pow_fact);
+            let factor = sym_pow_k + asym_pow_k;
+            norm += factor.abs();
             let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
             tmp
         })
         .sum::<f64>()
+        / norm
         / (freq / 440.0).sqrt();
     envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
 }

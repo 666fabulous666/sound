@@ -189,29 +189,80 @@ impl GuiApp {
                             }
                             ui.separator();
                             {
-                                ui.label("Chorus");
-                                let mut chorus = seq.chorus;
-                                let n = ui.add(
-                                    egui::Slider::new(&mut chorus.voices, 1..=10).text("Voices"),
-                                );
-                                let delta = ui.add(
-                                    egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
-                                        .text("Detune")
-                                        .logarithmic(true),
-                                );
+                                ui.label("Chorus (Unison Detune)").on_hover_text(concat!(
+                                    "Adds multiple voices detuned\n",
+                                    "around the main frequency f₀\n",
+                                    "to create width and motion.\n",
+                                    "\n",
+                                    "Small detune -> subtle beating;\n",
+                                    "larger detune -> wider, thicker chorus."
+                                ));
 
-                                ui.label("Attenuation coefficients");
-                                let symmetric = ui.add(
-                                    egui::Slider::new(&mut chorus.sym, 0.0..=1.0).text("Symmetric"),
-                                );
-                                let asymmetric = ui.add(
-                                    egui::Slider::new(&mut chorus.asym, 0.0..=1.0)
-                                        .text("Asymmetric"),
-                                );
-                                let time_dep = ui.add(
-                                    egui::Slider::new(&mut chorus.time_dependency, -5.0..=5.0)
-                                        .text("Time dependency"),
-                                );
+                                let mut chorus = seq.chorus;
+
+                                let n = ui
+                                    .add(
+                                        egui::Slider::new(&mut chorus.voices, 1..=10)
+                                            .text("Voice layers"),
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Each layer adds one detuned voice\n",
+                                        "above and below f₀.\n",
+                                        "Voices total = 1 + 2 × (steps − 1).",
+                                    ));
+
+                                let delta = ui
+                                    .add(
+                                        egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
+                                            .text("Detune (Δf)")
+                                            .logarithmic(true),
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Detune amount between voices around f₀.\n",
+                                        "\n",
+                                        "Use very small values for slow beating;\n",
+                                        "increase for a wider chorus.",
+                                    ));
+
+                                let time_dep = ui
+                                    .add(
+                                        egui::Slider::new(&mut chorus.time_dependency, -5.0..=5.0)
+                                            .text("Detune over time"),
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Modulates Δf over time.\n",
+                                        "\n",
+                                        " > 0 : Δf increases over time.\n",
+                                        " < 0 : Δf decreases over time.\n",
+                                        " = 0 : static detune."
+                                    ));
+
+                                ui.label("Weighting (around f₀)").on_hover_text(concat!(
+                                    "Sets how much outer voices contribute\n",
+                                    "relative to the center.\n",
+                                    "\n",
+                                    " • |value| > 1 -> outer voices are amplified\n",
+                                    " • |value| = 1 -> constant voice levels\n",
+                                    " • |value| < 1 -> outer voices are attenuated\n",
+                                    "                  (so energy concentrates near f₀)\n",
+                                    " •  value < 0  -> outer voices are inverted in phase"
+                                ));
+                                let symmetric = ui
+                                    .add(
+                                        egui::Slider::new(&mut chorus.sym, -2.0..=2.0).text("Even"),
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Even (symmetric) weighting across +/− Δf",
+                                    ));
+
+                                let asymmetric = ui
+                                    .add(
+                                        egui::Slider::new(&mut chorus.asym, -2.0..=2.0).text("Odd"),
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Odd (asymmetric) weighting across +/− Δf.",
+                                    ));
+
                                 if [n, delta, symmetric, asymmetric, time_dep]
                                     .iter()
                                     .any(|x| x.changed())
@@ -241,8 +292,7 @@ impl GuiApp {
                             {
                                 ui.horizontal(|ui| {
                                     let mut tmp_quantum = seq.time_quantum.clone();
-                                    ui.label("Time quantum:");
-                                    ui.small_button("?").on_hover_text(concat!(
+                                    ui.label("Time quantum:").on_hover_text(concat!(
                                         "Duration of the base time unit for beats.\n",
                                         "\n",
                                         "Rhythm inclusions and exclusions are tested\n",
@@ -296,9 +346,8 @@ impl GuiApp {
                                 match tmp_inclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label("Random inclusion generators:");
-                                                ui.small_button("?").on_hover_text(concat!(
+                                            ui.label("Random inclusion generators:").on_hover_text(
+                                                concat!(
                                                     "Rules that randomly place beats.\n",
                                                     "\n",
                                                     "A set of n inclusion generators is picked\n",
@@ -306,8 +355,8 @@ impl GuiApp {
                                                     "\n",
                                                     "Any beat whose time unit is a multiple of\n",
                                                     "one of these values will be included."
-                                                ));
-                                            });
+                                                ),
+                                            );
                                             ui.horizontal(|ui| {
                                                 ui.label("n:");
                                                 if ui
@@ -352,9 +401,8 @@ impl GuiApp {
                                     }
                                     Rythm::Det(det_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label("Deterministic inclusion generators:");
-                                                ui.small_button("?").on_hover_text(concat!(
+                                            ui.label("Deterministic inclusion generators:")
+                                                .on_hover_text(concat!(
                                                     "Rules that deterministically place beats.\n",
                                                     "\n",
                                                     "Choose inclusion generators: any beat whose\n",
@@ -363,7 +411,6 @@ impl GuiApp {
                                                     "\n",
                                                     "Generators ≤ 1 are ignored; use values > 1.",
                                                 ));
-                                            });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
                                             Self::edit_vec(ui, &mut gens, <Option<&str>>::None, 2);
@@ -410,9 +457,8 @@ impl GuiApp {
                                 match tmp_exclusions {
                                     Rythm::Rd(ref mut rd_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label("Random exclusion generators:");
-                                                ui.small_button("?").on_hover_text(concat!(
+                                            ui.label("Random exclusion generators:").on_hover_text(
+                                                concat!(
                                                     "Rules that randomly skip beats.\n",
                                                     "\n",
                                                     "A set of n exclusion generators is picked\n",
@@ -425,8 +471,8 @@ impl GuiApp {
                                                     "\n",
                                                     "(Generator 1 is not allowed,\n",
                                                     "as it would exclude every beat.)"
-                                                ));
-                                            });
+                                                ),
+                                            );
                                             ui.horizontal(|ui| {
                                                 ui.label("n:");
                                                 if ui
@@ -471,9 +517,8 @@ impl GuiApp {
                                     }
                                     Rythm::Det(det_rythm) => {
                                         ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label("Deterministic exclusion generators:");
-                                                ui.small_button("?").on_hover_text(concat!(
+                                            ui.label("Deterministic exclusion generators:")
+                                                .on_hover_text(concat!(
                                                     "Rules that deterministically skip beats.\n",
                                                     "\n",
                                                     "Choose exclusion generators: any beat whose\n",
@@ -487,7 +532,6 @@ impl GuiApp {
                                                     "\n",
                                                     "Generators ≤ 1 are ignored; use values > 1."
                                                 ));
-                                            });
                                             let mut gens = det_rythm.generators;
                                             let old_val = gens.clone();
                                             Self::edit_vec(ui, &mut gens, <Option<&str>>::None, 2);
