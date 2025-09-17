@@ -216,7 +216,7 @@ impl GuiApp {
 
                                 let delta = ui
                                     .add(
-                                        egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
+                                        egui::Slider::new(&mut chorus.delta, 0.0..=1.0)
                                             // egui::Slider::new(&mut chorus.delta, 1.0..=1.1)
                                             .text("Detune (Δf)")
                                             .logarithmic(true),

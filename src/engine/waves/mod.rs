@@ -70,13 +70,28 @@ pub fn generate_wave(
     let p = pow_fact.0 * (pow_fact.1 * time).exp();
     let mut norm = 0.0;
     let tmp = (0..chorus.voices)
+        // .map(|k| {
+        //     let delta = chorus.delta * (chorus.time_dependency * time).exp2();
+        //     let two_pow_k = 2f64.powi(k as i32);
+        //     let sym_pow_k = chorus.sym.powi(k as i32);
+        //     let asym_pow_k = chorus.asym.powi(k as i32);
+        //     let tmp1 = f(phase * (1.0 + two_pow_k * delta));
+        //     let tmp2 = f(phase * (1.0 - two_pow_k * delta));
+        //     let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
+        //     let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
+        //     let factor1 = sym_pow_k + asym_pow_k;
+        //     let factor2 = sym_pow_k - asym_pow_k;
+        //     norm += 0.5 * (factor1.abs() + factor2.abs());
+        //     let tmp = factor1 * tmp1 + factor2 * tmp2;
+        //     tmp
+        // })
         .map(|k| {
-            let delta = chorus.delta * (chorus.time_dependency * time).exp2();
-            let two_pow_k = 2f64.powi(k as i32);
+            let delta = 1.0 + chorus.delta * (chorus.time_dependency * time).exp2();
+            // let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
-            let tmp1 = f(phase * (1.0 + two_pow_k * delta));
-            let tmp2 = f(phase * (1.0 - two_pow_k * delta));
+            let tmp1 = f(phase * delta.powi(k as i32));
+            let tmp2 = f(phase / delta.powi(k as i32));
             let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
             let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
             let factor = sym_pow_k + asym_pow_k;
@@ -84,20 +99,6 @@ pub fn generate_wave(
             let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
             tmp
         })
-        // .map(|k| {
-        //     let delta = chorus.delta * (chorus.time_dependency * time).exp2();
-        //     // let two_pow_k = 2f64.powi(k as i32);
-        //     let sym_pow_k = chorus.sym.powi(k as i32);
-        //     let asym_pow_k = chorus.asym.powi(k as i32);
-        //     let tmp1 = f(phase * delta.powi(k as i32));
-        //     let tmp2 = f(phase / delta.powi(k as i32));
-        //     let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
-        //     let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
-        //     let factor = sym_pow_k + asym_pow_k;
-        //     norm += factor.abs();
-        //     let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
-        //     tmp
-        // })
         .sum::<f64>()
         / norm
         / (freq / 440.0).sqrt();
