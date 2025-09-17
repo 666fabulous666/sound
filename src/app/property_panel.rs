@@ -152,8 +152,10 @@ impl GuiApp {
                             {
                                 ui.label("Bend");
                                 let mut bend = seq.bend;
+                                let mut tmp_mag = bend.0 * 1e4;
                                 let mag = ui.add(
-                                    egui::Slider::new(&mut bend.0, -0.01..=0.01).text("Magnitude"),
+                                    egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
+                                        .text("Magnitude"),
                                 );
                                 let speed = ui.add(
                                     egui::Slider::new(&mut bend.1, 1.0..=1000.0)
@@ -161,9 +163,10 @@ impl GuiApp {
                                         .logarithmic(true),
                                 );
                                 if mag.changed() || speed.changed() {
-                                    edited_seq
-                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .bend = bend;
+                                    let e =
+                                        edited_seq.get_or_insert(seqs.lock().unwrap()[sel].clone());
+                                    e.bend.0 = tmp_mag * 1e-4;
+                                    e.bend.1 = bend.1;
                                 };
                             }
                             ui.separator();
@@ -214,6 +217,7 @@ impl GuiApp {
                                 let delta = ui
                                     .add(
                                         egui::Slider::new(&mut chorus.delta, 5e-4..=2e-1)
+                                            // egui::Slider::new(&mut chorus.delta, 1.0..=1.1)
                                             .text("Detune (Δf)")
                                             .logarithmic(true),
                                     )
@@ -274,18 +278,44 @@ impl GuiApp {
                             }
                             ui.separator();
                             {
-                                let mut pow_fact =
-                                    seq.pow_fact.signum() * seq.pow_fact.abs().sqrt();
+                                ui.label("Power factor").on_hover_text(concat!(
+                                    "Produces distortion or metallic timbre\n",
+                                    "\n",
+                                    " • |value| = 0 -> square wave\n",
+                                    " • |value| < 1 -> distortion\n",
+                                    " • |value| = 1 -> unchanged wave\n",
+                                    " • |value| < 1 -> metallic",
+                                ));
+                                let mut pow_fact = seq.pow_fact.0;
                                 if ui
                                     .add(
-                                        egui::Slider::new(&mut pow_fact, -10.0..=10.0)
-                                            .text("pow factor"), // .logarithmic(true),
+                                        egui::Slider::new(&mut pow_fact, 0.0..=1000.0)
+                                            .logarithmic(true)
+                                            .text("Initial value"),
                                     )
                                     .changed()
                                 {
                                     edited_seq
                                         .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .pow_fact = pow_fact.signum() * pow_fact * pow_fact;
+                                        .pow_fact
+                                        .0 = pow_fact;
+                                };
+                                let mut time_dep_pow_fact =
+                                    seq.pow_fact.1.signum() * seq.pow_fact.1.abs().sqrt();
+                                if ui
+                                    .add(
+                                        egui::Slider::new(&mut time_dep_pow_fact, -10.0..=10.0)
+                                            .text("Evolution"),
+                                    )
+                                    .on_hover_text(concat!())
+                                    .changed()
+                                {
+                                    edited_seq
+                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                        .pow_fact
+                                        .1 = time_dep_pow_fact.signum()
+                                        * time_dep_pow_fact
+                                        * time_dep_pow_fact;
                                 };
                             }
                             ui.separator();

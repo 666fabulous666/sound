@@ -41,7 +41,7 @@ pub fn generate_wave(
     bend: (f64, f64),
     vibrato: (f64, f64),
     chorus: &ChorusParams,
-    pow_fact: f64,
+    pow_fact: (f64, f64),
 ) -> f64 {
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     let f = |x: f64| match wave_type {
@@ -67,7 +67,7 @@ pub fn generate_wave(
         WaveType::Snare => drums::snare(freq, bend_vib_time),
     };
     let phase = 2.0 * PI * freq * bend_vib_time;
-    let pow_fact = (pow_fact * time).exp();
+    let p = pow_fact.0 * (pow_fact.1 * time).exp();
     let mut norm = 0.0;
     let tmp = (0..chorus.voices)
         .map(|k| {
@@ -77,13 +77,27 @@ pub fn generate_wave(
             let asym_pow_k = chorus.asym.powi(k as i32);
             let tmp1 = f(phase * (1.0 + two_pow_k * delta));
             let tmp2 = f(phase * (1.0 - two_pow_k * delta));
-            let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(pow_fact);
-            let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(pow_fact);
+            let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
+            let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
             let factor = sym_pow_k + asym_pow_k;
             norm += factor.abs();
             let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
             tmp
         })
+        // .map(|k| {
+        //     let delta = chorus.delta * (chorus.time_dependency * time).exp2();
+        //     // let two_pow_k = 2f64.powi(k as i32);
+        //     let sym_pow_k = chorus.sym.powi(k as i32);
+        //     let asym_pow_k = chorus.asym.powi(k as i32);
+        //     let tmp1 = f(phase * delta.powi(k as i32));
+        //     let tmp2 = f(phase / delta.powi(k as i32));
+        //     let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
+        //     let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
+        //     let factor = sym_pow_k + asym_pow_k;
+        //     norm += factor.abs();
+        //     let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
+        //     tmp
+        // })
         .sum::<f64>()
         / norm
         / (freq / 440.0).sqrt();
