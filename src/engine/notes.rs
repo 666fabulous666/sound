@@ -86,6 +86,7 @@ fn default_attack_decay() -> (f64, f64) {
 pub struct ChorusParams {
     pub voices: usize,
     pub delta: f64,
+    pub delta_noise: f64,
     pub sym: f64,
     pub asym: f64,
     pub time_dependency: f64,
@@ -95,6 +96,7 @@ impl ChorusParams {
     pub fn new(
         number_of_heads: usize,
         delta: f64,
+        delta_noise: f64,
         sym: f64,
         asym: f64,
         time_dependency: f64,
@@ -102,6 +104,7 @@ impl ChorusParams {
         Self {
             voices: number_of_heads,
             delta,
+            delta_noise,
             sym,
             asym,
             time_dependency,
@@ -158,7 +161,7 @@ impl Sequence {
             not_generate_until: None,
             bend: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: ChorusParams::new(1, 0.0, 0.5, 0.0, 0.0),
+            chorus: ChorusParams::new(1, 0.0, 0.0, 0.5, 0.0, 0.0),
             // chorus: ChorusParams::new(1, 0.0, 0.5, 0.0, 0.0),
             pow_fact: (1.0, 0.0),
             loop_len: DEFAULT_LOOP_LEN,

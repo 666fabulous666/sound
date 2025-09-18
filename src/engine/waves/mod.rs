@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::{f64::consts::PI, iter::once};
 
 use serde::{Deserialize, Serialize};
 
@@ -68,41 +68,52 @@ pub fn generate_wave(
     };
     let phase = 2.0 * PI * freq * bend_vib_time;
     let p = pow_fact.0 * (pow_fact.1 * time).exp();
+    // let mut norm = 1.0;
+    // let tmp = once({
+    //     let wave = f(phase);
+    //     wave.signum() * wave.abs().min(1.0).powf(p)
+    // })
+    // .chain((1..chorus.voices).map(|k| {
+    //     let delta = chorus.delta * (chorus.time_dependency * time).exp2();
+    //     let two_pow_k = 2f64.powi(k as i32);
+    //     let sym_pow_k = chorus.sym.powi(k as i32);
+    //     let asym_pow_k = chorus.asym.powi(k as i32);
+    //     let wave1 = f(phase * (1.0 + two_pow_k * delta));
+    //     let wave2 = f(phase * (1.0 - two_pow_k * delta));
+    //     let pow_wave1 = wave1.signum() * wave1.abs().min(1.0).powf(p);
+    //     let pow_wave2 = wave2.signum() * wave2.abs().min(1.0).powf(p);
+    //     let factor1 = sym_pow_k + asym_pow_k;
+    //     let factor2 = sym_pow_k - asym_pow_k;
+    //     norm += 0.5 * (factor1.abs() + factor2.abs());
+    //     let tmp = factor1 * pow_wave1 + factor2 * pow_wave2;
+    //     tmp
+    // }))
     let mut norm = 0.0;
-    let tmp = (0..chorus.voices)
-        // .map(|k| {
-        //     let delta = chorus.delta * (chorus.time_dependency * time).exp2();
-        //     let two_pow_k = 2f64.powi(k as i32);
-        //     let sym_pow_k = chorus.sym.powi(k as i32);
-        //     let asym_pow_k = chorus.asym.powi(k as i32);
-        //     let tmp1 = f(phase * (1.0 + two_pow_k * delta));
-        //     let tmp2 = f(phase * (1.0 - two_pow_k * delta));
-        //     let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
-        //     let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
-        //     let factor1 = sym_pow_k + asym_pow_k;
-        //     let factor2 = sym_pow_k - asym_pow_k;
-        //     norm += 0.5 * (factor1.abs() + factor2.abs());
-        //     let tmp = factor1 * tmp1 + factor2 * tmp2;
-        //     tmp
-        // })
+    let sum_of_waves = (0..chorus.voices)
         .map(|k| {
-            let delta = 1.0 + chorus.delta * (chorus.time_dependency * time).exp2();
+            let noise1 = chorus.delta_noise * hash_f64_to_minus1_1(freq * k as f64);
+            let noise2 = chorus.delta_noise * hash_f64_to_minus1_1(freq * k as f64 + 1.2345);
+            let d = chorus.delta * (chorus.time_dependency * time).exp2();
+            let noised_delta1 = 1.0 + d * (1.0 + noise1);
+            let noised_delta2 = 1.0 + d * (1.0 + noise2);
             // let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
-            let tmp1 = f(phase * delta.powi(k as i32));
-            let tmp2 = f(phase / delta.powi(k as i32));
+            // let tmp1 = f(phase
+            //     * (1.0 + chorus.delta * (chorus.time_dependency * time).exp2()).powi(k as i32));
+            let tmp1 = f(phase * noised_delta1.powi(k as i32));
+            let tmp2 = f(phase / noised_delta2.powi(k as i32));
             let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
             let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
-            let factor = sym_pow_k + asym_pow_k;
-            norm += factor.abs();
-            let tmp = (sym_pow_k + asym_pow_k) * tmp1 + (sym_pow_k - asym_pow_k) * tmp2;
+            let factor = (sym_pow_k.powi(2) + asym_pow_k.powi(2)).sqrt();
+            norm += factor;
+            let tmp = sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
             tmp
         })
         .sum::<f64>()
         / norm
         / (freq / 440.0).sqrt();
-    envelope(attack_decay.0, attack_decay.1, duration)(time) * tmp
+    envelope(attack_decay.0, attack_decay.1, duration)(time) * sum_of_waves
 }
 fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
@@ -119,4 +130,38 @@ fn time_bend_vibrato(
 ) -> f64 {
     time + bend_mag * (1.0 + time).powf(-bend_speed)
         + vibrato_mag * (2.0 * PI * time * vibrato_freq).sin()
+}
+
+/// Deterministically "hash" an f64 into a pseudo-random f64 in [-1.0, 1.0).
+/// - `-0.0` is treated as `0.0`
+/// - All NaNs map to the same output for stability
+/// - Infinities are handled like any other bit pattern
+pub fn hash_f64_to_minus1_1(x: f64) -> f64 {
+    // Canonicalize special cases so that -0.0 == 0.0, and all NaNs share one seed.
+    let seed_bits: u64 = if x == 0.0 {
+        0
+    } else if x.is_nan() {
+        // A canonical quiet-NaN payload
+        0x7ff8_0000_0000_0000
+    } else {
+        x.to_bits()
+    };
+
+    // SplitMix64 mixer
+    fn splitmix64(mut z: u64) -> u64 {
+        z = z.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+
+    // Mix the seed
+    let mixed = splitmix64(seed_bits);
+
+    // Use the high 53 bits to construct a uniform in [0, 1)
+    // (53 is the mantissa precision of f64)
+    let u01 = ((mixed >> 11) as f64) * (1.0 / (1u64 << 53) as f64);
+
+    // Map [0,1) -> [-1,1)
+    2.0 * u01 - 1.0
 }
