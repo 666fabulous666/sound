@@ -81,12 +81,16 @@ fn default_volume() -> f64 {
 fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
 }
+fn default_delta_shift() -> f64 {
+    0.0
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChorusParams {
     pub voices: usize,
     pub delta: f64,
-    pub delta_noise: f64,
+    #[serde(default = "default_delta_shift")]
+    pub delta_shift: f64,
     pub sym: f64,
     pub asym: f64,
     pub time_dependency: f64,
@@ -104,7 +108,7 @@ impl ChorusParams {
         Self {
             voices: number_of_heads,
             delta,
-            delta_noise,
+            delta_shift: delta_noise,
             sym,
             asym,
             time_dependency,
@@ -161,7 +165,7 @@ impl Sequence {
             not_generate_until: None,
             bend: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: ChorusParams::new(1, 0.0, 0.0, 0.5, 0.0, 0.0),
+            chorus: ChorusParams::new(1, 0.0, 0.0, 0.0, 0.0, 0.0),
             // chorus: ChorusParams::new(1, 0.0, 0.5, 0.0, 0.0),
             pow_fact: (1.0, 0.0),
             loop_len: DEFAULT_LOOP_LEN,

@@ -228,14 +228,14 @@ impl GuiApp {
                                         "increase for a wider chorus.",
                                     ));
 
-                                let delta_noise = ui
+                                let delta_shift = ui
                                     .add(
-                                        egui::Slider::new(&mut chorus.delta_noise, 0.0..=1.0)
-                                            .text("Detune noise")
-                                            .logarithmic(true),
+                                        egui::Slider::new(&mut chorus.delta_shift, -1.0..=1.0)
+                                            .text("Detune shift"), // .logarithmic(true),
                                     )
                                     .on_hover_text(concat!(
-                                        "Noise voices frequencies to avoid beatings.",
+                                        "Shift voices frequencies asymmetrically\n",
+                                        "to avoid beatings.",
                                     ));
 
                                 let time_dep = ui
@@ -277,7 +277,7 @@ impl GuiApp {
                                         "Odd (asymmetric) weighting across +/− Δf.",
                                     ));
 
-                                if [n, delta, delta_noise, symmetric, asymmetric, time_dep]
+                                if [n, delta, delta_shift, symmetric, asymmetric, time_dep]
                                     .iter()
                                     .any(|x| x.changed())
                                 {

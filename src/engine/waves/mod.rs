@@ -91,27 +91,25 @@ pub fn generate_wave(
     let mut norm = 0.0;
     let sum_of_waves = (0..chorus.voices)
         .map(|k| {
-            let noise1 = chorus.delta_noise * hash_f64_to_minus1_1(freq * k as f64);
-            let noise2 = chorus.delta_noise * hash_f64_to_minus1_1(freq * k as f64 + 1.2345);
             let d = chorus.delta * (chorus.time_dependency * time).exp2();
-            let noised_delta1 = 1.0 + d * (1.0 + noise1);
-            let noised_delta2 = 1.0 + d * (1.0 + noise2);
+            let delta1 = 1.0 + d * (1.0 + chorus.delta_shift);
+            let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
             // let two_pow_k = 2f64.powi(k as i32);
             let sym_pow_k = chorus.sym.powi(k as i32);
             let asym_pow_k = chorus.asym.powi(k as i32);
             // let tmp1 = f(phase
             //     * (1.0 + chorus.delta * (chorus.time_dependency * time).exp2()).powi(k as i32));
-            let tmp1 = f(phase * noised_delta1.powi(k as i32));
-            let tmp2 = f(phase / noised_delta2.powi(k as i32));
+            let tmp1 = f(phase * delta1.powi(k as i32));
+            let tmp2 = f(phase / delta2.powi(k as i32));
             let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
             let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
-            let factor = (sym_pow_k.powi(2) + asym_pow_k.powi(2)).sqrt();
+            let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
             norm += factor;
             let tmp = sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
             tmp
         })
         .sum::<f64>()
-        / norm
+        / norm.sqrt()
         / (freq / 440.0).sqrt();
     envelope(attack_decay.0, attack_decay.1, duration)(time) * sum_of_waves
 }
