@@ -25,14 +25,20 @@ impl<const N: usize> RingBuff<N> {
 }
 
 pub struct Reverb<const B: usize> {
-    delays: Arc<Mutex<Vec<usize>>>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
+    delays: Arc<Mutex<Vec<f64>>>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
     buffer: RingBuff<B>,
     dry_factor: f64,
     wet_factor: f64,
+    sample_rate: f64,
 }
 
 impl<const B: usize> Reverb<B> {
-    pub fn new(dry_factor: f64, wet_factor: f64, delays: Arc<Mutex<Vec<usize>>>) -> Self {
+    pub fn new(
+        dry_factor: f64,
+        wet_factor: f64,
+        delays: Arc<Mutex<Vec<f64>>>,
+        sample_rate: f64,
+    ) -> Self {
         let delays = delays;
         // let len = { delays.lock().unwrap().len() };
         // let a = wet_factor / len as f64;
@@ -42,6 +48,7 @@ impl<const B: usize> Reverb<B> {
             buffer: RingBuff::default(),
             dry_factor,
             wet_factor,
+            sample_rate,
             // a,
         }
     }
@@ -52,7 +59,9 @@ impl<const B: usize> Reverb<B> {
         let ds = self.delays.lock().unwrap();
         let a = self.wet_factor / ds.len() as f64;
         for d in ds.iter() {
-            output += a * self.buffer.backward(*d);
+            output += a * self
+                .buffer
+                .backward((*d / 1000.0 * self.sample_rate) as usize);
         }
 
         self.buffer.push(output);

@@ -35,7 +35,7 @@ const ALL_WAVES: [WaveType; 8] = [
 // ------------------------------------------------------------
 
 pub struct ScoreParams {
-    delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+    delays: (Arc<Mutex<Vec<f64>>>, Arc<Mutex<Vec<f64>>>),
 }
 
 impl Default for ScoreParams {
@@ -77,7 +77,7 @@ impl GuiApp {
         notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
         scheduler: Scheduler,
         sender: Sender<Message>,
-        delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
+        delays: (Arc<Mutex<Vec<f64>>>, Arc<Mutex<Vec<f64>>>),
     ) -> Self {
         *seqs.lock().unwrap() = Vec::new();
 

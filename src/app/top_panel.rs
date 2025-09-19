@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex};
 
+use cpal::traits::DeviceTrait;
+
 use crate::{
     app::GuiApp,
     engine::{notes::Sequence, reverb::Reverb, scheduler::Message},
@@ -71,28 +73,34 @@ impl GuiApp {
                 Self::edit_vec(
                     &mut cols[0],
                     self.score_params.delays.0.lock().unwrap(),
-                    Some("Left Delays"),
-                    1,
+                    Some("Left Delays (ms)"),
+                    0.0,
                 );
                 Self::edit_vec(
                     &mut cols[1],
                     self.score_params.delays.1.lock().unwrap(),
-                    Some("Right Delays"),
-                    1,
+                    Some("Right Delays (ms)"),
+                    0.0,
                 );
             });
         });
     }
 
     fn start_stream(&mut self, clock: Option<std::sync::Arc<std::sync::Mutex<f64>>>) {
+        let sample_rate = self
+            .device
+            .default_output_config()
+            .expect("Can't find default output config")
+            .sample_rate()
+            .0 as f64;
         self.stream = Some(stream(
             440.0,
             &self.device,
             clock.unwrap_or(Arc::new(Mutex::new(0.0))),
             self.notes.clone(),
             (
-                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone()),
-                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone()),
+                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone(), sample_rate),
+                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone(), sample_rate),
             ),
         ))
     }
