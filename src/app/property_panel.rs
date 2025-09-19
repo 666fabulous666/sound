@@ -45,6 +45,38 @@ impl GuiApp {
                             let can_up = sel > 0;
                             let can_down = sel + 1 < len; // ← NEW: use cached len
 
+                            {
+                                // volume
+                                ui.horizontal(|ui| {
+                                    let mut tmp_volume = seq.volume.clone();
+                                    ui.label("Volume:");
+                                    if ui
+                                        .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0))
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .volume = tmp_volume;
+                                    };
+                                });
+
+                                // spacial
+                                ui.horizontal(|ui| {
+                                    let mut tmp_spacial = seq.spacial.clone();
+                                    ui.label("Stereo:");
+                                    if ui
+                                        .add(egui::Slider::new(&mut tmp_spacial, 0.0..=1.0))
+                                        .on_hover_text("0.5 is centered.")
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .spacial = tmp_spacial.clamp(0.0, 1.0);
+                                    };
+                                });
+                            }
+                            ui.separator();
+
                             ui.horizontal(|ui| {
                                 if ui.button("Delete").clicked() {
                                     action = Action::Delete;
@@ -593,6 +625,52 @@ impl GuiApp {
                                         });
                                     }
                                 }
+                                ui.separator();
+                                ui.horizontal(|ui| {
+                                    let mut tmp_beat_offset = seq.beat_offset.clone();
+                                    ui.label("Groove offset:").on_hover_text(concat!(
+                                        "Shifts the rhythmic grid used to place notes.\n",
+                                        "\n",
+                                        "It offsets the index of the\n",
+                                        "time quanta tested for divisibility.\n",
+                                        "\n",
+                                        "This changes where note onsets are more likely\n",
+                                        "to occur, creating an off-beat feel.\n",
+                                        "\n",
+                                        "Expressed in the unit of the time quantum.",
+                                    ));
+                                    if ui
+                                        .add(
+                                            egui::DragValue::new(&mut tmp_beat_offset)
+                                                .range(0..=256),
+                                        )
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone())
+                                            .beat_offset = tmp_beat_offset;
+                                    };
+                                });
+                                ui.horizontal(|ui| {
+                                    let mut loop_len = seq.loop_len.clone();
+                                    ui.label("Loop:").on_hover_text(concat!(
+                                        "Length of the loop for this sequence.\n",
+                                        "\n",
+                                        "When the end is reached, playback jumps\n",
+                                        "back to zero immediately, independent of\n",
+                                        "the loop lengths of other sequences."
+                                    ));
+                                    let slider = ui.add(
+                                        egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
+                                    );
+                                    if slider.changed() {
+                                        loop_len = loop_len.max(0.0);
+                                        let tmp_edited_seq = edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone());
+                                        tmp_edited_seq.loop_len = loop_len.max(0.0);
+                                        tmp_edited_seq.t_max = tmp_edited_seq.t_max.min(loop_len);
+                                    };
+                                });
                             }
                             ui.separator();
                             {
@@ -635,29 +713,6 @@ impl GuiApp {
                                             .1 = tmp_tolerance.1;
                                     };
                                     ui.label("->");
-                                });
-                            }
-
-                            {
-                                ui.horizontal(|ui| {
-                                    let mut loop_len = seq.loop_len.clone();
-                                    ui.label("Loop:").on_hover_text(concat!(
-                                        "Length of the loop for this sequence.\n",
-                                        "\n",
-                                        "When the end is reached, playback jumps\n",
-                                        "back to zero immediately, independent of\n",
-                                        "the loop lengths of other sequences."
-                                    ));
-                                    let slider = ui.add(
-                                        egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
-                                    );
-                                    if slider.changed() {
-                                        loop_len = loop_len.max(0.0);
-                                        let tmp_edited_seq = edited_seq
-                                            .get_or_insert(seqs.lock().unwrap()[sel].clone());
-                                        tmp_edited_seq.loop_len = loop_len.max(0.0);
-                                        tmp_edited_seq.t_max = tmp_edited_seq.t_max.min(loop_len);
-                                    };
                                 });
                             }
 
@@ -710,7 +765,7 @@ impl GuiApp {
                                         "(12 semitones)."
                                     ));
                                     ui.horizontal_wrapped(|ui| {
-                                        for tone in -11..=11 {
+                                        for tone in 0..=11 {
                                             let mut selected = tones.contains(&tone);
 
                                             // show the checkbox; the label *is* the number
@@ -743,64 +798,6 @@ impl GuiApp {
                                         .interval = f;
                                 }
                             }
-
-                            // beat_offset
-                            ui.horizontal(|ui| {
-                                let mut tmp_beat_offset = seq.beat_offset.clone();
-                                ui.label("Groove offset:").on_hover_text(concat!(
-                                    "Shifts the rhythmic grid used to place notes.\n",
-                                    "\n",
-                                    "It offsets the index of the\n",
-                                    "time quanta tested for divisibility.\n",
-                                    "\n",
-                                    "This changes where note onsets are more likely\n",
-                                    "to occur, creating an off-beat feel.\n",
-                                    "\n",
-                                    "Expressed in the unit of the time quantum.",
-                                ));
-                                if ui
-                                    .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
-                                    .changed()
-                                {
-                                    edited_seq
-                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .beat_offset = tmp_beat_offset;
-                                };
-                            });
-
-                            // volume
-                            ui.horizontal(|ui| {
-                                let mut tmp_volume = seq.volume.clone();
-                                ui.label("volume:");
-                                if ui
-                                    .add(
-                                        egui::Slider::new(&mut tmp_volume, 0.0..=32.0)
-                                            .text("volume"),
-                                    )
-                                    .changed()
-                                {
-                                    edited_seq
-                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .volume = tmp_volume;
-                                };
-                            });
-
-                            // spacial
-                            ui.horizontal(|ui| {
-                                let mut tmp_spacial = seq.spacial.clone();
-                                ui.label("spacial:");
-                                if ui
-                                    .add(
-                                        egui::Slider::new(&mut tmp_spacial, 0.0..=1.0)
-                                            .text("spacial"),
-                                    )
-                                    .changed()
-                                {
-                                    edited_seq
-                                        .get_or_insert(seqs.lock().unwrap()[sel].clone())
-                                        .spacial = tmp_spacial.clamp(0.0, 1.0);
-                                };
-                            });
                         }
                     } else {
                         ui.label("Click a block to edit");
