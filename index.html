@@ -3,19 +3,41 @@
   <head>
     <base data-trunk-public-url/>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- viewport-fit=cover is important for iOS safe areas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>synth (web)</title>
-    <!-- tell Trunk to build the wasm library target -->
     <link data-trunk rel="rust" data-target-name="synth" data-cargo-args="--lib" data-wasm-opt="4"/>
     <link rel="icon" href="data:,">
     <style>
-      html,body{height:100%} body{margin:0;background:#0e1116;color:#e5e7eb}
-      canvas#the_canvas_id{display:block;width:100vw;height:100vh}
-      #fallback{position:fixed;top:8px;left:12px;font:14px system-ui;opacity:.6;pointer-events:none}
+      /* Prevent any scrolling / bounce and make the page background solid */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0e1116;
+        color: #e5e7eb;
+        overflow: hidden;
+        /* Use fixed + inset to lock to visual viewport across browsers */
+        position: fixed;
+        inset: 0;
+      }
+
+      /* Stretch canvas to full visual viewport, respecting safe areas (iOS) */
+      canvas#the_canvas_id {
+        position: fixed;
+        /* Safe-area insets avoid being drawn under the tab/URL bars / notches */
+        top: env(safe-area-inset-top);
+        left: env(safe-area-inset-left);
+        /* Subtract insets from width/height */
+        width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+        height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        display: block;
+      }
+
+      /* Optional: reduce rubber-banding effects where supported */
+      body { overscroll-behavior: none; }
     </style>
   </head>
   <body>
-    <!-- <div id="fallback">If you see this but not the UI, WASM didn't start.</div> -->
     <canvas id="the_canvas_id"></canvas>
   </body>
 </html>

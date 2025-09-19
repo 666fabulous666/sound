@@ -32,15 +32,19 @@ impl GuiApp {
                     self.selected = Some(idx);
                     self.start_stream(clock.clone());
                 }
-                *save = ui.button("Save…").clicked();
-                *load = if ui.button("Load…").clicked() {
-                    self.stream = None;
-                    self.is_playing = false;
-                    true
-                } else {
-                    false
-                };
-                *exit = ui.button("Exit").clicked();
+
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    *save = ui.button("Save…").clicked();
+                    *load = if ui.button("Load…").clicked() {
+                        self.stream = None;
+                        self.is_playing = false;
+                        true
+                    } else {
+                        false
+                    };
+                    *exit = ui.button("Exit").clicked();
+                }
                 if ui
                     .add(egui::Button::new(if self.is_playing {
                         "⏸"
