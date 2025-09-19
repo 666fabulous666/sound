@@ -60,6 +60,7 @@ pub struct Sequence {
     pub spacial: f64,
     #[serde(default = "default_tolerance")]
     pub tolerance: (f64, f64),
+    pub repeat: usize,
 }
 
 fn default_spacial() -> f64 {
@@ -172,6 +173,7 @@ impl Sequence {
             loop_len: DEFAULT_LOOP_LEN,
             spacial: default_spacial(),
             tolerance: default_tolerance(),
+            repeat: 1,
         }
     }
     pub fn draw(
@@ -232,9 +234,26 @@ impl Sequence {
             .for_each(|n| {
                 let to_push = n.draw(&out, rng);
                 if let Some((_, v)) = out.iter_mut().find(|(token, _)| *token == self.token) {
-                    v.push(to_push);
+                    for p in (0..self.repeat).map(|i| {
+                        let tmp = to_push.clone();
+                        Note {
+                            time: tmp.time + i as f64 * self.loop_len,
+                            ..tmp
+                        }
+                    }) {
+                        v.push(p);
+                    }
+                    // v.push(to_push);
                 } else {
-                    out.push((self.token, vec![to_push]));
+                    for p in (0..self.repeat).map(|i| {
+                        let tmp = to_push.clone();
+                        Note {
+                            time: tmp.time + i as f64 * self.loop_len,
+                            ..tmp
+                        }
+                    }) {
+                        out.push((self.token, vec![p]));
+                    }
                 }
             });
     }

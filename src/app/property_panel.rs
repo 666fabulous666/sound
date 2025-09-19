@@ -653,7 +653,7 @@ impl GuiApp {
                                 });
                                 ui.horizontal(|ui| {
                                     let mut loop_len = seq.loop_len.clone();
-                                    ui.label("Loop:").on_hover_text(concat!(
+                                    ui.label("Loop length:").on_hover_text(concat!(
                                         "Length of the loop for this sequence.\n",
                                         "\n",
                                         "When the end is reached, playback jumps\n",
@@ -669,6 +669,17 @@ impl GuiApp {
                                             .get_or_insert(seqs.lock().unwrap()[sel].clone());
                                         tmp_edited_seq.loop_len = loop_len.max(0.0);
                                         tmp_edited_seq.t_max = tmp_edited_seq.t_max.min(loop_len);
+                                    };
+                                    let mut repeat = seq.repeat.clone();
+                                    ui.label("Repeat:").on_hover_text(concat!(
+                                        "How many times the sequence will be repeated.\n",
+                                    ));
+                                    let slider =
+                                        ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
+                                    if slider.changed() {
+                                        let tmp_edited_seq = edited_seq
+                                            .get_or_insert(seqs.lock().unwrap()[sel].clone());
+                                        tmp_edited_seq.repeat = repeat;
                                     };
                                 });
                             }

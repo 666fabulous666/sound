@@ -186,7 +186,6 @@ impl App for GuiApp {
         if exit {
             self.exit(ctx);
         }
-
         let seqs = self.seqs.clone();
 
         self.property_panel(ctx, len, &seqs);
