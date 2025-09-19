@@ -598,7 +598,16 @@ impl GuiApp {
                             {
                                 ui.horizontal(|ui| {
                                     let mut tmp_tolerance = seq.tolerance.clone();
-                                    ui.label("tolerance:");
+                                    ui.label("Tolerance:").on_hover_text(concat!(
+                                        "Tolerance defines how much to look\n",
+                                        "before the note starts and after it ends.\n",
+                                        "\n",
+                                        "Use this to follow notes across their edges\n",
+                                        "while generating new notes.\n",
+                                        "Negative values are allowed.\n",
+                                        "\n",
+                                        "(See generating logics for more details)",
+                                    ));
                                     ui.label("<-");
                                     if ui
                                         .add(
@@ -632,7 +641,13 @@ impl GuiApp {
                             {
                                 ui.horizontal(|ui| {
                                     let mut loop_len = seq.loop_len.clone();
-                                    ui.label("loop_len:");
+                                    ui.label("Loop:").on_hover_text(concat!(
+                                        "Length of the loop for this sequence.\n",
+                                        "\n",
+                                        "When the end is reached, playback jumps\n",
+                                        "back to zero immediately, independent of\n",
+                                        "the loop lengths of other sequences."
+                                    ));
                                     let slider = ui.add(
                                         egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
                                     );
@@ -657,7 +672,9 @@ impl GuiApp {
                                 {
                                     // octave
                                     ui.horizontal(|ui| {
-                                        ui.label("octave:");
+                                        ui.label("Octave:").on_hover_text(
+                                            "Base octave where notes of this sequence are placed.",
+                                        );
                                         if ui
                                             .add(egui::DragValue::new(octave).range(-5..=5))
                                             .changed()
@@ -667,7 +684,16 @@ impl GuiApp {
                                     });
                                     // nb_rd_steps
                                     ui.horizontal(|ui| {
-                                        ui.label("nb_rd_steps:");
+                                        ui.label("Variation steps:").on_hover_text(concat!(
+                                            "Maximum number of random variations to apply.\n",
+                                            "\n",
+                                            "The note is chosen from visible ones\n",
+                                            "(based on tolerance),\n",
+                                            "then shifted step by step using\n",
+                                            "the allowed intervals.\n",
+                                            "\n",
+                                            "Higher values allow more chained shifts."
+                                        ));
                                         if ui
                                             .add(egui::DragValue::new(nb_rd_steps).range(0..=16))
                                             .changed()
@@ -676,7 +702,13 @@ impl GuiApp {
                                         };
                                     });
                                     // ----- RDTempered tones (–11 … 11) ---------------------------------
-                                    ui.label("RD tones:");
+                                    ui.label("Variation intervals:").on_hover_text(concat!(
+                                        "The set of semitone intervals used for variation.\n",
+                                        "\n",
+                                        "Each step shifts the note by one of these values.\n",
+                                        "Multiple steps can combine, wrapping around octaves\n",
+                                        "(12 semitones)."
+                                    ));
                                     ui.horizontal_wrapped(|ui| {
                                         for tone in -11..=11 {
                                             let mut selected = tones.contains(&tone);
@@ -715,7 +747,17 @@ impl GuiApp {
                             // beat_offset
                             ui.horizontal(|ui| {
                                 let mut tmp_beat_offset = seq.beat_offset.clone();
-                                ui.label("beat_offset:");
+                                ui.label("Groove offset:").on_hover_text(concat!(
+                                    "Shifts the rhythmic grid used to place notes.\n",
+                                    "\n",
+                                    "It offsets the index of the\n",
+                                    "time quanta tested for divisibility.\n",
+                                    "\n",
+                                    "This changes where note onsets are more likely\n",
+                                    "to occur, creating an off-beat feel.\n",
+                                    "\n",
+                                    "Expressed in the unit of the time quantum.",
+                                ));
                                 if ui
                                     .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
                                     .changed()

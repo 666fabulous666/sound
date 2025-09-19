@@ -149,7 +149,11 @@ impl GuiApp {
             }
             ui.horizontal(|ui| {
                 vec.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked()); // TODO: return true
-                if ui.button("add").clicked() {
+                if ui
+                    .button("+")
+                    .on_hover_text("Right click an item to remove it.")
+                    .clicked()
+                {
                     vec.push(default_value);
                 } else {
                 }
