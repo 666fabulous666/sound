@@ -209,7 +209,7 @@ impl Sequence {
                     .all(|s| (i + 1 - self.beat_offset) % s != 0)
             })
             .map(|i| self.t_min + i as f64 * step_as_time)
-            .take_while(|t| *t <= self.t_max.min(self.loop_len));
+            .take_while(|t| *t < self.t_max.min(self.loop_len));
         let ds = ts
             .clone()
             .chain(once(self.t_max))
@@ -281,9 +281,10 @@ impl Note {
                     .collect::<Vec<_>>();
 
                 let seed = *others.choose(rng).unwrap_or(&0);
-                let degree =
-                    (((0..*degree).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12) + 12)
-                        % 12;
+                // let degree =
+                //     (((0..*degree).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12) + 12)
+                //         % 12;
+                let degree = (0..*degree).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12;
 
                 Self {
                     interval: Interval::Tempered(degree, *octave),

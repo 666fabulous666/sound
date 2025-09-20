@@ -776,7 +776,7 @@ impl GuiApp {
                                         "(12 semitones)."
                                     ));
                                     ui.horizontal_wrapped(|ui| {
-                                        for tone in 0..=11 {
+                                        for tone in -11..=11 {
                                             let mut selected = tones.contains(&tone);
 
                                             // show the checkbox; the label *is* the number

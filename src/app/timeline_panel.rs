@@ -126,30 +126,63 @@ impl GuiApp {
                     .for_each(|n| {
                         if let Interval::Tempered(degree, _) = n.interval {
                             let dy = track_rect.top() - track_rect.bottom();
-                            // let y = 0.5 * (track_rect.bottom() + track_rect.top())
-                            //     + dy * degree as f32 / 24.0; // FIXME: why 24?
-                            let y = track_rect.bottom() + dy * (degree as f32 + 0.5) / 12.0; // FIXME: why 24?
-                            painter.line_segment(
-                                [
-                                    egui::pos2(
-                                        Self::t_to_x(
-                                            track_rect,
-                                            n.time - self.current_time(),
-                                            loop_len,
-                                        ) + 1.0,
-                                        y,
+                            let y = 0.5 * (track_rect.bottom() + track_rect.top())
+                                + dy * degree as f32 / 24.0;
+                            // let y = track_rect.bottom() + dy * (degree as f32 + 0.5) / 12.0;
+
+                            let note_rect = egui::Rect::from_min_max(
+                                egui::pos2(
+                                    Self::t_to_x(
+                                        track_rect,
+                                        n.time - self.current_time(),
+                                        loop_len,
+                                        // ) + 1.0,
                                     ),
-                                    egui::pos2(
-                                        Self::t_to_x(
-                                            track_rect,
-                                            n.time + n.duration - self.current_time(),
-                                            loop_len,
-                                        ) - 1.0,
-                                        y,
+                                    // y + dy / 48.8,
+                                    0.5 * (track_rect.bottom() + track_rect.top())
+                                        + dy * (degree as f32 + 0.5) / 24.0,
+                                ),
+                                egui::pos2(
+                                    Self::t_to_x(
+                                        track_rect,
+                                        n.time + n.duration - self.current_time(),
+                                        loop_len,
+                                        // ) - 1.0,
                                     ),
-                                ],
-                                egui::Stroke::new(5.0, egui::Color32::BLACK),
+                                    // y - dy / 48.0,
+                                    0.5 * (track_rect.bottom() + track_rect.top())
+                                        + dy * (degree as f32 - 0.5) / 24.0,
+                                ),
                             );
+                            let color = egui::Color32::BLACK.gamma_multiply(0.5);
+                            painter.rect_filled(note_rect, 10.0, color);
+                            painter.rect_filled(note_rect.expand(-1.0), 10.0, color);
+                            painter.rect_filled(note_rect.expand(-2.0), 10.0, color);
+                            painter.rect_filled(note_rect.expand(-3.0), 10.0, color);
+                            painter.rect_filled(note_rect.expand(-4.0), 10.0, color);
+                            painter.rect_filled(note_rect.expand(-5.0), 10.0, color);
+
+                            // painter.line_segment(
+                            //     [
+                            //         egui::pos2(
+                            //             Self::t_to_x(
+                            //                 track_rect,
+                            //                 n.time - self.current_time(),
+                            //                 loop_len,
+                            //             ) + 1.0,
+                            //             y,
+                            //         ),
+                            //         egui::pos2(
+                            //             Self::t_to_x(
+                            //                 track_rect,
+                            //                 n.time + n.duration - self.current_time(),
+                            //                 loop_len,
+                            //             ) - 1.0,
+                            //             y,
+                            //         ),
+                            //     ],
+                            //     egui::Stroke::new(5.0, egui::Color32::BLACK),
+                            // );
                         }
                     });
 
