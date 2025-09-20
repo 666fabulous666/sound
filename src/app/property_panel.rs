@@ -497,7 +497,7 @@ impl GuiApp {
                                                 {
                                                     edited_det_rythm.generators = gens
                                                         .into_iter()
-                                                        .filter(|g| *g > 1)
+                                                        .filter(|g| *g > 0)
                                                         .collect();
                                                     // edited_det_rythm.generators = gens;
                                                 }

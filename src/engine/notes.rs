@@ -15,9 +15,7 @@ pub struct DetRythm {
 }
 impl Default for DetRythm {
     fn default() -> Self {
-        Self {
-            generators: vec![2],
-        }
+        Self { generators: vec![] }
     }
 }
 impl Default for RdRythm {
@@ -201,15 +199,16 @@ impl Sequence {
         .into_iter()
         .collect_vec();
         let step_as_time = self.time_quantum.0 as f64 / self.time_quantum.1 as f64;
-        let ts = (0..)
-            .filter(|i| inclusions.iter().any(|p| (i - self.beat_offset) % p == 0))
-            .filter(|i| {
-                exclusions
-                    .iter()
-                    .all(|s| (i + 1 - self.beat_offset) % s != 0)
-            })
-            .map(|i| self.t_min + i as f64 * step_as_time)
-            .take_while(|t| *t < self.t_max.min(self.loop_len));
+        let ts =
+            (0..32768) // FIXME: do better
+                .filter(|i| inclusions.iter().any(|p| (i - self.beat_offset) % p == 0))
+                .filter(|i| {
+                    exclusions
+                        .iter()
+                        .all(|s| (i + 1 - self.beat_offset) % s != 0)
+                })
+                .map(|i| self.t_min + i as f64 * step_as_time)
+                .take_while(|t| *t < self.t_max.min(self.loop_len));
         let ds = ts
             .clone()
             .chain(once(self.t_max))
