@@ -1,3 +1,4 @@
+use arc_swap::ArcSwap;
 use std::sync::{Arc, Mutex};
 
 use cpal::traits::DeviceTrait;
@@ -20,13 +21,13 @@ impl GuiApp {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    self.scheduler.new_score();
+                    self.new_score();
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
-                    self.last_token += 1;
                     let seq = Sequence::new(self.last_token);
-                    self.scheduler.new_seq(seq, &mut self.rng, &mut self.notes);
+                    self.last_token += 1; // TODO: handle it internally
+                    self.new_seq(seq);
                     self.selected = Some(self.last_token);
                     if self.stream.is_none() {
                         self.start_stream(now.clone());
@@ -92,7 +93,8 @@ impl GuiApp {
             440.0,
             &self.device,
             clock,
-            self.notes.clone(),
+            // self.notes.clone(),
+            self.shared_notes.clone(),
             (
                 Reverb::new(0.5, 0.5, self.score_params.delays.0.clone(), sample_rate),
                 Reverb::new(0.5, 0.5, self.score_params.delays.1.clone(), sample_rate),

@@ -2,8 +2,8 @@ use crate::{app::GuiApp, engine::notes::Interval};
 
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
-        let len = self.scheduler.sequences.len();
-        let current_time = self.scheduler.clock.lock().unwrap().clone();
+        let len = self.sequences.len();
+        let current_time = self.clock.lock().unwrap().clone();
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), ui.available_height()),
@@ -15,7 +15,7 @@ impl GuiApp {
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
-            let max_loop_len = (&self.scheduler.sequences)
+            let max_loop_len = (&self.sequences)
                 .iter()
                 .fold(0.0f64, |acc, seq| acc.max(seq.loop_len));
 
@@ -34,7 +34,7 @@ impl GuiApp {
             }
 
             // sequences
-            for (idx, seq) in (&self.scheduler.sequences).iter().enumerate() {
+            for (idx, seq) in (&self.sequences).iter().enumerate() {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;

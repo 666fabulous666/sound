@@ -4,11 +4,14 @@ mod save;
 mod timeline_panel;
 mod top_panel;
 
-use crate::engine::{
-    notes::{Note, Sequence},
-    scheduler::Scheduler,
-    waves::WaveType,
+use crate::{
+    engine::{
+        notes::{Note, Sequence},
+        waves::WaveType,
+    },
+    GENERATE_EARLY, SCHEDULER_STEP,
 };
+use arc_swap::ArcSwap;
 use cpal::Device;
 use cpal::Stream;
 use eframe::{egui, App, CreationContext};
@@ -47,13 +50,15 @@ impl Default for ScoreParams {
 }
 
 pub struct GuiApp {
-    // seqs: Vec<Sequence>,
     notes: Vec<(usize, Vec<Note>)>,
+    shared_notes: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
+    sequences: Vec<Sequence>,
+    clock: Arc<Mutex<f64>>, // TODO: see if it can be an Atomic, maybe using ticks instead of secs
+    sched_start: f64,
+    rng: ThreadRng,
     selected: Option<usize>,
     last_token: usize,
-    scheduler: Scheduler,
     score_params: ScoreParams,
-    rng: ThreadRng,
     stream: Option<Stream>,
     device: Device,
 }
@@ -67,15 +72,17 @@ struct GuiState {
 impl GuiApp {
     pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
         Self {
-            // seqs: Vec::new(),
-            notes: Vec::new(),
             selected: None,
             last_token: 0,
             score_params: ScoreParams::default(),
-            rng: thread_rng(),
             stream: None,
             device: device,
-            scheduler: Scheduler::default(),
+            notes: Vec::new(),
+            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
+            sequences: Vec::new(),
+            clock: Arc::new(Mutex::new(0.0)),
+            sched_start: 0.0,
+            rng: thread_rng(),
         }
     }
 
@@ -103,7 +110,7 @@ impl GuiApp {
     }
 
     fn now(&self) -> Arc<Mutex<f64>> {
-        self.scheduler.now()
+        self.clock.clone()
     }
 
     fn exit(&self, ctx: &egui::Context) {
@@ -159,7 +166,8 @@ impl App for GuiApp {
         self.property_panel(ctx);
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis(16));
-        // self.scheduler.run_once(&mut self.rng)
+        self.generate_notes();
+        self.shared_notes.store(self.notes.clone().into());
     }
 }
 
@@ -213,4 +221,86 @@ fn hash32(s: &str) -> u32 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut h);
     h.finish() as u32
+}
+
+impl GuiApp {
+    fn generate_notes(&mut self) {
+        let now = self.now().lock().unwrap().clone();
+        let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new(); // FIXME: should not need it
+        for seq in self.sequences.clone().iter() {
+            // TODO: don't clone
+            if seq.not_generate_until.is_none()
+                || seq
+                    .not_generate_until
+                    .as_ref()
+                    .is_some_and(|until| now >= *until)
+            {
+                self.draw_seq_at(seq.token, &mut notes_buffer);
+                println!("generate token {}, {} notes", seq.token, notes_buffer.len());
+            }
+        }
+        self.notes.extend(notes_buffer);
+        self.sched_start += SCHEDULER_STEP;
+    }
+    fn new_score(&mut self) {
+        self.sequences.clear();
+        self.notes.clear();
+    }
+    fn new_seq(&mut self, mut sequence: Sequence) {
+        self.draw_seq(&mut sequence);
+        self.sequences.push(sequence);
+    }
+    fn edit_seq(
+        &mut self,
+        mut sequence: Sequence,
+        notes_buffer: &mut Vec<(usize, Vec<Note>)>,
+        a: usize,
+    ) {
+        self.regen_seq(&mut sequence);
+        self.sequences[a] = sequence;
+        let len = self.sequences.len();
+        (a + 1..len).for_each(|k| self.regen_seq_at(k, notes_buffer));
+    }
+    fn del_seq(&mut self, a: usize) {
+        let tk = self.sequences[a].token;
+        self.remove_seq(tk);
+        self.sequences.remove(a);
+    }
+    fn clone_seq(&mut self, a: usize, new_token: usize) {
+        let mut sequence = self.sequences[a].clone();
+        sequence.token = new_token;
+        self.draw_seq(&mut sequence);
+        self.sequences.push(sequence);
+    }
+    fn swap_seqs(&mut self, a: usize, b: usize, notes_buffer: &mut Vec<(usize, Vec<Note>)>) {
+        self.sequences.swap(a, b);
+        self.regen_seq_at(a, notes_buffer);
+        self.regen_seq_at(b, notes_buffer);
+        let len = self.sequences.len();
+        (a.max(b) + 1..len).for_each(|k| self.regen_seq_at(k, notes_buffer));
+    }
+    fn draw_seq(&mut self, seq: &mut Sequence) {
+        let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
+        seq.draw(&mut self.notes, &mut self.rng, seq_start);
+        seq.not_generate_until =
+            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
+    }
+    fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
+        let seq = &mut self.sequences[a];
+        let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
+        seq.draw(out, &mut self.rng, seq_start);
+        seq.not_generate_until =
+            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
+    }
+    fn remove_seq(&mut self, tk: usize) {
+        self.notes.retain(|(token, _)| *token != tk);
+    }
+    fn regen_seq(&mut self, seq: &mut Sequence) {
+        self.remove_seq(seq.token);
+        self.draw_seq(seq);
+    }
+    fn regen_seq_at(&mut self, a: usize, notes_buffer: &mut Vec<(usize, Vec<Note>)>) {
+        self.remove_seq(a);
+        self.draw_seq_at(a, notes_buffer);
+    }
 }

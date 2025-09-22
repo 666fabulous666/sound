@@ -1,3 +1,4 @@
+use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
 use std::sync::{Arc, Mutex};
@@ -11,8 +12,7 @@ pub fn stream(
     freq0: f64,
     device: &cpal::Device,
     sample_clock: Arc<Mutex<f64>>,
-    note_queue: Vec<(usize, Vec<Note>)>,
-    // recorded_samples: Arc<Mutex<Vec<f64>>>,
+    note_queue: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
@@ -29,6 +29,7 @@ pub fn stream(
         let sample_clock = sample_clock.clone();
 
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+            let note_queue = note_queue.load();
             // let mut recorded_samples = recorded_samples.lock().unwrap();
             let mut sample_clock = sample_clock.lock().unwrap();
 
@@ -40,9 +41,7 @@ pub fn stream(
                 for (_, notes_from_seq) in note_queue.iter() {
                     // FIXME: no longer removes outdated notes
                     notes_from_seq.iter().for_each(|note| {
-                        if elapsed < note.time {
-                            // true
-                        } else if elapsed <= note.time + note.duration {
+                        if note.time < elapsed && elapsed <= note.time + note.duration {
                             let t = elapsed - note.time;
                             let volume = note.volume // TODO: make this parameters
                                     / (1.5
@@ -64,19 +63,12 @@ pub fn stream(
                                 );
                             dry_left += (1.0 - note.spacial) * dry;
                             dry_right += note.spacial * dry;
-                            // true
-                        } else if elapsed > note.time + note.duration + NOTE_LINGER_TIME {
-                            // false
-                        } else {
-                            // true
                         }
                     })
                 }
 
                 let left = reverb_left.process(dry_left);
                 let right = reverb_right.process(dry_right);
-                // let left = dry_left;
-                // let right = dry_right;
 
                 if channels >= 2 {
                     frame[0] = left as f32;
@@ -84,9 +76,6 @@ pub fn stream(
                 } else {
                     frame[0] = (left + right) as f32;
                 }
-
-                // frame[0] = (*sample_clock * 440.0).sin() as f32;
-
                 // recorded_samples.push(left);
                 // recorded_samples.push(right);
                 *sample_clock += sample_duration;
@@ -96,7 +85,6 @@ pub fn stream(
         let stream = match device.build_output_stream(
             &config,
             callback,
-            // move |_data: &mut [f32], _: &cpal::OutputCallbackInfo| {},
             |err| eprintln!("Stream error: {}", err),
             None,
         ) {

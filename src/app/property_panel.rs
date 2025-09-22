@@ -9,7 +9,7 @@ use crate::{
 
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
-        let len = self.scheduler.sequences.len();
+        let len = self.sequences.len();
         egui::SidePanel::left("props")
             .default_width(230.0)
             .show(ctx, |ui| {
@@ -28,7 +28,7 @@ impl GuiApp {
 
                     if let Some(sel) = self.selected {
                         if sel < len {
-                            let seq = (&mut self.scheduler.sequences)[sel].clone();
+                            let seq = (&mut self.sequences)[sel].clone();
 
                             ui.heading(format!("Track {}", sel + 1));
 
@@ -46,9 +46,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .volume = tmp_volume;
                                     };
                                 });
@@ -63,9 +61,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .spacial = tmp_spacial.clamp(0.0, 1.0);
                                     };
                                 });
@@ -104,7 +100,7 @@ impl GuiApp {
                                 });
                             if w_choice != seq.wave_type {
                                 edited_seq
-                                    .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                    .get_or_insert((&mut self.sequences)[sel].clone())
                                     .wave_type = w_choice;
                             }
 
@@ -123,12 +119,12 @@ impl GuiApp {
                                     seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
                                 if (t_min - seq.t_min).abs() > f64::EPSILON {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .t_min = (t_min / step_f64).round() * step_f64;
                                 }
                                 if (t_max - seq.t_max).abs() > f64::EPSILON {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .t_max = (t_max / step_f64).round() * step_f64;
                                 }
                             }
@@ -171,7 +167,7 @@ impl GuiApp {
                                 );
                                 if attack.changed() || decay.changed() {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .attack_decay = attack_decay;
                                 };
                             }
@@ -190,9 +186,8 @@ impl GuiApp {
                                         .logarithmic(true),
                                 );
                                 if mag.changed() || speed.changed() {
-                                    let e = edited_seq.get_or_insert(
-                                        (&mut self.scheduler.sequences)[sel].clone(),
-                                    );
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
                                     e.bend.0 = tmp_mag * 1e-4;
                                     e.bend.1 = bend.1;
                                 };
@@ -214,7 +209,7 @@ impl GuiApp {
                                 );
                                 if mag.changed() || fq.changed() {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                                 };
                             }
@@ -310,7 +305,7 @@ impl GuiApp {
                                     .any(|x| x.changed())
                                 {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .chorus = chorus;
                                 };
                             }
@@ -334,7 +329,7 @@ impl GuiApp {
                                     .changed()
                                 {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .pow_fact
                                         .0 = pow_fact;
                                 };
@@ -349,7 +344,7 @@ impl GuiApp {
                                     .changed()
                                 {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .pow_fact
                                         .1 = time_dep_pow_fact.signum()
                                         * time_dep_pow_fact
@@ -373,9 +368,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .time_quantum
                                             .0 = tmp_quantum.0;
                                     };
@@ -387,9 +380,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .time_quantum
                                             .1 = tmp_quantum.1;
                                     };
@@ -405,17 +396,13 @@ impl GuiApp {
                                         .clicked()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .inclusions = Rythm::Det(DetRythm::default());
                                     }
                                 } else {
                                     if ui.button("Use random inclusion generators").clicked() {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .inclusions = Rythm::Rd(RdRythm::default());
                                     }
                                 }
@@ -445,9 +432,7 @@ impl GuiApp {
                                                     if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.scheduler.sequences)
-                                                                    [sel]
-                                                                    .clone(),
+                                                                (&mut self.sequences)[sel].clone(),
                                                             )
                                                             .inclusions
                                                     {
@@ -466,9 +451,7 @@ impl GuiApp {
                                                     if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.scheduler.sequences)
-                                                                    [sel]
-                                                                    .clone(),
+                                                                (&mut self.sequences)[sel].clone(),
                                                             )
                                                             .inclusions
                                                     {
@@ -499,8 +482,7 @@ impl GuiApp {
                                                 if let Rythm::Det(ref mut edited_det_rythm) =
                                                     edited_seq
                                                         .get_or_insert(
-                                                            (&mut self.scheduler.sequences)[sel]
-                                                                .clone(),
+                                                            (&mut self.sequences)[sel].clone(),
                                                         )
                                                         .inclusions
                                                 {
@@ -525,17 +507,13 @@ impl GuiApp {
                                         .clicked()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .exclusions = Rythm::Det(DetRythm::default());
                                     }
                                 } else {
                                     if ui.button("Use random exclusion generators").clicked() {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .exclusions = Rythm::Rd(RdRythm::default());
                                     }
                                 }
@@ -570,9 +548,7 @@ impl GuiApp {
                                                     if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.scheduler.sequences)
-                                                                    [sel]
-                                                                    .clone(),
+                                                                (&mut self.sequences)[sel].clone(),
                                                             )
                                                             .exclusions
                                                     {
@@ -591,9 +567,7 @@ impl GuiApp {
                                                     if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.scheduler.sequences)
-                                                                    [sel]
-                                                                    .clone(),
+                                                                (&mut self.sequences)[sel].clone(),
                                                             )
                                                             .exclusions
                                                     {
@@ -629,8 +603,7 @@ impl GuiApp {
                                                 if let Rythm::Det(ref mut edited_det_rythm) =
                                                     edited_seq
                                                         .get_or_insert(
-                                                            (&mut self.scheduler.sequences)[sel]
-                                                                .clone(),
+                                                            (&mut self.sequences)[sel].clone(),
                                                         )
                                                         .exclusions
                                                 {
@@ -665,9 +638,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .beat_offset = tmp_beat_offset;
                                     };
                                 });
@@ -685,9 +656,8 @@ impl GuiApp {
                                     );
                                     if slider.changed() {
                                         loop_len = loop_len.max(0.0);
-                                        let tmp_edited_seq = edited_seq.get_or_insert(
-                                            (&mut self.scheduler.sequences)[sel].clone(),
-                                        );
+                                        let tmp_edited_seq = edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone());
                                         tmp_edited_seq.loop_len = loop_len.max(0.0);
                                         tmp_edited_seq.t_max = tmp_edited_seq.t_max.min(loop_len);
                                     };
@@ -698,9 +668,8 @@ impl GuiApp {
                                     let slider =
                                         ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
                                     if slider.changed() {
-                                        let tmp_edited_seq = edited_seq.get_or_insert(
-                                            (&mut self.scheduler.sequences)[sel].clone(),
-                                        );
+                                        let tmp_edited_seq = edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone());
                                         tmp_edited_seq.repeat = repeat;
                                     };
                                 });
@@ -728,9 +697,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .tolerance
                                             .0 = tmp_tolerance.0;
                                     };
@@ -743,9 +710,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         edited_seq
-                                            .get_or_insert(
-                                                (&mut self.scheduler.sequences)[sel].clone(),
-                                            )
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
                                             .tolerance
                                             .1 = tmp_tolerance.1;
                                     };
@@ -831,7 +796,7 @@ impl GuiApp {
                                 }
                                 if changed {
                                     edited_seq
-                                        .get_or_insert((&mut self.scheduler.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
                                         .interval = f;
                                 }
                             }
@@ -846,7 +811,7 @@ impl GuiApp {
                         Action::Delete => {
                             if let Some(sel) = self.selected {
                                 // self.sender.send(Message::DeleteSequence(sel)).unwrap();
-                                self.scheduler.del_seq(sel);
+                                self.del_seq(sel);
                                 self.selected = if sel == 0 { None } else { Some(sel - 1) };
                             }
                         }
@@ -866,10 +831,9 @@ impl GuiApp {
                         }
                         Action::Up => {
                             if let Some(sel) = self.selected {
-                                self.scheduler.swap_seqs(
+                                self.swap_seqs(
                                     sel,
                                     sel - 1,
-                                    &mut self.rng,
                                     &mut self.notes.clone(), // WARNING: check this is correct
                                 );
                                 // self.sender
@@ -880,10 +844,9 @@ impl GuiApp {
                         }
                         Action::Down => {
                             if let Some(sel) = self.selected {
-                                self.scheduler.swap_seqs(
+                                self.swap_seqs(
                                     sel,
                                     sel + 1,
-                                    &mut self.rng,
                                     &mut self.notes.clone(), // WARNING: check this is correct
                                 );
                                 // self.sender
@@ -896,15 +859,11 @@ impl GuiApp {
                     if let Some(edited_seq) = edited_seq {
                         if let Some(sel) = self.selected {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                self.scheduler.edit_seq(
-                                    edited_seq,
-                                    &mut self.rng,
-                                    &mut self.scheduler.notes.clone(),
-                                    sel,
-                                ); // WARNING: check this is correct
-                                   // self.sender
-                                   //     .send(Message::EditSequence(sel, edited_seq))
-                                   //     .unwrap();
+                                self.edit_seq(edited_seq, &mut self.notes.clone(), sel);
+                                // WARNING: check this is correct
+                                // self.sender
+                                //     .send(Message::EditSequence(sel, edited_seq))
+                                //     .unwrap();
                             }
                         }
                     }

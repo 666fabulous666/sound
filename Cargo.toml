@@ -25,6 +25,7 @@ anyhow = "1"
 rfd = "0.14"
 instant = "0.1.13"
 log = "0.4"
+arc-swap = "1.7.1"
 
 # --- native-only ---
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
