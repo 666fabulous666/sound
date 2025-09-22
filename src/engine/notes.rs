@@ -52,7 +52,7 @@ pub struct Sequence {
     pub chorus: ChorusParams,
     pub pow_fact: (f64, f64),
     pub token: usize,
-    pub not_generate_until: Option<f64>,
+    pub not_generate_until: Option<f64>, // TODO: should be accessed through a method
     pub loop_len: f64,
     #[serde(default = "default_spacial")]
     pub spacial: f64,
@@ -176,7 +176,7 @@ impl Sequence {
     }
     pub fn draw(
         &self,
-        out: &mut Vec<(usize, Vec<Note>)>,
+        notes_buffer: &mut Vec<(usize, Vec<Note>)>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: f64,
     ) {
@@ -231,8 +231,11 @@ impl Sequence {
                 tolerance: self.tolerance,
             })
             .for_each(|n| {
-                let to_push = n.draw(&out, rng);
-                if let Some((_, v)) = out.iter_mut().find(|(token, _)| *token == self.token) {
+                let to_push = n.draw(&notes_buffer, rng);
+                if let Some((_, v)) = notes_buffer
+                    .iter_mut()
+                    .find(|(token, _)| *token == self.token)
+                {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
                         Note {
@@ -251,7 +254,7 @@ impl Sequence {
                             ..tmp
                         }
                     }) {
-                        out.push((self.token, vec![p]));
+                        notes_buffer.push((self.token, vec![p]));
                     }
                 }
             });

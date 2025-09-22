@@ -4,7 +4,7 @@ use cpal::traits::DeviceTrait;
 
 use crate::{
     app::GuiApp,
-    engine::{notes::Sequence, reverb::Reverb, scheduler::Message},
+    engine::{notes::Sequence, reverb::Reverb},
     stream::stream,
 };
 
@@ -12,27 +12,25 @@ impl GuiApp {
     pub fn top_panel(
         &mut self,
         ctx: &egui::Context,
-        len: usize,
         save: &mut bool,
         load: &mut bool,
         exit: &mut bool,
     ) {
-        let clock = self.clock.clone();
+        let now = self.now();
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
-                    self.sender.send(Message::NewScore).unwrap();
+                    self.scheduler.new_score();
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
-                    let idx = len;
-                    self.last_token
-                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                    let seq =
-                        Sequence::new(self.last_token.load(std::sync::atomic::Ordering::Relaxed));
-                    self.sender.send(Message::NewSequence(seq)).unwrap();
-                    self.selected = Some(idx);
-                    self.start_stream(clock.clone());
+                    self.last_token += 1;
+                    let seq = Sequence::new(self.last_token);
+                    self.scheduler.new_seq(seq, &mut self.rng, &mut self.notes);
+                    self.selected = Some(self.last_token);
+                    if self.stream.is_none() {
+                        self.start_stream(now.clone());
+                    }
                 }
 
                 #[cfg(not(target_arch = "wasm32"))]
@@ -40,7 +38,6 @@ impl GuiApp {
                     *save = ui.button("Save…").clicked();
                     *load = if ui.button("Load…").clicked() {
                         self.stream = None;
-                        self.is_playing = false;
                         true
                     } else {
                         false
@@ -48,23 +45,21 @@ impl GuiApp {
                     *exit = ui.button("Exit").clicked();
                 }
                 if ui
-                    .add(egui::Button::new(if self.is_playing {
-                        "⏸"
-                    } else {
+                    .add(egui::Button::new(if self.stream.is_none() {
                         "▶"
+                    } else {
+                        "⏸"
                     }))
                     .clicked()
                 {
                     if self.stream.is_some() {
                         self.stream = None
                     } else {
-                        self.start_stream(clock.clone());
+                        self.start_stream(now.clone());
                     }
-                    self.is_playing = !self.is_playing;
                 }
 
                 if self.stream.is_some() {
-                    // TODO: when removing it, replace is_playing with just testing for self.stream.is_some()
                     ui.label("stream");
                 }
             });
@@ -72,13 +67,13 @@ impl GuiApp {
             ui.columns(2, |cols| {
                 Self::edit_vec(
                     &mut cols[0],
-                    self.score_params.delays.0.lock().unwrap(),
+                    &mut self.score_params.delays.0,
                     Some("Left Delays (ms)"),
                     0.0,
                 );
                 Self::edit_vec(
                     &mut cols[1],
-                    self.score_params.delays.1.lock().unwrap(),
+                    &mut self.score_params.delays.1,
                     Some("Right Delays (ms)"),
                     0.0,
                 );
@@ -86,7 +81,7 @@ impl GuiApp {
         });
     }
 
-    fn start_stream(&mut self, clock: Option<std::sync::Arc<std::sync::Mutex<f64>>>) {
+    fn start_stream(&mut self, clock: Arc<Mutex<f64>>) {
         let sample_rate = self
             .device
             .default_output_config()
@@ -96,7 +91,7 @@ impl GuiApp {
         self.stream = Some(stream(
             440.0,
             &self.device,
-            clock.unwrap_or(Arc::new(Mutex::new(0.0))),
+            clock,
             self.notes.clone(),
             (
                 Reverb::new(0.5, 0.5, self.score_params.delays.0.clone(), sample_rate),

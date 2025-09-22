@@ -6,19 +6,19 @@ mod top_panel;
 
 use crate::engine::{
     notes::{Note, Sequence},
-    scheduler::{Message, Scheduler},
+    scheduler::Scheduler,
     waves::WaveType,
 };
 use cpal::Device;
 use cpal::Stream;
 use eframe::{egui, App, CreationContext};
 use egui::WidgetText;
-use instant::{Duration, Instant};
+use instant::Duration;
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::{
     ops::DerefMut,
-    sync::{atomic::AtomicUsize, mpsc::Sender, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 
 const ALL_WAVES: [WaveType; 8] = [
@@ -35,30 +35,26 @@ const ALL_WAVES: [WaveType; 8] = [
 // ------------------------------------------------------------
 
 pub struct ScoreParams {
-    delays: (Arc<Mutex<Vec<f64>>>, Arc<Mutex<Vec<f64>>>),
+    delays: (Vec<f64>, Vec<f64>),
 }
 
 impl Default for ScoreParams {
     fn default() -> Self {
         Self {
-            delays: (Arc::new(Mutex::new(vec![])), Arc::new(Mutex::new(vec![]))),
+            delays: (Vec::new(), Vec::new()),
         }
     }
 }
 
 pub struct GuiApp {
-    seqs: Arc<Mutex<Vec<Sequence>>>,
-    notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    // seqs: Vec<Sequence>,
+    notes: Vec<(usize, Vec<Note>)>,
     selected: Option<usize>,
-    clock: Option<Arc<Mutex<f64>>>,
-    fall_back_start: Instant,
-    last_token: AtomicUsize,
+    last_token: usize,
     scheduler: Scheduler,
-    sender: Sender<Message>,
     score_params: ScoreParams,
     rng: ThreadRng,
     stream: Option<Stream>,
-    is_playing: bool,
     device: Device,
 }
 
@@ -69,33 +65,17 @@ struct GuiState {
 }
 
 impl GuiApp {
-    pub fn new(
-        _cc: &CreationContext<'_>,
-        device: Device,
-        clock: Option<Arc<Mutex<f64>>>,
-        seqs: Arc<Mutex<Vec<Sequence>>>,
-        notes: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
-        scheduler: Scheduler,
-        sender: Sender<Message>,
-        delays: (Arc<Mutex<Vec<f64>>>, Arc<Mutex<Vec<f64>>>),
-    ) -> Self {
-        *seqs.lock().unwrap() = Vec::new();
-
+    pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
         Self {
-            seqs,
-            notes,
+            // seqs: Vec::new(),
+            notes: Vec::new(),
             selected: None,
-            clock,
-            fall_back_start: Instant::now(),
-            last_token: 0.into(),
-
-            scheduler,
-            sender,
-            score_params: ScoreParams { delays },
+            last_token: 0,
+            score_params: ScoreParams::default(),
             rng: thread_rng(),
             stream: None,
-            is_playing: false,
             device: device,
+            scheduler: Scheduler::default(),
         }
     }
 
@@ -122,12 +102,8 @@ impl GuiApp {
         egui::Color32::from_rgb(a / 4 * 3, b / 7 * 3, c / 5 * 3)
     }
 
-    fn current_time(&self) -> f64 {
-        if let Some(clk) = &self.clock {
-            *clk.lock().unwrap()
-        } else {
-            self.fall_back_start.elapsed().as_secs_f64()
-        }
+    fn now(&self) -> Arc<Mutex<f64>> {
+        self.scheduler.now()
     }
 
     fn exit(&self, ctx: &egui::Context) {
@@ -167,16 +143,10 @@ impl App for GuiApp {
         let mut style: egui::Style = (*ctx.style()).clone();
         style.interaction.tooltip_delay = 0.01;
         ctx.set_style(style);
-
-        let current_time = self.current_time();
-        let len = self.seqs.lock().unwrap().len();
-        // -------- top bar --------
         let mut save = false;
         let mut load = false;
         let mut exit = false;
-
-        self.top_panel(ctx, len, &mut save, &mut load, &mut exit);
-
+        self.top_panel(ctx, &mut save, &mut load, &mut exit);
         if save {
             self.save_state();
         }
@@ -186,14 +156,10 @@ impl App for GuiApp {
         if exit {
             self.exit(ctx);
         }
-        let seqs = self.seqs.clone();
-
-        self.property_panel(ctx, len, &seqs);
-
-        self.timeline_panel(ctx, current_time, len, seqs);
-
+        self.property_panel(ctx);
+        self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis(16));
-        self.scheduler.run_once(&mut self.rng)
+        // self.scheduler.run_once(&mut self.rng)
     }
 }
 

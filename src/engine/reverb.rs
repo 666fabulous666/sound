@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 struct RingBuff<const N: usize> {
     data: Vec<f64>,
     head: usize,
@@ -25,7 +23,7 @@ impl<const N: usize> RingBuff<N> {
 }
 
 pub struct Reverb<const B: usize> {
-    delays: Arc<Mutex<Vec<f64>>>, // WARNING: for simplicity, we work directily with the samples so it is sample_rate dependant.
+    delays: Vec<f64>,
     buffer: RingBuff<B>,
     dry_factor: f64,
     wet_factor: f64,
@@ -33,15 +31,8 @@ pub struct Reverb<const B: usize> {
 }
 
 impl<const B: usize> Reverb<B> {
-    pub fn new(
-        dry_factor: f64,
-        wet_factor: f64,
-        delays: Arc<Mutex<Vec<f64>>>,
-        sample_rate: f64,
-    ) -> Self {
+    pub fn new(dry_factor: f64, wet_factor: f64, delays: Vec<f64>, sample_rate: f64) -> Self {
         let delays = delays;
-        // let len = { delays.lock().unwrap().len() };
-        // let a = wet_factor / len as f64;
 
         Self {
             delays,
@@ -56,9 +47,8 @@ impl<const B: usize> Reverb<B> {
     pub fn process(&mut self, dry: f64) -> f64 {
         let mut output = self.dry_factor * dry;
 
-        let ds = self.delays.lock().unwrap();
-        let a = self.wet_factor / ds.len() as f64;
-        for d in ds.iter() {
+        let a = self.wet_factor / self.delays.len() as f64;
+        for d in self.delays.iter() {
             output += a * self
                 .buffer
                 .backward((*d / 1000.0 * self.sample_rate) as usize);

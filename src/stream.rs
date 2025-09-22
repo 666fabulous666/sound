@@ -11,7 +11,7 @@ pub fn stream(
     freq0: f64,
     device: &cpal::Device,
     sample_clock: Arc<Mutex<f64>>,
-    note_queue: Arc<Mutex<Vec<(usize, Vec<Note>)>>>,
+    note_queue: Vec<(usize, Vec<Note>)>,
     // recorded_samples: Arc<Mutex<Vec<f64>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
@@ -25,12 +25,10 @@ pub fn stream(
     let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
     let stream = {
-        let note_queue = note_queue.clone();
         // let recorded_samples = recorded_samples.clone();
         let sample_clock = sample_clock.clone();
 
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            let mut note_queue = note_queue.lock().unwrap();
             // let mut recorded_samples = recorded_samples.lock().unwrap();
             let mut sample_clock = sample_clock.lock().unwrap();
 
@@ -39,10 +37,11 @@ pub fn stream(
                 let mut dry_left = 0.0;
                 let mut dry_right = 0.0;
 
-                for (_, notes_from_seq) in note_queue.iter_mut() {
-                    notes_from_seq.retain(|note| {
+                for (_, notes_from_seq) in note_queue.iter() {
+                    // FIXME: no longer removes outdated notes
+                    notes_from_seq.iter().for_each(|note| {
                         if elapsed < note.time {
-                            true
+                            // true
                         } else if elapsed <= note.time + note.duration {
                             let t = elapsed - note.time;
                             let volume = note.volume // TODO: make this parameters
@@ -65,11 +64,11 @@ pub fn stream(
                                 );
                             dry_left += (1.0 - note.spacial) * dry;
                             dry_right += note.spacial * dry;
-                            true
+                            // true
                         } else if elapsed > note.time + note.duration + NOTE_LINGER_TIME {
-                            false
+                            // false
                         } else {
-                            true
+                            // true
                         }
                     })
                 }
