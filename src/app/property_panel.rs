@@ -831,27 +831,13 @@ impl GuiApp {
                         }
                         Action::Up => {
                             if let Some(sel) = self.selected {
-                                self.swap_seqs(
-                                    sel,
-                                    sel - 1,
-                                    &mut self.notes.clone(), // WARNING: check this is correct
-                                );
-                                // self.sender
-                                //     .send(Message::SwapSequences(sel, sel - 1))
-                                //     .unwrap();
+                                self.swap_seqs(sel, sel - 1);
                                 self.selected = Some(sel - 1);
                             }
                         }
                         Action::Down => {
                             if let Some(sel) = self.selected {
-                                self.swap_seqs(
-                                    sel,
-                                    sel + 1,
-                                    &mut self.notes.clone(), // WARNING: check this is correct
-                                );
-                                // self.sender
-                                //     .send(Message::SwapSequences(sel, sel + 1))
-                                //     .unwrap();
+                                self.swap_seqs(sel, sel + 1);
                                 self.selected = Some(sel + 1);
                             }
                         }
@@ -859,11 +845,7 @@ impl GuiApp {
                     if let Some(edited_seq) = edited_seq {
                         if let Some(sel) = self.selected {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                self.edit_seq(edited_seq, &mut self.notes.clone(), sel);
-                                // WARNING: check this is correct
-                                // self.sender
-                                //     .send(Message::EditSequence(sel, edited_seq))
-                                //     .unwrap();
+                                self.edit_seq(edited_seq, sel);
                             }
                         }
                     }

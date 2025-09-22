@@ -93,7 +93,6 @@ impl GuiApp {
             440.0,
             &self.device,
             clock,
-            // self.notes.clone(),
             self.shared_notes.clone(),
             (
                 Reverb::new(0.5, 0.5, self.score_params.delays.0.clone(), sample_rate),
