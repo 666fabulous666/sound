@@ -253,7 +253,7 @@ impl GuiApp {
             self.draw_seq_at(token);
         }
 
-        self.sched_start += SCHEDULER_STEP;
+        // self.sched_start += SCHEDULER_STEP;
     }
     fn new_score(&mut self) {
         self.sequences.clear();
@@ -296,8 +296,9 @@ impl GuiApp {
 
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
     fn draw_seq_at(&mut self, a: usize) {
+        let now = self.now();
         let seq = &mut self.sequences[a];
-        let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
+        let seq_start = ((now + GENERATE_EARLY) / seq.loop_len).floor() * seq.loop_len;
         seq.draw(&mut self.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
