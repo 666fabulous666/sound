@@ -1,6 +1,6 @@
 use crate::{
     engine::notes::{Note, Sequence},
-    SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
+    GENERATE_EARLY, SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
 };
 use instant::Duration;
 use rand::rngs::ThreadRng;
@@ -82,7 +82,7 @@ impl Scheduler {
                         || seq
                             .not_generate_until
                             .as_ref()
-                            .is_some_and(|until| self.now() > *until)
+                            .is_some_and(|until| self.now() >= *until)
                     {
                         self.draw_seq(seq, rng, &mut notes_buffer);
                     }
@@ -164,7 +164,7 @@ impl Scheduler {
         let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
         seq.draw(out, rng, seq_start);
         seq.not_generate_until =
-            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - 1e-2);
+            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
     }
     fn remove_seq(&self, tk: usize) {
         self.notes.lock().unwrap().retain(|(token, _)| *token != tk);

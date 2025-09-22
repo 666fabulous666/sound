@@ -9,6 +9,7 @@ pub const F0: f64 = 440.0;
 pub const REVERB_BUFFER_LEN: usize = 65535;
 pub const SCHEDULER_STEP: f64 = 1e-2;
 pub const SCHEDULER_WAKE_EARLY: f64 = 0.1;
+pub const GENERATE_EARLY: f64 = 1e-2; //FIXME: should be able to set to 1.0
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
