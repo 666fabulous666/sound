@@ -1,6 +1,6 @@
 use crate::{
     engine::notes::{Note, Sequence},
-    GENERATE_EARLY, SCHEDULER_STEP, SCHEDULER_WAKE_EARLY,
+    GENERATE_EARLY, SCHEDULER_STEP,
 };
 use rand::{rngs::ThreadRng, thread_rng};
 use std::sync::{Arc, Mutex};

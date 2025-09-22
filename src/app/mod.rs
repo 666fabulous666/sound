@@ -12,8 +12,8 @@ use crate::{
     GENERATE_EARLY, NOTE_LINGER_TIME, SCHEDULER_STEP,
 };
 use arc_swap::ArcSwap;
-use cpal::Device;
 use cpal::Stream;
+use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
 use egui::WidgetText;
 use instant::Duration;
@@ -21,7 +21,7 @@ use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::{
     ops::DerefMut,
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicU64, Arc},
 };
 
 const ALL_WAVES: [WaveType; 8] = [
@@ -53,7 +53,7 @@ pub struct GuiApp {
     notes: Vec<(usize, Vec<Note>)>,
     shared_notes: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
     sequences: Vec<Sequence>,
-    clock: Arc<Mutex<f64>>, // TODO: see if it can be an Atomic, maybe using ticks instead of secs
+    clock: Arc<AtomicU64>,
     sched_start: f64,
     rng: ThreadRng,
     selected: Option<usize>,
@@ -61,6 +61,7 @@ pub struct GuiApp {
     score_params: ScoreParams,
     stream: Option<Stream>,
     device: Device,
+    sample_rate: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -76,13 +77,14 @@ impl GuiApp {
             last_token: 0,
             score_params: ScoreParams::default(),
             stream: None,
-            device: device,
             notes: Vec::new(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
             sequences: Vec::new(),
-            clock: Arc::new(Mutex::new(0.0)),
+            clock: Arc::new(AtomicU64::new(0)),
             sched_start: 0.0,
             rng: thread_rng(),
+            sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
+            device: device,
         }
     }
 
@@ -109,8 +111,8 @@ impl GuiApp {
         egui::Color32::from_rgb(a / 4 * 3, b / 7 * 3, c / 5 * 3)
     }
 
-    fn now(&self) -> Arc<Mutex<f64>> {
-        self.clock.clone()
+    fn now(&self) -> f64 {
+        self.clock.load(std::sync::atomic::Ordering::Relaxed) as f64 / self.sample_rate
     }
 
     fn exit(&self, ctx: &egui::Context) {
@@ -143,6 +145,13 @@ impl GuiApp {
             });
         });
     }
+
+    fn retain_notes(&mut self, now: f64) {
+        let _ = self
+            .notes
+            .iter_mut()
+            .for_each(|(_, ns)| ns.retain(|n| n.time - NOTE_LINGER_TIME <= now));
+    }
 }
 
 impl App for GuiApp {
@@ -167,11 +176,10 @@ impl App for GuiApp {
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis(16));
         self.generate_notes();
-        let now = *self.now().lock().unwrap();
-        self.notes
-            .iter_mut()
-            .for_each(|(_, ns)| ns.retain(|n| n.time - NOTE_LINGER_TIME <= now));
+        let now = self.now();
+        self.retain_notes(now);
         self.shared_notes.store(self.notes.clone().into());
+        // println!("{now}");
     }
 }
 
@@ -229,23 +237,22 @@ fn hash32(s: &str) -> u32 {
 
 impl GuiApp {
     fn generate_notes(&mut self) {
-        let now = self.now().lock().unwrap().clone();
-        // let mut notes_buffer = Vec::<(usize, Vec<Note>)>::new(); // FIXME: should not need it
-        for seq in self.sequences.clone().iter() {
-            // TODO: don't clone
-            if seq.not_generate_until.is_none()
-                || seq
-                    .not_generate_until
+        let now = self.now();
+        let tokens: Vec<_> = self
+            .sequences
+            .iter()
+            .filter(|seq| {
+                seq.not_generate_until
                     .as_ref()
-                    .is_some_and(|until| now >= *until)
-            {
-                // self.draw_seq_at(seq.token, &mut notes_buffer);
-                self.draw_seq_at(seq.token);
-                // println!("generate token {}, {} notes", seq.token, notes_buffer.len());
-            }
+                    .map_or(true, |until| now >= *until)
+            })
+            .map(|seq| seq.token)
+            .collect();
+
+        for token in tokens {
+            self.draw_seq_at(token);
         }
-        // println!("generate {} notes", notes_buffer.len());
-        // self.notes.extend(notes_buffer);
+
         self.sched_start += SCHEDULER_STEP;
     }
     fn new_score(&mut self) {
@@ -286,6 +293,7 @@ impl GuiApp {
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
     }
+
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
     fn draw_seq_at(&mut self, a: usize) {
         let seq = &mut self.sequences[a];

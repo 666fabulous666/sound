@@ -1,5 +1,4 @@
-use arc_swap::ArcSwap;
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::AtomicU64, Arc};
 
 use cpal::traits::DeviceTrait;
 
@@ -17,7 +16,6 @@ impl GuiApp {
         load: &mut bool,
         exit: &mut bool,
     ) {
-        let now = self.now();
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 if ui.button("New score").clicked() {
@@ -30,7 +28,7 @@ impl GuiApp {
                     self.new_seq(seq);
                     self.selected = Some(self.last_token);
                     if self.stream.is_none() {
-                        self.start_stream(now.clone());
+                        self.start_stream(self.clock.clone());
                     }
                 }
 
@@ -56,7 +54,7 @@ impl GuiApp {
                     if self.stream.is_some() {
                         self.stream = None
                     } else {
-                        self.start_stream(now.clone());
+                        self.start_stream(self.clock.clone());
                     }
                 }
 
@@ -82,7 +80,7 @@ impl GuiApp {
         });
     }
 
-    fn start_stream(&mut self, clock: Arc<Mutex<f64>>) {
+    fn start_stream(&mut self, clock: Arc<AtomicU64>) {
         let sample_rate = self
             .device
             .default_output_config()

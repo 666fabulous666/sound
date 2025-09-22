@@ -1,17 +1,17 @@
 use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::AtomicU64, Arc};
 
 use crate::{
     engine::{notes::Note, reverb::Reverb, waves::generate_wave},
-    NOTE_LINGER_TIME, REVERB_BUFFER_LEN,
+    REVERB_BUFFER_LEN,
 };
 
 pub fn stream(
     freq0: f64,
     device: &cpal::Device,
-    sample_clock: Arc<Mutex<f64>>,
+    clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
@@ -22,33 +22,34 @@ pub fn stream(
     }
     let config = config.config();
     let sample_rate = config.sample_rate.0 as f64;
-    let sample_duration = 1.0 / sample_rate;
+    println!("sample rate from callback: {sample_rate}");
+    // let sample_duration = 1.0 / sample_rate;
     let channels = config.channels;
     let stream = {
         // let recorded_samples = recorded_samples.clone();
-        let sample_clock = sample_clock.clone();
+        // let sample_clock = clock.clone();
 
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            let note_queue = note_queue.load();
-            // let mut recorded_samples = recorded_samples.lock().unwrap();
-            let mut sample_clock = sample_clock.lock().unwrap();
+            let notes = note_queue.load();
+            let channels_usize = channels as usize;
+            let frames = data.len() / channels_usize;
 
-            for frame in data.chunks_mut(channels as usize) {
-                let elapsed = *sample_clock;
+            let mut now = clock.load(std::sync::atomic::Ordering::Relaxed) as f64 / sample_rate;
+
+            for frame in data.chunks_mut(channels_usize) {
                 let mut dry_left = 0.0;
                 let mut dry_right = 0.0;
 
-                for (_, notes_from_seq) in note_queue.iter() {
-                    // FIXME: no longer removes outdated notes
-                    notes_from_seq.iter().for_each(|note| {
-                        if note.time < elapsed && elapsed <= note.time + note.duration {
-                            let t = elapsed - note.time;
-                            let volume = note.volume // TODO: make this parameters
-                                    / (1.5
-                                        + (0.5 * note.time).fract()
-                                        + (1.2 * note.time).fract()
-                                        + (2.5 * note.time).fract()
-                                        + (3.0 * note.time).fract());
+                for (_, notes_from_seq) in notes.iter() {
+                    for note in notes_from_seq {
+                        if note.time < now && now <= note.time + note.duration {
+                            let t = now - note.time;
+                            let volume = note.volume
+                                / (1.5
+                                    + (0.5 * note.time).fract()
+                                    + (1.2 * note.time).fract()
+                                    + (2.5 * note.time).fract()
+                                    + (3.0 * note.time).fract());
                             let dry = volume
                                 * generate_wave(
                                     &note.wave_type,
@@ -64,22 +65,23 @@ pub fn stream(
                             dry_left += (1.0 - note.spacial) * dry;
                             dry_right += note.spacial * dry;
                         }
-                    })
+                    }
                 }
 
                 let left = reverb_left.process(dry_left);
                 let right = reverb_right.process(dry_right);
 
-                if channels >= 2 {
+                if channels_usize >= 2 {
                     frame[0] = left as f32;
                     frame[1] = right as f32;
                 } else {
                     frame[0] = (left + right) as f32;
                 }
-                // recorded_samples.push(left);
-                // recorded_samples.push(right);
-                *sample_clock += sample_duration;
+
+                now += 1.0 / sample_rate;
             }
+
+            clock.fetch_add(frames as u64, std::sync::atomic::Ordering::Relaxed);
         };
 
         let stream = match device.build_output_stream(

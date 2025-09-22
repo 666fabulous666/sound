@@ -3,7 +3,7 @@ use crate::{app::GuiApp, engine::notes::Interval};
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
         let len = self.sequences.len();
-        let current_time = self.clock.lock().unwrap().clone();
+        let current_time = self.now();
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), ui.available_height()),
