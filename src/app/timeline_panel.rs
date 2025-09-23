@@ -170,7 +170,7 @@ impl GuiApp {
                     self.selected = Some(idx);
                 }
 
-                // lane label
+                let bar_color = col.lerp_to_gamma(egui::Color32::GRAY, 0.5);
                 painter.text(
                     egui::pos2(
                         rect.right() - 4.0,
@@ -185,41 +185,42 @@ impl GuiApp {
                         } else {
                             todo!()
                         },
-                        // idx + 1,
                     ),
                     egui::TextStyle::Body.resolve(ui.style()),
-                    egui::Color32::WHITE,
+                    bar_color,
                 );
-                painter.line_segment(
-                    [
-                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y0),
-                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
-                    ],
-                    egui::Stroke::new(2.0, egui::Color32::BLACK),
-                );
-                painter.line_segment(
-                    [
-                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y0),
-                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y1),
-                    ],
-                    egui::Stroke::new(2.0, egui::Color32::BLACK),
-                );
-                painter.circle_filled(
-                    egui::pos2(
-                        Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
-                        0.75 * y0 + 0.25 * y1,
-                    ),
-                    2.0,
-                    egui::Color32::BLACK,
-                );
-                painter.circle_filled(
-                    egui::pos2(
-                        Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
-                        0.25 * y0 + 0.75 * y1,
-                    ),
-                    2.0,
-                    egui::Color32::BLACK,
-                );
+                if seq.loop_len != max_loop_len {
+                    painter.line_segment(
+                        [
+                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y0),
+                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
+                        ],
+                        egui::Stroke::new(2.0, bar_color),
+                    );
+                    painter.line_segment(
+                        [
+                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y0),
+                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y1),
+                        ],
+                        egui::Stroke::new(2.0, bar_color),
+                    );
+                    painter.circle_filled(
+                        egui::pos2(
+                            Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                            0.75 * y0 + 0.25 * y1,
+                        ),
+                        2.0,
+                        bar_color,
+                    );
+                    painter.circle_filled(
+                        egui::pos2(
+                            Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                            0.25 * y0 + 0.75 * y1,
+                        ),
+                        2.0,
+                        bar_color,
+                    );
+                }
             }
         });
     }
