@@ -68,7 +68,7 @@ impl GuiApp {
             stream: None,
             notes: Vec::new(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
-            delays: (Vec::new(), Vec::new()),
+            delays: (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0]),
             shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
             sequences: Vec::new(),
             clock: Arc::new(AtomicU64::new(0)),
