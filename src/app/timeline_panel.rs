@@ -190,6 +190,36 @@ impl GuiApp {
                     egui::TextStyle::Body.resolve(ui.style()),
                     egui::Color32::WHITE,
                 );
+                painter.line_segment(
+                    [
+                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y0),
+                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
+                    ],
+                    egui::Stroke::new(2.0, egui::Color32::BLACK),
+                );
+                painter.line_segment(
+                    [
+                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y0),
+                        egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y1),
+                    ],
+                    egui::Stroke::new(2.0, egui::Color32::BLACK),
+                );
+                painter.circle_filled(
+                    egui::pos2(
+                        Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                        0.75 * y0 + 0.25 * y1,
+                    ),
+                    2.0,
+                    egui::Color32::BLACK,
+                );
+                painter.circle_filled(
+                    egui::pos2(
+                        Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                        0.25 * y0 + 0.75 * y1,
+                    ),
+                    2.0,
+                    egui::Color32::BLACK,
+                );
             }
         });
     }
