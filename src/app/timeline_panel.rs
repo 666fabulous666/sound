@@ -116,19 +116,10 @@ impl GuiApp {
                     .for_each(|n| {
                         if let Interval::Tempered(degree, _) = n.interval {
                             let dy = track_rect.top() - track_rect.bottom();
-                            // let y = 0.5 * (track_rect.bottom() + track_rect.top())
-                            //     + dy * degree as f32 / 24.0;
-                            // let y = track_rect.bottom() + dy * (degree as f32 + 0.5) / 12.0;
 
                             let note_rect = egui::Rect::from_min_max(
                                 egui::pos2(
-                                    Self::t_to_x(
-                                        track_rect,
-                                        n.time - current_time,
-                                        max_loop_len,
-                                        // ) + 1.0,
-                                    ),
-                                    // y + dy / 48.8,
+                                    Self::t_to_x(track_rect, n.time - current_time, max_loop_len),
                                     0.5 * (track_rect.bottom() + track_rect.top())
                                         + dy * (degree as f32 + 0.5) / 24.0,
                                 ),
@@ -137,32 +128,28 @@ impl GuiApp {
                                         track_rect,
                                         n.time + n.duration - current_time,
                                         max_loop_len,
-                                        // ) - 1.0,
                                     ),
-                                    // y - dy / 48.0,
                                     0.5 * (track_rect.bottom() + track_rect.top())
                                         + dy * (degree as f32 - 0.5) / 24.0,
                                 ),
                             );
 
-                            let es: Vec<_> = (0..100)
+                            let tmp = 100f32.min(note_rect.width()).floor();
+                            let tmp_inv = 1.0 / tmp;
+                            let es: Vec<_> = (0..tmp as _)
                                 .map(|i| {
                                     envelope(n.attack_decay.0, n.attack_decay.1, n.duration)(
-                                        n.duration * i as f64 * 1e-2,
+                                        n.duration * i as f64 * tmp_inv as f64,
                                     ) as f32
                                 })
                                 .collect();
                             let max_e = es.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
                             for (i, e) in es.iter().enumerate() {
-                                let fract = i as f32 * 1e-2;
-                                // let gamma =
-                                //     envelope(n.attack_decay.0, n.attack_decay.1, n.duration)(
-                                //         n.duration * fract as f64,
-                                //     ) as f32;
+                                let fract = i as f32 * tmp_inv;
                                 let tmp = note_rect
                                     .with_min_x(note_rect.left() + note_rect.width() * fract)
                                     .with_max_x(
-                                        note_rect.left() + note_rect.width() * (fract + 1e-2),
+                                        note_rect.left() + note_rect.width() * (fract + tmp_inv),
                                     );
                                 painter.rect_filled(
                                     tmp,
