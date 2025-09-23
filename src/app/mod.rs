@@ -9,7 +9,7 @@ use crate::{
         notes::{Note, Sequence},
         waves::WaveType,
     },
-    Token, TokenGen, GENERATE_EARLY, NOTE_LINGER_TIME,
+    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -55,14 +55,14 @@ pub struct GuiApp {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-struct GuiState {
+pub struct GuiState {
     seqs: Vec<Sequence>,
     selected: Option<usize>,
 }
 
 impl GuiApp {
-    pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
-        Self {
+    pub fn new(cc: &CreationContext<'_>, device: Device) -> Self {
+        let mut app = Self {
             selected: None,
             last_token: TokenGen(0),
             stream: None,
@@ -75,8 +75,11 @@ impl GuiApp {
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
             device: device,
+            #[cfg(target_arch = "wasm32")]
             pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
-        }
+        };
+        app.try_load_default(&cc.egui_ctx);
+        app
     }
 
     fn t_to_x(rect: egui::Rect, t: f64, loop_len: f64) -> f32 {
@@ -272,6 +275,13 @@ impl GuiApp {
         };
         if let Some(state) = state {
             self.apply_loaded_state(state);
+        }
+    }
+    fn try_load_default(&mut self, _ctx: &egui::Context) {
+        if let Ok(state) = serde_json::from_str::<GuiState>(GROOVE_JSON) {
+            self.apply_loaded_state(state);
+        } else {
+            eprintln!("Failed to parse embedded groove.json");
         }
     }
 }
