@@ -49,6 +49,7 @@ impl GuiApp {
                         "⏸"
                     }))
                     .clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Space))
                 {
                     if self.stream.is_some() {
                         self.stream = None
