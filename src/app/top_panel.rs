@@ -31,15 +31,15 @@ impl GuiApp {
                     }
                 }
 
+                *load = if ui.button("Load…").clicked() {
+                    self.stream = None;
+                    true
+                } else {
+                    false
+                };
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     *save = ui.button("Save…").clicked();
-                    *load = if ui.button("Load…").clicked() {
-                        self.stream = None;
-                        true
-                    } else {
-                        false
-                    };
                     *exit = ui.button("Exit").clicked();
                 }
                 if ui

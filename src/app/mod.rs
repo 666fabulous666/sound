@@ -50,6 +50,8 @@ pub struct GuiApp {
     sample_rate: f64,
     delays: (Vec<f64>, Vec<f64>),
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -73,6 +75,7 @@ impl GuiApp {
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
             device: device,
+            pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
         }
     }
 
@@ -150,12 +153,14 @@ impl App for GuiApp {
         let mut save = false;
         let mut load = false;
         let mut exit = false;
+        #[cfg(target_arch = "wasm32")]
+        self.poll_loaded_state();
         self.top_panel(ctx, &mut save, &mut load, &mut exit);
         if save {
             self.save_state();
         }
         if load {
-            self.load_state();
+            self.load_state(ctx);
         }
         if exit {
             self.exit(ctx);
@@ -257,5 +262,16 @@ impl GuiApp {
     fn regen_seq_at(&mut self, i: usize) {
         self.drain_notes_from_seq(self.sequences[i].token);
         self.draw_seq_at(i);
+    }
+    #[cfg(target_arch = "wasm32")]
+    fn poll_loaded_state(&mut self) {
+        let state = {
+            let mut slot = self.pending_loaded_bytes.borrow_mut();
+            slot.take()
+                .and_then(|bytes| serde_json::from_slice::<crate::app::GuiState>(&bytes).ok())
+        };
+        if let Some(state) = state {
+            self.apply_loaded_state(state);
+        }
     }
 }
