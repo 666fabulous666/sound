@@ -76,7 +76,6 @@ impl GuiApp {
                                 y: k as f32,
                             }),
                             tmp.sqrt(),
-                            // egui::Color32::from_rgba_unmultiplied(200, 225, 255, 1),
                             col.gamma_multiply(1.0 / tmp),
                         );
                     }
@@ -111,6 +110,7 @@ impl GuiApp {
                     .iter()
                     .filter(|(token, _)| *token == seq.token)
                     .flat_map(|(_, ns)| ns.iter())
+                    .filter(|n| n.time < self.now() + seq.loop_len)
                     .collect::<Vec<_>>()
                     .iter()
                     .for_each(|n| {
@@ -126,7 +126,7 @@ impl GuiApp {
                                 egui::pos2(
                                     Self::t_to_x(
                                         track_rect,
-                                        n.time + n.duration - current_time,
+                                        (n.time + n.duration - current_time).min(seq.loop_len),
                                         max_loop_len,
                                     ),
                                     0.5 * (track_rect.bottom() + track_rect.top())
@@ -143,7 +143,10 @@ impl GuiApp {
                                     ) as f32
                                 })
                                 .collect();
-                            let max_e = es.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+                            let max_e = es
+                                .iter()
+                                .max_by(|x, y| x.partial_cmp(y).unwrap())
+                                .unwrap_or(&1.0);
                             for (i, e) in es.iter().enumerate() {
                                 let fract = i as f32 * tmp_inv;
                                 let tmp = note_rect

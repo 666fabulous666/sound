@@ -59,7 +59,7 @@
         0.0
       ],
       "token": 1,
-      "not_generate_until": 1977.99,
+      "not_generate_until": 155.0,
       "loop_len": 2.0,
       "spacial": 0.57,
       "tolerance": [
@@ -118,7 +118,7 @@
         "delta": 0.07,
         "delta_shift": 0.0,
         "sym": 0.55,
-        "asym": 0.9500000000000001,
+        "asym": 0.95,
         "time_dependency": 0.0
       },
       "pow_fact": [
@@ -126,7 +126,7 @@
         0.0
       ],
       "token": 2,
-      "not_generate_until": 1977.99,
+      "not_generate_until": 155.0,
       "loop_len": 2.0,
       "spacial": 0.61,
       "tolerance": [
@@ -194,7 +194,7 @@
         0.0
       ],
       "token": 10,
-      "not_generate_until": 1977.99,
+      "not_generate_until": 155.0,
       "loop_len": 2.0,
       "spacial": 0.61,
       "tolerance": [
@@ -263,7 +263,7 @@
         0.0
       ],
       "token": 3,
-      "not_generate_until": 1977.99,
+      "not_generate_until": 155.0,
       "loop_len": 2.0,
       "spacial": 0.38,
       "tolerance": [
@@ -330,7 +330,7 @@
         0.0
       ],
       "token": 5,
-      "not_generate_until": 1983.99,
+      "not_generate_until": 155.0,
       "loop_len": 2.0,
       "spacial": 0.5,
       "tolerance": [
@@ -397,7 +397,7 @@
         0.0
       ],
       "token": 6,
-      "not_generate_until": 1980.99,
+      "not_generate_until": 160.0,
       "loop_len": 2.0,
       "spacial": 0.5,
       "tolerance": [
@@ -464,7 +464,7 @@
         1.0
       ],
       "token": 7,
-      "not_generate_until": 1982.99,
+      "not_generate_until": 155.0,
       "loop_len": 3.0,
       "spacial": 0.5,
       "tolerance": [
@@ -531,7 +531,7 @@
         1.0
       ],
       "token": 14,
-      "not_generate_until": 1983.99,
+      "not_generate_until": 156.0,
       "loop_len": 3.0,
       "spacial": 0.5,
       "tolerance": [
@@ -571,10 +571,10 @@
             5,
             7
           ],
-          2
+          0
         ]
       },
-      "wave_type": "Triangle",
+      "wave_type": "Sawtooth",
       "volume": 12.8,
       "attack_decay": [
         2.3,
@@ -601,7 +601,7 @@
         26.01
       ],
       "token": 9,
-      "not_generate_until": 1977.49,
+      "not_generate_until": 156.5,
       "loop_len": 4.0,
       "spacial": 0.5,
       "tolerance": [
@@ -611,5 +611,5 @@
       "repeat": 1
     }
   ],
-  "selected": 0
+  "selected": 6
 }
