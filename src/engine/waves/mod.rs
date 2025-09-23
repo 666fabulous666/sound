@@ -113,7 +113,7 @@ pub fn generate_wave(
         / (freq / 440.0).sqrt();
     envelope(attack_decay.0, attack_decay.1, duration)(time) * sum_of_waves
 }
-fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
+pub fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
         let time_fraction = time / note_duration;
         0.1 * (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64

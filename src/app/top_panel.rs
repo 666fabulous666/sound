@@ -63,6 +63,7 @@ impl GuiApp {
             });
             ui.separator();
             ui.columns(2, |cols| {
+                // FIXME: waits for stream to restart to be updated
                 Self::edit_vec(
                     &mut cols[0],
                     &mut self.score_params.delays.0,

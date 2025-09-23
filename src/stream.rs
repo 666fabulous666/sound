@@ -13,7 +13,7 @@ pub fn stream(
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
-    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
+    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>), // FIXME: should be dynamically shared with the callback
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
     if config.sample_format() != cpal::SampleFormat::F32 {

@@ -172,58 +172,13 @@ impl App for GuiApp {
         }
         self.property_panel(ctx);
         self.timeline_panel(ctx);
-        ctx.request_repaint_after(Duration::from_millis(16));
+        ctx.request_repaint_after(Duration::from_millis(8));
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
         self.shared_notes.store(Arc::new(self.notes.clone()));
-        // println!("{now}");
     }
 }
-
-// ------------------------------------------------------------
-
-// #[cfg(not(target_arch = "wasm32"))]
-// pub fn run_gui_native(
-//     device: Device,
-//     clock: Option<Arc<Mutex<f64>>>,
-//     scheduler: Scheduler,
-//     sender: Sender<Message>,
-// ) {
-//     let delays = (
-//         Arc::new(Mutex::new(Vec::new())),
-//         Arc::new(Mutex::new(Vec::new())),
-//     );
-//     let native_options = NativeOptions::default();
-//     let _ = eframe::run_native(
-//         "Notes GUI",
-//         native_options,
-//         Box::new(move |cc| {
-//             Ok(Box::new(GuiApp::new(
-//                 cc,
-//                 device,
-//                 clock.clone(),
-//                 scheduler.sequences(),
-//                 scheduler.notes(),
-//                 scheduler,
-//                 sender,
-//                 delays,
-//             )))
-//         }),
-//     );
-// }
-
-// #[cfg(target_arch = "wasm32")]
-// pub fn make_app_for_web(
-//     cc: &CreationContext<'_>,
-//     clock: Option<Arc<Mutex<f64>>>,
-//     shared: Arc<Mutex<Vec<Sequence>>>,
-//     scheduler: Scheduler,
-//     messages: Sender<Message>,
-//     delays: (Arc<Mutex<Vec<usize>>>, Arc<Mutex<Vec<usize>>>),
-// ) -> Box<dyn App> {
-//     Box::new(GuiApp::new(cc, clock, shared, scheduler, messages, delays))
-// }
 
 // simple deterministic hash for colour
 fn hash32(s: &str) -> u32 {
@@ -251,8 +206,6 @@ impl GuiApp {
         for i in ids {
             self.draw_seq_at(i);
         }
-
-        // self.sched_start += SCHEDULER_STEP;
     }
     fn new_score(&mut self) {
         self.sequences.clear();
