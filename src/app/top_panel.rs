@@ -62,21 +62,23 @@ impl GuiApp {
                 }
             });
             ui.separator();
-            ui.columns(2, |cols| {
-                // FIXME: waits for stream to restart to be updated
-                Self::edit_vec(
-                    &mut cols[0],
-                    &mut self.score_params.delays.0,
-                    Some("Left Delays (ms)"),
-                    0.0,
-                );
-                Self::edit_vec(
-                    &mut cols[1],
-                    &mut self.score_params.delays.1,
-                    Some("Right Delays (ms)"),
-                    0.0,
-                );
-            });
+            {
+                // let mut delays = self.delays.clone();
+                ui.columns(2, |cols| {
+                    Self::edit_vec(
+                        &mut cols[0],
+                        &mut self.delays.0,
+                        Some("Left Delays (ms)"),
+                        0.0,
+                    );
+                    Self::edit_vec(
+                        &mut cols[1],
+                        &mut self.delays.1,
+                        Some("Right Delays (ms)"),
+                        0.0,
+                    );
+                });
+            }
         });
     }
 
@@ -93,9 +95,10 @@ impl GuiApp {
             clock,
             self.shared_notes.clone(),
             (
-                Reverb::new(0.5, 0.5, self.score_params.delays.0.clone(), sample_rate),
-                Reverb::new(0.5, 0.5, self.score_params.delays.1.clone(), sample_rate),
+                Reverb::new(0.5, 0.5, sample_rate),
+                Reverb::new(0.5, 0.5, sample_rate),
             ),
+            self.shared_delays.clone(),
         ))
     }
 }

@@ -14,6 +14,7 @@ pub fn stream(
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>), // FIXME: should be dynamically shared with the callback
+    delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
     if config.sample_format() != cpal::SampleFormat::F32 {
@@ -22,15 +23,12 @@ pub fn stream(
     }
     let config = config.config();
     let sample_rate = config.sample_rate.0 as f64;
-    println!("sample rate from callback: {sample_rate}");
-    // let sample_duration = 1.0 / sample_rate;
+    // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
-        // let recorded_samples = recorded_samples.clone();
-        // let sample_clock = clock.clone();
-
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let notes = note_queue.load();
+            let delays = delays.load();
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
 
@@ -68,8 +66,8 @@ pub fn stream(
                     }
                 }
 
-                let left = reverb_left.process(dry_left);
-                let right = reverb_right.process(dry_right);
+                let left = reverb_left.process(dry_left, &delays.0);
+                let right = reverb_right.process(dry_right, &delays.1);
 
                 if channels_usize >= 2 {
                     frame[0] = left as f32;

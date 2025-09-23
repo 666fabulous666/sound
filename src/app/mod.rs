@@ -37,18 +37,6 @@ const ALL_WAVES: [WaveType; 8] = [
 
 // ------------------------------------------------------------
 
-pub struct ScoreParams {
-    delays: (Vec<f64>, Vec<f64>),
-}
-
-impl Default for ScoreParams {
-    fn default() -> Self {
-        Self {
-            delays: (Vec::new(), Vec::new()),
-        }
-    }
-}
-
 pub struct GuiApp {
     notes: Vec<(Token, Vec<Note>)>,
     shared_notes: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
@@ -57,10 +45,11 @@ pub struct GuiApp {
     rng: ThreadRng,
     selected: Option<usize>,
     last_token: TokenGen,
-    score_params: ScoreParams,
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
+    delays: (Vec<f64>, Vec<f64>),
+    shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -74,10 +63,11 @@ impl GuiApp {
         Self {
             selected: None,
             last_token: TokenGen(0),
-            score_params: ScoreParams::default(),
             stream: None,
             notes: Vec::new(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
+            delays: (Vec::new(), Vec::new()),
+            shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
             sequences: Vec::new(),
             clock: Arc::new(AtomicU64::new(0)),
             rng: thread_rng(),
@@ -177,6 +167,7 @@ impl App for GuiApp {
         let now = self.now();
         self.retain_notes(now);
         self.shared_notes.store(Arc::new(self.notes.clone()));
+        self.shared_delays.store(Arc::new(self.delays.clone()));
     }
 }
 
