@@ -14,7 +14,6 @@ impl GuiApp {
             .default_width(230.0)
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    // Which structural edit (if any) should happen after the UI is drawn?
                     enum Action {
                         None,
                         Delete,
@@ -32,12 +31,7 @@ impl GuiApp {
 
                             ui.heading(format!("Track {}", sel + 1));
 
-                            // ── delete / move buttons ─────────────────────────
-                            let can_up = sel > 0;
-                            let can_down = sel + 1 < len; // ← NEW: use cached len
-
                             {
-                                // volume
                                 ui.horizontal(|ui| {
                                     let mut tmp_volume = seq.volume.clone();
                                     ui.label("Volume:");
@@ -50,8 +44,6 @@ impl GuiApp {
                                             .volume = tmp_volume;
                                     };
                                 });
-
-                                // spacial
                                 ui.horizontal(|ui| {
                                     let mut tmp_spacial = seq.spacial.clone();
                                     ui.label("Stereo:");
@@ -75,14 +67,13 @@ impl GuiApp {
                                 if ui.button("Clone").clicked() {
                                     action = Action::Clone;
                                 }
-                                if ui.button("move up").clicked() && can_up {
+                                if ui.button("move up").clicked() && sel > 0 {
                                     action = Action::Up;
                                 }
-                                if ui.button("move down").clicked() && can_down {
+                                if ui.button("move down").clicked() && sel + 1 < len {
                                     action = Action::Down;
                                 }
                             });
-
                             ui.separator();
                             // ---- WaveType picker ----
                             let mut w_choice = seq.wave_type;
@@ -103,7 +94,6 @@ impl GuiApp {
                                     .get_or_insert((&mut self.sequences)[sel].clone())
                                     .wave_type = w_choice;
                             }
-
                             ui.separator();
                             {
                                 ui.label("Sequence position");
@@ -128,28 +118,6 @@ impl GuiApp {
                                         .t_max = (t_max / step_f64).round() * step_f64;
                                 }
                             }
-                            // {
-                            //     ui.label("Sequence's position");
-
-                            //     // If you keep a draft sequence somewhere, prefer it here to avoid resets
-                            //     let mut t_min = seq.t_min;
-                            //     let mut t_max = seq.t_max;
-
-                            //     let step = seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
-
-                            //     let resp = ui.add(DoubleSlider::new(
-                            //         &mut t_min,
-                            //         &mut t_max,
-                            //         0.0..=seq.loop_len,
-                            //     ));
-                            //     if resp.changed() {
-                            //         let e =
-                            //             edited_seq.get_or_insert(seqs[sel].clone());
-                            //         e.t_min = t_min;
-                            //         e.t_max = t_max;
-                            //     }
-                            // }
-
                             ui.separator();
                             {
                                 ui.label("Envelope");
@@ -810,34 +778,24 @@ impl GuiApp {
                         Action::None => {}
                         Action::Delete => {
                             if let Some(sel) = self.selected {
-                                // self.sender.send(Message::DeleteSequence(sel)).unwrap();
                                 self.del_seq(sel);
-                                self.selected = if sel == 0 { None } else { Some(sel - 1) };
+                                self.selected = None;
                             }
                         }
                         Action::Clone => {
-                            todo!()
-                            // let last_token = self
-                            //     .last_token
-                            //     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                            // if let Some(sel) = self.selected {
-                            //     self.scheduler.clone_seq(
-                            //         sel,
-                            //         last_token + 1,
-                            //         &mut self.rng,
-                            //         &mut self.notes.clone(), // WARNING: check this is correct
-                            //     );
-                            // }
+                            if let Some(sel) = self.selected {
+                                self.clone_seq(sel);
+                            }
                         }
                         Action::Up => {
                             if let Some(sel) = self.selected {
-                                self.swap_seqs(sel, sel - 1);
+                                self.swap_seqs_at(sel, sel - 1);
                                 self.selected = Some(sel - 1);
                             }
                         }
                         Action::Down => {
                             if let Some(sel) = self.selected {
-                                self.swap_seqs(sel, sel + 1);
+                                self.swap_seqs_at(sel, sel + 1);
                                 self.selected = Some(sel + 1);
                             }
                         }
@@ -845,7 +803,7 @@ impl GuiApp {
                     if let Some(edited_seq) = edited_seq {
                         if let Some(sel) = self.selected {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                self.edit_seq(edited_seq, sel);
+                                self.edit_seq_at(edited_seq, sel);
                             }
                         }
                     }

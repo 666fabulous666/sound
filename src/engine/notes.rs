@@ -1,4 +1,4 @@
-use crate::{engine::waves::WaveType, DEFAULT_LOOP_LEN};
+use crate::{engine::waves::WaveType, Token, DEFAULT_LOOP_LEN};
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, seq::index::sample};
 use serde::{Deserialize, Serialize};
@@ -51,7 +51,7 @@ pub struct Sequence {
     pub vibrato: (f64, f64),
     pub chorus: ChorusParams,
     pub pow_fact: (f64, f64),
-    pub token: usize,
+    pub token: Token,
     pub not_generate_until: Option<f64>, // TODO: should be accessed through a method
     pub loop_len: f64,
     #[serde(default = "default_spacial")]
@@ -148,7 +148,7 @@ impl Interval {
     }
 }
 impl Sequence {
-    pub fn new(token: usize) -> Self {
+    pub fn new(token: Token) -> Self {
         Sequence {
             t_min: 0.0,
             t_max: DEFAULT_LOOP_LEN,
@@ -176,7 +176,7 @@ impl Sequence {
     }
     pub fn draw(
         &self,
-        notes_buffer: &mut Vec<(usize, Vec<Note>)>,
+        notes_buffer: &mut Vec<(Token, Vec<Note>)>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: f64,
     ) {
@@ -262,7 +262,7 @@ impl Sequence {
 }
 
 impl Note {
-    pub fn draw(&self, context: &[(usize, Vec<Note>)], rng: &mut rand::prelude::ThreadRng) -> Self {
+    pub fn draw(&self, context: &[(Token, Vec<Note>)], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.interval {
             Interval::RDTempered(degree, base, octave) => {
                 let others = context

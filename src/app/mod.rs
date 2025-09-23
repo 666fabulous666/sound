@@ -9,7 +9,7 @@ use crate::{
         notes::{Note, Sequence},
         waves::WaveType,
     },
-    GENERATE_EARLY, NOTE_LINGER_TIME, SCHEDULER_STEP,
+    Token, TokenGen, GENERATE_EARLY, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -50,14 +50,13 @@ impl Default for ScoreParams {
 }
 
 pub struct GuiApp {
-    notes: Vec<(usize, Vec<Note>)>,
-    shared_notes: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
+    notes: Vec<(Token, Vec<Note>)>,
+    shared_notes: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
     sequences: Vec<Sequence>,
     clock: Arc<AtomicU64>,
-    sched_start: f64,
     rng: ThreadRng,
     selected: Option<usize>,
-    last_token: usize,
+    last_token: TokenGen,
     score_params: ScoreParams,
     stream: Option<Stream>,
     device: Device,
@@ -74,14 +73,13 @@ impl GuiApp {
     pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
         Self {
             selected: None,
-            last_token: 0,
+            last_token: TokenGen(0),
             score_params: ScoreParams::default(),
             stream: None,
             notes: Vec::new(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
             sequences: Vec::new(),
             clock: Arc::new(AtomicU64::new(0)),
-            sched_start: 0.0,
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
             device: device,
@@ -178,7 +176,7 @@ impl App for GuiApp {
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
-        self.shared_notes.store(self.notes.clone().into());
+        self.shared_notes.store(Arc::new(self.notes.clone()));
         // println!("{now}");
     }
 }
@@ -238,19 +236,20 @@ fn hash32(s: &str) -> u32 {
 impl GuiApp {
     fn generate_notes(&mut self) {
         let now = self.now();
-        let tokens: Vec<_> = self
+        let ids: Vec<_> = self
             .sequences
             .iter()
-            .filter(|seq| {
+            .enumerate()
+            .filter(|(_, seq)| {
                 seq.not_generate_until
                     .as_ref()
                     .map_or(true, |until| now >= *until)
             })
-            .map(|seq| seq.token)
+            .map(|(i, _)| i)
             .collect();
 
-        for token in tokens {
-            self.draw_seq_at(token);
+        for i in ids {
+            self.draw_seq_at(i);
         }
 
         // self.sched_start += SCHEDULER_STEP;
@@ -263,32 +262,33 @@ impl GuiApp {
         self.draw_seq(&mut sequence);
         self.sequences.push(sequence);
     }
-    fn edit_seq(&mut self, mut sequence: Sequence, a: usize) {
+    fn edit_seq_at(&mut self, mut sequence: Sequence, i: usize) {
         self.regen_seq(&mut sequence);
-        self.sequences[a] = sequence;
+        self.sequences[i] = sequence;
         let len = self.sequences.len();
-        (a + 1..len).for_each(|k| self.regen_seq_at(k));
+        (i + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn del_seq(&mut self, a: usize) {
         let tk = self.sequences[a].token;
-        self.remove_seq(tk);
+        self.drain_notes_from_seq(tk);
         self.sequences.remove(a);
     }
-    fn clone_seq(&mut self, a: usize, new_token: usize) {
-        let mut sequence = self.sequences[a].clone();
-        sequence.token = new_token;
+    fn clone_seq(&mut self, i: usize) {
+        let mut sequence = self.sequences[i].clone();
+        sequence.token = self.last_token.next();
         self.draw_seq(&mut sequence);
         self.sequences.push(sequence);
     }
-    fn swap_seqs(&mut self, a: usize, b: usize) {
-        self.sequences.swap(a, b);
-        self.regen_seq_at(a);
-        self.regen_seq_at(b);
+    fn swap_seqs_at(&mut self, i: usize, j: usize) {
+        self.sequences.swap(i, j);
+        self.regen_seq_at(i);
+        self.regen_seq_at(j);
         let len = self.sequences.len();
-        (a.max(b) + 1..len).for_each(|k| self.regen_seq_at(k));
+        (i.max(j) + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn draw_seq(&mut self, seq: &mut Sequence) {
-        let seq_start = (self.sched_start / seq.loop_len).floor() * seq.loop_len;
+        let now = self.now();
+        let seq_start = (now / seq.loop_len).floor() * seq.loop_len;
         seq.draw(&mut self.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
@@ -303,15 +303,15 @@ impl GuiApp {
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
     }
-    fn remove_seq(&mut self, tk: usize) {
+    fn drain_notes_from_seq(&mut self, tk: Token) {
         self.notes.retain(|(token, _)| *token != tk);
     }
     fn regen_seq(&mut self, seq: &mut Sequence) {
-        self.remove_seq(seq.token);
+        self.drain_notes_from_seq(seq.token);
         self.draw_seq(seq);
     }
-    fn regen_seq_at(&mut self, a: usize) {
-        self.remove_seq(a);
-        self.draw_seq_at(a);
+    fn regen_seq_at(&mut self, i: usize) {
+        self.drain_notes_from_seq(self.sequences[i].token);
+        self.draw_seq_at(i);
     }
 }

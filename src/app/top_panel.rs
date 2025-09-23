@@ -23,10 +23,9 @@ impl GuiApp {
                     self.selected = None;
                 }
                 if ui.button("Add track").clicked() {
-                    let seq = Sequence::new(self.last_token);
-                    self.last_token += 1; // TODO: handle it internally
+                    let seq = Sequence::new(self.last_token.next());
                     self.new_seq(seq);
-                    self.selected = Some(self.last_token);
+                    self.selected = Some(self.sequences.len() - 1);
                     if self.stream.is_none() {
                         self.start_stream(self.clock.clone());
                     }

@@ -7,10 +7,34 @@ pub const DEFAULT_LOOP_LEN: f64 = 4.0;
 pub const NOTE_LINGER_TIME: f64 = 12.0;
 pub const F0: f64 = 440.0;
 pub const REVERB_BUFFER_LEN: usize = 65535;
-pub const SCHEDULER_STEP: f64 = 1e-2;
 pub const SCHEDULER_WAKE_EARLY: f64 = 0.1;
 pub const GENERATE_EARLY: f64 = 1e0;
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Token(usize);
+
+impl Deref for Token {
+    type Target = usize;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub struct TokenGen(usize);
+impl TokenGen {
+    pub fn new() -> Self {
+        Self(0)
+    }
+    pub fn next(&mut self) -> Token {
+        self.0 += 1;
+        Token(self.0)
+    }
+}
+
+use std::ops::Deref;
+
+use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 

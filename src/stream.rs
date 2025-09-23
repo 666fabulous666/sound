@@ -5,14 +5,14 @@ use std::sync::{atomic::AtomicU64, Arc};
 
 use crate::{
     engine::{notes::Note, reverb::Reverb, waves::generate_wave},
-    REVERB_BUFFER_LEN,
+    Token, REVERB_BUFFER_LEN,
 };
 
 pub fn stream(
     freq0: f64,
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
-    note_queue: Arc<ArcSwap<Vec<(usize, Vec<Note>)>>>,
+    note_queue: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
