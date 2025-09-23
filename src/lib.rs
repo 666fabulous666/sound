@@ -41,6 +41,10 @@ use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]
 pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
+    use crate::app::GuiApp;
+    use cpal::traits::HostTrait;
+    use eframe::web_sys::HtmlCanvasElement;
+
     fn make_canvas(id: &str) -> Result<HtmlCanvasElement, JsValue> {
         use eframe::web_sys::window;
 
@@ -56,49 +60,24 @@ pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
         Ok(canvas)
     }
 
+    const CANVAS: &str = "the_canvas_id";
+
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
     // log::log!(log::Level::Error, "test init");
-    use cpal::traits::HostTrait;
-    use eframe::web_sys::HtmlCanvasElement;
 
-    use crate::engine::scheduler::Scheduler;
-    use std::sync::{Arc, Mutex};
-    const CANVAS: &str = "the_canvas_id";
     let canvas = make_canvas(CANVAS)?;
+    let web_options = eframe::WebOptions::default();
 
     let host = cpal::default_host();
     let device = host
         .default_output_device()
         .expect("Failed to get default output device");
-    let sample_clock = Arc::new(Mutex::new(0f64));
-    let (scheduler, sender) = Scheduler::new(Arc::clone(&sample_clock));
-
-    let web_options = eframe::WebOptions::default();
-
-    let clock = Some(Arc::clone(&sample_clock));
-    let delays = (
-        Arc::new(Mutex::new(Vec::new())),
-        Arc::new(Mutex::new(Vec::new())),
-    );
 
     eframe::WebRunner::new()
         .start(
             canvas,
             web_options,
-            Box::new(move |cc| {
-                use crate::app::GuiApp;
-
-                Ok(Box::new(GuiApp::new(
-                    cc,
-                    device,
-                    clock.clone(),
-                    scheduler.sequences(),
-                    scheduler.notes(),
-                    scheduler,
-                    sender,
-                    delays,
-                )))
-            }),
+            Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, device)))),
         )
         .await
 }
