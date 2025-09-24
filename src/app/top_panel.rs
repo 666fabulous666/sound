@@ -37,9 +37,9 @@ impl GuiApp {
                 } else {
                     false
                 };
+                *save = ui.button("Save…").clicked();
                 #[cfg(not(target_arch = "wasm32"))]
                 {
-                    *save = ui.button("Save…").clicked();
                     *exit = ui.button("Exit").clicked();
                 }
                 if ui

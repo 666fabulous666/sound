@@ -28,6 +28,35 @@ impl GuiApp {
     }
     #[cfg(target_arch = "wasm32")]
     pub fn save_state(&self) {
-        todo!()
+        use rfd::AsyncFileDialog;
+        use wasm_bindgen_futures::spawn_local;
+
+        // Build the state the same way as native
+        let state = crate::app::GuiState {
+            seqs: self.sequences.clone(),
+            selected: self.selected,
+        };
+
+        let Ok(text) = serde_json::to_string_pretty(&state) else {
+            eprintln!("[save_state] Failed to serialize state to JSON");
+            return;
+        };
+        // Move the bytes into the async task
+        let bytes: Vec<u8> = text.into_bytes();
+
+        spawn_local(async move {
+            if let Some(file) = AsyncFileDialog::new()
+                .set_title("Save session as JSON")
+                .set_file_name("session.json")
+                .add_filter("JSON", &["json"])
+                .save_file()
+                .await
+            {
+                if let Err(e) = file.write(&bytes).await {
+                    eprintln!("[save_state] Failed to write file: {e}");
+                }
+            }
+            // else: user canceled; do nothing
+        });
     }
 }

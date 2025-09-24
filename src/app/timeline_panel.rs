@@ -221,6 +221,12 @@ impl GuiApp {
                         bar_color,
                     );
                 }
+                if ui
+                    .interact(track_rect, egui::Id::new(idx), egui::Sense::click())
+                    .clicked()
+                {
+                    self.selected = Some(idx);
+                }
             }
         });
     }
