@@ -14,6 +14,7 @@ impl GuiApp {
             let state = GuiState {
                 seqs: self.sequences.clone(),
                 selected: self.selected,
+                delays: self.delays.clone(),
             };
 
             match serde_json::to_string_pretty(&state) {
@@ -35,6 +36,7 @@ impl GuiApp {
         let state = crate::app::GuiState {
             seqs: self.sequences.clone(),
             selected: self.selected,
+            delays: self.delays.clone(),
         };
 
         let Ok(text) = serde_json::to_string_pretty(&state) else {

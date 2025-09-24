@@ -59,5 +59,6 @@ impl GuiApp {
                 .saturating_add(1),
         );
         self.selected = state.selected.filter(|&i| i < state.seqs.len());
+        self.delays = state.delays;
     }
 }

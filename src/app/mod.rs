@@ -54,10 +54,16 @@ pub struct GuiApp {
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
 }
 
+fn default_delays() -> (Vec<f64>, Vec<f64>) {
+    (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0])
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuiState {
     seqs: Vec<Sequence>,
     selected: Option<usize>,
+    #[serde(default = "default_delays")]
+    delays: (Vec<f64>, Vec<f64>),
 }
 
 impl GuiApp {
@@ -68,7 +74,7 @@ impl GuiApp {
             stream: None,
             notes: Vec::new(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
-            delays: (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0]),
+            delays: default_delays(),
             shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
             sequences: Vec::new(),
             clock: Arc::new(AtomicU64::new(0)),
