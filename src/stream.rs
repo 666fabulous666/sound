@@ -42,12 +42,7 @@ pub fn stream(
                     for note in notes_from_seq {
                         if note.time < now && now <= note.time + note.duration {
                             let t = now - note.time;
-                            let volume = note.volume
-                                / (1.5
-                                    + (0.5 * note.time).fract()
-                                    + (1.2 * note.time).fract()
-                                    + (2.5 * note.time).fract()
-                                    + (3.0 * note.time).fract());
+                            let volume = note.volume;
                             let dry = volume
                                 * generate_wave(
                                     &note.wave_type,

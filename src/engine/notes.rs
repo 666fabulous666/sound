@@ -59,6 +59,12 @@ pub struct Sequence {
     #[serde(default = "default_tolerance")]
     pub tolerance: (f64, f64),
     pub repeat: usize,
+    #[serde(default = "default_accents")]
+    pub accents: (f64, Vec<f64>),
+}
+
+fn default_accents() -> (f64, Vec<f64>) {
+    (1.0, vec![0.5, 1.2, 2.5, 3.0])
 }
 
 fn default_spacial() -> f64 {
@@ -172,6 +178,7 @@ impl Sequence {
             spacial: default_spacial(),
             tolerance: default_tolerance(),
             repeat: 1,
+            accents: default_accents(),
         }
     }
     pub fn draw(
@@ -221,7 +228,16 @@ impl Sequence {
                 duration: *d,
                 interval: self.interval.clone(),
                 wave_type: self.wave_type,
-                volume: self.volume,
+                volume: 0.5
+                    * self.volume
+                    * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
+                    / (self.accents.0
+                        + self
+                            .accents
+                            .1
+                            .iter()
+                            .map(|a| (a * (t + seq_start)).fract())
+                            .sum::<f64>()),
                 attack_decay: self.attack_decay,
                 bend: self.bend,
                 vibrato: self.vibrato,

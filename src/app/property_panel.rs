@@ -790,6 +790,50 @@ impl GuiApp {
                                     }
                                 }
                             });
+                            ui.collapsing("Accents", |ui| {
+                                // Take current stored values
+                                let mut accents = seq.accents;
+
+                                // --- Base ---
+                                // Invert before showing in UI
+                                let mut mag_val = 1.0 / accents.0.max(f64::MIN_POSITIVE);
+                                let base_slider = ui.add(
+                                    egui::Slider::new(&mut mag_val, 0.01..=100.0)
+                                        .text("Magnitude")
+                                        .logarithmic(true),
+                                );
+                                if base_slider.changed() {
+                                    // Invert back before storing
+                                    accents.0 = 1.0 / mag_val;
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .accents = accents.clone();
+                                }
+
+                                // --- Generators ---
+                                // Work with inverses in the UI
+                                let mut gens: Vec<f64> = accents
+                                    .1
+                                    .iter()
+                                    .map(|&x| 1.0 / x.max(f64::MIN_POSITIVE))
+                                    .collect();
+
+                                let old_gens = gens.clone();
+                                Self::edit_vec(ui, &mut gens, Some("Generators"), 1.0);
+
+                                if gens != old_gens {
+                                    // Invert back before storing
+                                    let restored: Vec<f64> = gens
+                                        .into_iter()
+                                        .map(|x| 1.0 / x.max(f64::MIN_POSITIVE))
+                                        .collect();
+
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .accents
+                                        .1 = restored;
+                                }
+                            });
                         }
                     } else {
                         ui.label("Click a block to edit");
