@@ -1,4 +1,4 @@
-use crate::{engine::waves::WaveType, Token, DEFAULT_LOOP_LEN};
+use crate::{engine::waves::WaveType, Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME};
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, seq::index::sample};
 use serde::{Deserialize, Serialize};
@@ -228,7 +228,7 @@ impl Sequence {
                 duration: *d,
                 interval: self.interval.clone(),
                 wave_type: self.wave_type,
-                volume: 0.5
+                volume: GLOBAL_VOLUME
                     * self.volume
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
                     / (self.accents.0

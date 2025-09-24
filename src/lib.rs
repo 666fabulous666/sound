@@ -9,6 +9,7 @@ pub const F0: f64 = 440.0;
 pub const REVERB_BUFFER_LEN: usize = 65535;
 pub const SCHEDULER_WAKE_EARLY: f64 = 0.1;
 pub const GENERATE_EARLY: f64 = 1e-1;
+pub const GLOBAL_VOLUME: f64 = 0.2;
 const GROOVE_JSON: &str = include_str!("../assets/groove.json");
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
