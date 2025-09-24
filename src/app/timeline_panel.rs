@@ -10,7 +10,7 @@ impl GuiApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), ui.available_height()),
-                egui::Sense::hover(),
+                egui::Sense::click_and_drag(),
             );
             let painter = ui.painter_at(rect);
 
@@ -163,14 +163,14 @@ impl GuiApp {
                         }
                     });
 
-                if ui
-                    .interact(track_rect, egui::Id::new(idx), egui::Sense::click())
-                    .clicked()
-                {
-                    self.selected = Some(idx);
-                }
-
-                let bar_color = col.lerp_to_gamma(egui::Color32::GRAY, 0.5);
+                let bar_color = col.lerp_to_gamma(
+                    if self.selected == Some(idx) {
+                        egui::Color32::BLACK
+                    } else {
+                        egui::Color32::GRAY
+                    },
+                    0.5,
+                );
                 painter.text(
                     egui::pos2(
                         rect.right() - 4.0,

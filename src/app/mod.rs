@@ -112,9 +112,6 @@ impl GuiApp {
     fn exit(&self, ctx: &egui::Context) {
         #[cfg(not(target_arch = "wasm32"))]
         ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-
-        #[cfg(target_arch = "wasm32")]
-        todo!()
     }
     fn edit_vec<T: egui::emath::Numeric>(
         ui: &mut egui::Ui,
@@ -158,6 +155,23 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
+        if !self.sequences.is_empty() {
+            let len = self.sequences.len();
+
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp)) {
+                self.selected = Some(match self.selected {
+                    Some(n) => (n + len - 1) % len,
+                    None => len - 1,
+                });
+            }
+
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown)) {
+                self.selected = Some(match self.selected {
+                    Some(n) => (n + 1) % len,
+                    None => 0,
+                });
+            }
+        }
         self.top_panel(ctx, &mut save, &mut load, &mut exit);
         if save {
             self.save_state();
@@ -165,7 +179,7 @@ impl App for GuiApp {
         if load {
             self.load_state(ctx);
         }
-        if exit {
+        if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             self.exit(ctx);
         }
         self.property_panel(ctx);

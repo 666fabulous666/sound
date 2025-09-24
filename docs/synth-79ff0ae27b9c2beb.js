@@ -1687,11 +1687,11 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 225, __wbg_adapter_41);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper2614 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper2615 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 554, __wbg_adapter_44);
         return ret;
     };
-    imports.wbg.__wbindgen_closure_wrapper2653 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper2654 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 577, __wbg_adapter_47);
         return ret;
     };
