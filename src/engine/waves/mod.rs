@@ -69,9 +69,6 @@ pub fn generate_wave(
             0.5 * (t - (0.5 + t).floor())
         }
         _ => unreachable!(),
-        // WaveType::HiHat => drums::hi_hat(freq, bend_vib_time),
-        // WaveType::Kick => drums::kick(freq, bend_vib_time),
-        // WaveType::Snare => drums::snare(freq, bend_vib_time),
     };
     let phase = 2.0 * PI * freq * bend_vib_time;
     let p = pow_fact.0 * (pow_fact.1 * time).exp2();

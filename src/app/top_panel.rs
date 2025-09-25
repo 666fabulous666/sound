@@ -1,13 +1,15 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
 use cpal::traits::DeviceTrait;
-use egui::{DragValue, Slider};
+#[cfg(target_arch = "wasm32")]
+use egui::Slider;
 
+#[cfg(target_arch = "wasm32")]
+use crate::MAX_FPS;
 use crate::{
     app::GuiApp,
     engine::{notes::Sequence, reverb::Reverb},
     stream::stream,
-    MAX_FPS,
 };
 
 impl GuiApp {
@@ -63,11 +65,14 @@ impl GuiApp {
                 if self.stream.is_some() {
                     ui.label("stream");
                 }
-                self.fps = 0.9 * self.fps + 1e8 / self.instant.elapsed().as_nanos() as f64;
-                self.instant = instant::Instant::now();
-                ui.label(format!("fps: {:.0}", self.fps));
-                ui.add(Slider::new(&mut self.min_fps, 12.0..=MAX_FPS).show_value(false))
-                    .on_hover_text(format!("Minimum fps: {}", self.min_fps));
+                #[cfg(target_arch = "wasm32")]
+                {
+                    self.fps = 0.9 * self.fps + 1e8 / self.instant.elapsed().as_nanos() as f64;
+                    self.instant = instant::Instant::now();
+                    ui.label(format!("fps: {:.0}", self.fps));
+                    ui.add(Slider::new(&mut self.min_fps, 12.0..=MAX_FPS).show_value(false))
+                        .on_hover_text(format!("Minimum fps: {}", self.min_fps));
+                }
             });
             ui.separator();
             {

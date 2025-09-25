@@ -1,5 +1,5 @@
 use crate::{
-    app::GuiApp,
+    app::{GuiApp, NotesGroup},
     engine::{notes::Interval, waves::envelope},
 };
 
@@ -108,8 +108,8 @@ impl GuiApp {
 
                 self.notes
                     .iter()
-                    .filter(|(token, _)| *token == seq.token)
-                    .flat_map(|(_, ns)| ns.iter())
+                    .filter(|NotesGroup { token, .. }| *token == seq.token)
+                    .flat_map(|NotesGroup { notes, .. }| notes.iter())
                     .filter(|n| n.time < self.now() + seq.loop_len)
                     .collect::<Vec<_>>()
                     .iter()

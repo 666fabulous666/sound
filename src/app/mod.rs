@@ -16,7 +16,9 @@ use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
 use egui::WidgetText;
-use instant::{Duration, Instant};
+use instant::Duration;
+#[cfg(target_arch = "wasm32")]
+use instant::Instant;
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -37,11 +39,16 @@ const ALL_WAVES: [WaveType; 8] = [
 
 const DRUM_WAVES: [WaveType; 3] = [WaveType::HiHat, WaveType::Kick, WaveType::Snare];
 
-// ------------------------------------------------------------
+#[derive(Clone)]
+pub struct NotesGroup {
+    pub token: Token,
+    pub bend: (f64, f64),
+    pub notes: Vec<Note>,
+}
 
 pub struct GuiApp {
-    notes: Vec<(Token, Vec<Note>)>,
-    shared_notes: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
+    notes: Vec<NotesGroup>,
+    shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
     sequences: Vec<Sequence>,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
@@ -54,7 +61,9 @@ pub struct GuiApp {
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
+    #[cfg(target_arch = "wasm32")]
     instant: Instant,
+    #[cfg(target_arch = "wasm32")]
     fps: f64,
     min_fps: f64,
 }
@@ -88,7 +97,9 @@ impl GuiApp {
             device: device,
             #[cfg(target_arch = "wasm32")]
             pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
+            #[cfg(target_arch = "wasm32")]
             instant: Instant::now(),
+            #[cfg(target_arch = "wasm32")]
             fps: 60.0,
             min_fps: 60.0,
         };
@@ -152,10 +163,9 @@ impl GuiApp {
     }
 
     fn retain_notes(&mut self, now: f64) {
-        let _ = self
-            .notes
-            .iter_mut()
-            .for_each(|(_, ns)| ns.retain(|n| n.time - NOTE_LINGER_TIME <= now));
+        let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
+            notes.retain(|n| n.time - NOTE_LINGER_TIME <= now)
+        });
     }
 }
 
@@ -284,7 +294,7 @@ impl GuiApp {
             Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
     }
     fn drain_notes_from_seq(&mut self, tk: Token) {
-        self.notes.retain(|(token, _)| *token != tk);
+        self.notes.retain(|NotesGroup { token, .. }| *token != tk);
     }
     fn regen_seq(&mut self, seq: &mut Sequence) {
         self.drain_notes_from_seq(seq.token);

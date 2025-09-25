@@ -4,15 +4,16 @@ use cpal::traits::{DeviceTrait, StreamTrait};
 use std::sync::{atomic::AtomicU64, Arc};
 
 use crate::{
-    engine::{notes::Note, reverb::Reverb, waves::generate_wave},
-    Token, REVERB_BUFFER_LEN,
+    app::NotesGroup,
+    engine::{reverb::Reverb, waves::generate_wave},
+    REVERB_BUFFER_LEN,
 };
 
 pub fn stream(
     freq0: f64,
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
-    note_queue: Arc<ArcSwap<Vec<(Token, Vec<Note>)>>>,
+    note_queue: Arc<ArcSwap<Vec<NotesGroup>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>), // FIXME: should be dynamically shared with the callback
     delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
 ) -> cpal::Stream {
@@ -38,7 +39,12 @@ pub fn stream(
                 let mut dry_left = 0.0;
                 let mut dry_right = 0.0;
 
-                for (_, notes_from_seq) in notes.iter() {
+                for NotesGroup {
+                    notes: notes_from_seq,
+                    bend,
+                    ..
+                } in notes.iter()
+                {
                     for note in notes_from_seq {
                         if note.time < now && now <= note.time + note.duration {
                             let t = now - note.time;
@@ -50,7 +56,7 @@ pub fn stream(
                                     t,
                                     note.duration,
                                     note.attack_decay,
-                                    note.bend,
+                                    *bend,
                                     note.vibrato,
                                     &note.chorus,
                                     note.pow_fact,

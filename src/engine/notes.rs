@@ -1,4 +1,4 @@
-use crate::{engine::waves::WaveType, Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME};
+use crate::{app::NotesGroup, engine::waves::WaveType, Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME};
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, seq::index::sample};
 use serde::{Deserialize, Serialize};
@@ -183,7 +183,7 @@ impl Sequence {
     }
     pub fn draw(
         &self,
-        notes_buffer: &mut Vec<(Token, Vec<Note>)>,
+        notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: f64,
     ) {
@@ -248,9 +248,9 @@ impl Sequence {
             })
             .for_each(|n| {
                 let to_push = n.draw(&notes_buffer, rng);
-                if let Some((_, v)) = notes_buffer
+                if let Some(NotesGroup { notes, .. }) = notes_buffer
                     .iter_mut()
-                    .find(|(token, _)| *token == self.token)
+                    .find(|NotesGroup { token, .. }| *token == self.token)
                 {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
@@ -259,7 +259,7 @@ impl Sequence {
                             ..tmp
                         }
                     }) {
-                        v.push(p);
+                        notes.push(p);
                     }
                     // v.push(to_push);
                 } else {
@@ -270,7 +270,11 @@ impl Sequence {
                             ..tmp
                         }
                     }) {
-                        notes_buffer.push((self.token, vec![p]));
+                        notes_buffer.push(NotesGroup {
+                            token: self.token,
+                            bend: self.bend,
+                            notes: vec![p],
+                        });
                     }
                 }
             });
@@ -278,12 +282,12 @@ impl Sequence {
 }
 
 impl Note {
-    pub fn draw(&self, context: &[(Token, Vec<Note>)], rng: &mut rand::prelude::ThreadRng) -> Self {
+    pub fn draw(&self, context: &[NotesGroup], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.interval {
             Interval::RDTempered(degree, base, octave) => {
                 let others = context
                     .iter()
-                    .flat_map(|(_, ns)| ns)
+                    .flat_map(|NotesGroup { notes, .. }| notes)
                     // Proper interval overlap test:
                     .filter(|n| {
                         self.time < n.time + n.duration + self.tolerance.0
