@@ -137,44 +137,46 @@ impl GuiApp {
                                         .attack_decay = attack_decay;
                                 };
                             });
-                            ui.collapsing("Bend", |ui| {
-                                let mut bend = seq.bend;
-                                let mut tmp_mag = bend.0 * 1e4;
-                                let mag = ui.add(
-                                    egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
-                                        .text("Magnitude"),
-                                );
-                                let speed = ui.add(
-                                    egui::Slider::new(&mut bend.1, 1.0..=1000.0)
-                                        .text("Speed")
-                                        .logarithmic(true),
-                                );
-                                if mag.changed() || speed.changed() {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.bend.0 = tmp_mag * 1e-4;
-                                    e.bend.1 = bend.1;
-                                };
-                            });
-                            ui.collapsing("Vibrato", |ui| {
-                                let mut vibrato = seq.vibrato;
-                                let mut vibrato_mag_display = vibrato.0 * 1e6;
-                                let mag = ui.add(
-                                    egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
-                                        .text("Magnitude"),
-                                );
+                            if !DRUM_WAVES.contains(&seq.wave_type) {
+                                ui.collapsing("Bend", |ui| {
+                                    let mut bend = seq.bend;
+                                    let mut tmp_mag = bend.0 * 1e4;
+                                    let mag = ui.add(
+                                        egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
+                                            .text("Magnitude"),
+                                    );
+                                    let speed = ui.add(
+                                        egui::Slider::new(&mut bend.1, 1.0..=1000.0)
+                                            .text("Speed")
+                                            .logarithmic(true),
+                                    );
+                                    if mag.changed() || speed.changed() {
+                                        let e = edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone());
+                                        e.bend.0 = tmp_mag * 1e-4;
+                                        e.bend.1 = bend.1;
+                                    };
+                                });
+                                ui.collapsing("Vibrato", |ui| {
+                                    let mut vibrato = seq.vibrato;
+                                    let mut vibrato_mag_display = vibrato.0 * 1e6;
+                                    let mag = ui.add(
+                                        egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
+                                            .text("Magnitude"),
+                                    );
 
-                                let fq = ui.add(
-                                    egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
-                                        .text("Frequency")
-                                        .logarithmic(true),
-                                );
-                                if mag.changed() || fq.changed() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
-                                };
-                            });
+                                    let fq = ui.add(
+                                        egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
+                                            .text("Frequency")
+                                            .logarithmic(true),
+                                    );
+                                    if mag.changed() || fq.changed() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
+                                    };
+                                });
+                            }
                             if !DRUM_WAVES.contains(&seq.wave_type) {
                                 ui.collapsing("Chorus (Unison Detune)", |ui| {
                                     let mut chorus = seq.chorus;
@@ -668,74 +670,80 @@ impl GuiApp {
                                     });
                                 }
                             });
-                            ui.collapsing("Harmony", |ui| {
-                                {
-                                    ui.horizontal(|ui| {
-                                        let mut tmp_tolerance = seq.tolerance.clone();
-                                        ui.label("Tolerance:").on_hover_text(concat!(
-                                            "Tolerance defines how much to look\n",
-                                            "before the note starts and after it ends.\n",
-                                            "\n",
-                                            "Use this to follow notes across their edges\n",
-                                            "while generating new notes.\n",
-                                            "Negative values are allowed.\n",
-                                            "\n",
-                                            "(See generating logics for more details)",
-                                        ));
-                                        ui.label("<-");
-                                        if ui
-                                            .add(
-                                                egui::DragValue::new(&mut tmp_tolerance.0)
-                                                    .range(-4.0..=16.0),
-                                            )
-                                            .changed()
-                                        {
-                                            edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
-                                                .tolerance
-                                                .0 = tmp_tolerance.0;
-                                        };
-                                        ui.label(",");
-                                        if ui
-                                            .add(
-                                                egui::DragValue::new(&mut tmp_tolerance.1)
-                                                    .range(-4.0..=16.0),
-                                            )
-                                            .changed()
-                                        {
-                                            edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
-                                                .tolerance
-                                                .1 = tmp_tolerance.1;
-                                        };
-                                        ui.label("->");
-                                    });
-                                }
-
-                                {
-                                    let mut changed = false;
-                                    let mut interval = seq.interval.clone();
-                                    if let Interval::RDTempered(
-                                        ref mut nb_rd_steps,
-                                        ref mut tones,
-                                        ref mut octave,
-                                    ) = interval
+                            if !DRUM_WAVES.contains(&seq.wave_type) {
+                                ui.collapsing("Harmony", |ui| {
                                     {
-                                        // octave
                                         ui.horizontal(|ui| {
-                                            ui.label("Octave:").on_hover_text(
-                                            "Base octave where notes of this sequence are placed.",
-                                        );
+                                            let mut tmp_tolerance = seq.tolerance.clone();
+                                            ui.label("Tolerance:").on_hover_text(concat!(
+                                                "Tolerance defines how much to look\n",
+                                                "before the note starts and after it ends.\n",
+                                                "\n",
+                                                "Use this to follow notes across their edges\n",
+                                                "while generating new notes.\n",
+                                                "Negative values are allowed.\n",
+                                                "\n",
+                                                "(See generating logics for more details)",
+                                            ));
+                                            ui.label("<-");
                                             if ui
-                                                .add(egui::DragValue::new(octave).range(-5..=5))
+                                                .add(
+                                                    egui::DragValue::new(&mut tmp_tolerance.0)
+                                                        .range(-4.0..=16.0),
+                                                )
                                                 .changed()
                                             {
-                                                changed = true;
+                                                edited_seq
+                                                    .get_or_insert(
+                                                        (&mut self.sequences)[sel].clone(),
+                                                    )
+                                                    .tolerance
+                                                    .0 = tmp_tolerance.0;
                                             };
+                                            ui.label(",");
+                                            if ui
+                                                .add(
+                                                    egui::DragValue::new(&mut tmp_tolerance.1)
+                                                        .range(-4.0..=16.0),
+                                                )
+                                                .changed()
+                                            {
+                                                edited_seq
+                                                    .get_or_insert(
+                                                        (&mut self.sequences)[sel].clone(),
+                                                    )
+                                                    .tolerance
+                                                    .1 = tmp_tolerance.1;
+                                            };
+                                            ui.label("->");
                                         });
-                                        // nb_rd_steps
-                                        ui.horizontal(|ui| {
-                                            ui.label("Variation steps:").on_hover_text(concat!(
+                                    }
+
+                                    {
+                                        let mut changed = false;
+                                        let mut interval = seq.interval.clone();
+                                        if let Interval::RDTempered(
+                                            ref mut nb_rd_steps,
+                                            ref mut tones,
+                                            ref mut octave,
+                                        ) = interval
+                                        {
+                                            // octave
+                                            ui.horizontal(|ui| {
+                                                ui.label("Octave:").on_hover_text(
+                                            "Base octave where notes of this sequence are placed.",
+                                        );
+                                                if ui
+                                                    .add(egui::DragValue::new(octave).range(-5..=5))
+                                                    .changed()
+                                                {
+                                                    changed = true;
+                                                };
+                                            });
+                                            // nb_rd_steps
+                                            ui.horizontal(|ui| {
+                                                ui.label("Variation steps:").on_hover_text(
+                                                    concat!(
                                                 "Maximum number of random variations to apply.\n",
                                                 "\n",
                                                 "The note is chosen from visible ones\n",
@@ -744,56 +752,62 @@ impl GuiApp {
                                                 "the allowed intervals.\n",
                                                 "\n",
                                                 "Higher values allow more chained shifts."
-                                            ));
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(nb_rd_steps).range(0..=16),
-                                                )
-                                                .changed()
-                                            {
-                                                changed = true;
-                                            };
-                                        });
-                                        // ----- RDTempered tones (–11 … 11) ---------------------------------
-                                        ui.label("Variation intervals:").on_hover_text(concat!(
+                                            ),
+                                                );
+                                                if ui
+                                                    .add(
+                                                        egui::DragValue::new(nb_rd_steps)
+                                                            .range(0..=16),
+                                                    )
+                                                    .changed()
+                                                {
+                                                    changed = true;
+                                                };
+                                            });
+                                            // ----- RDTempered tones (–11 … 11) ---------------------------------
+                                            ui.label("Variation intervals:").on_hover_text(
+                                                concat!(
                                             "The set of semitone intervals used for variation.\n",
                                             "\n",
                                             "Each step shifts the note by one of these values.\n",
                                             "Multiple steps can combine, wrapping around octaves\n",
                                             "(12 semitones)."
-                                        ));
-                                        ui.horizontal_wrapped(|ui| {
-                                            for tone in -11..=11 {
-                                                let mut selected = tones.contains(&tone);
+                                        ),
+                                            );
+                                            ui.horizontal_wrapped(|ui| {
+                                                for tone in -11..=11 {
+                                                    let mut selected = tones.contains(&tone);
 
-                                                if ui
-                                                    .checkbox(&mut selected, tone.to_string())
-                                                    .changed()
-                                                {
-                                                    if selected {
-                                                        if !tones.contains(&tone) {
-                                                            tones.push(tone);
-                                                            tones.sort_unstable();
+                                                    if ui
+                                                        .checkbox(&mut selected, tone.to_string())
+                                                        .changed()
+                                                    {
+                                                        if selected {
+                                                            if !tones.contains(&tone) {
+                                                                tones.push(tone);
+                                                                tones.sort_unstable();
+                                                            }
+                                                        } else {
+                                                            if let Some(pos) = tones
+                                                                .iter()
+                                                                .position(|&v| v == tone)
+                                                            {
+                                                                tones.remove(pos);
+                                                            }
                                                         }
-                                                    } else {
-                                                        if let Some(pos) =
-                                                            tones.iter().position(|&v| v == tone)
-                                                        {
-                                                            tones.remove(pos);
-                                                        }
+                                                        changed = !tones.is_empty();
                                                     }
-                                                    changed = !tones.is_empty();
                                                 }
-                                            }
-                                        });
+                                            });
+                                        }
+                                        if changed {
+                                            edited_seq
+                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .interval = interval;
+                                        }
                                     }
-                                    if changed {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .interval = interval;
-                                    }
-                                }
-                            });
+                                });
+                            }
                             ui.collapsing("Accents", |ui| {
                                 let mut accents = seq.accents;
 
