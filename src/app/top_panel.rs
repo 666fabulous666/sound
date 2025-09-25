@@ -65,6 +65,10 @@ impl GuiApp {
                 if self.stream.is_some() {
                     ui.label("stream");
                 }
+                ui.label(format!("#notes: {}", {
+                    let tmp = self.notes.iter().map(|ng| ng.notes.len()).sum::<usize>();
+                    tmp
+                }));
                 #[cfg(target_arch = "wasm32")]
                 {
                     self.fps = 0.9 * self.fps + 1e8 / self.instant.elapsed().as_nanos() as f64;

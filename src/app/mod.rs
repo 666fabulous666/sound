@@ -171,7 +171,7 @@ impl GuiApp {
 
     fn retain_notes(&mut self, now: f64) {
         let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
-            notes.retain(|n| n.time - NOTE_LINGER_TIME <= now)
+            notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
         });
     }
 }
