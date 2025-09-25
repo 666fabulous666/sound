@@ -54,6 +54,7 @@ pub struct NotesGroup {
 }
 
 pub struct GuiApp {
+    tempo: f64,
     notes: Vec<NotesGroup>,
     shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
     sequences: Vec<Sequence>,
@@ -90,6 +91,7 @@ pub struct GuiState {
 impl GuiApp {
     pub fn new(cc: &CreationContext<'_>, device: Device) -> Self {
         let mut app = Self {
+            tempo: default_tempo(),
             selected: None,
             last_token: TokenGen(0),
             stream: None,
@@ -171,6 +173,10 @@ impl GuiApp {
             notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
         });
     }
+}
+
+fn default_tempo() -> f64 {
+    60.0
 }
 
 impl App for GuiApp {

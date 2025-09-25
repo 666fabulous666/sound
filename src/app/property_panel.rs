@@ -164,6 +164,18 @@ impl GuiApp {
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .bend = default_bend();
                                     };
+                                    if mag.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .bend
+                                            .0 = default_bend().0;
+                                    };
+                                    if speed.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .bend
+                                            .1 = default_bend().1;
+                                    };
                                 });
                                 ui.collapsing("Vibrato", |ui| {
                                     let mut vibrato = seq.vibrato;
@@ -188,13 +200,25 @@ impl GuiApp {
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .vibrato = default_vibrato();
                                     };
+                                    if mag.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .vibrato
+                                            .0 = default_vibrato().0;
+                                    };
+                                    if fq.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .vibrato
+                                            .1 = default_vibrato().1;
+                                    };
                                 });
                             }
                             if !DRUM_WAVES.contains(&seq.wave_type) {
                                 ui.collapsing("Chorus (Unison Detune)", |ui| {
                                     let mut chorus = seq.chorus;
 
-                                    let n = ui
+                                    let voices = ui
                                         .add(
                                             egui::Slider::new(&mut chorus.voices, 1..=10)
                                                 .text("Voice layers"),
@@ -273,7 +297,44 @@ impl GuiApp {
                                             "Odd (asymmetric) weighting across +/− Δf.",
                                         ));
 
-                                    if [n, delta, delta_shift, symmetric, asymmetric, time_dep]
+                                    if voices.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .voices = ChorusParams::default().voices;
+                                    };
+                                    if delta.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .delta = ChorusParams::default().delta;
+                                    };
+                                    if delta_shift.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .delta_shift = ChorusParams::default().delta_shift;
+                                    };
+                                    if symmetric.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .sym = ChorusParams::default().sym;
+                                    };
+                                    if asymmetric.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .asym = ChorusParams::default().asym;
+                                    };
+                                    if time_dep.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus
+                                            .time_dependency =
+                                            ChorusParams::default().time_dependency;
+                                    };
+                                    if [voices, delta, delta_shift, symmetric, asymmetric, time_dep]
                                         .iter()
                                         .any(|x| x.changed())
                                     {
@@ -295,36 +356,45 @@ impl GuiApp {
                                 ));
 
                                 ui.collapsing("Power factor", |ui| {
-                                    let mut pow_fact = seq.pow_fact.0;
-                                    if ui
-                                        .add(
-                                            egui::Slider::new(&mut pow_fact, 0.0..=1000.0)
-                                                .logarithmic(true)
-                                                .text("Initial value"),
-                                        )
-                                        .changed()
-                                    {
+                                    let mut pow_fact_initial = seq.pow_fact.0;
+                                    let initial_val = ui.add(
+                                        egui::Slider::new(&mut pow_fact_initial, 0.0..=1000.0)
+                                            .logarithmic(true)
+                                            .text("Initial value"),
+                                    );
+                                    if initial_val.changed() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .pow_fact
-                                            .0 = pow_fact;
+                                            .0 = pow_fact_initial;
                                     };
                                     let mut time_dep_pow_fact =
                                         seq.pow_fact.1.signum() * seq.pow_fact.1.abs().sqrt();
-                                    if ui
+                                    let evol = ui
                                         .add(
                                             egui::Slider::new(&mut time_dep_pow_fact, -10.0..=10.0)
                                                 .text("Evolution"),
                                         )
-                                        .on_hover_text(concat!("Increase/Decrease over time."))
-                                        .changed()
-                                    {
+                                        .on_hover_text(concat!("Increase/Decrease over time."));
+                                    if evol.changed() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .pow_fact
                                             .1 = time_dep_pow_fact.signum()
                                             * time_dep_pow_fact
                                             * time_dep_pow_fact;
+                                    };
+                                    if initial_val.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .pow_fact
+                                            .0 = default_pow_fact().0;
+                                    };
+                                    if evol.double_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .pow_fact
+                                            .1 = default_pow_fact().1;
                                     };
                                     if ui.small_button("Default").clicked() {
                                         edited_seq
