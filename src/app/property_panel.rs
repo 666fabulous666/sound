@@ -3,7 +3,7 @@ use egui::ScrollArea;
 
 use crate::{
     app::{GuiApp, ALL_WAVES, DRUM_WAVES},
-    engine::notes::{DetRythm, Interval, RdRythm, Rythm, Sequence},
+    engine::notes::{ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence},
     // range_slider::*,
 };
 
@@ -267,6 +267,11 @@ impl GuiApp {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus = chorus;
+                                    };
+                                    if ui.small_button("Default").clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus = ChorusParams::default();
                                     };
                                 })
                                 .header_response

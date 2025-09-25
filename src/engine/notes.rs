@@ -100,6 +100,18 @@ pub struct ChorusParams {
     pub asym: f64,
     pub time_dependency: f64,
 }
+impl Default for ChorusParams {
+    fn default() -> Self {
+        Self {
+            voices: 1,
+            delta: 0.02,
+            delta_shift: 0.15,
+            sym: 0.5,
+            asym: 0.0,
+            time_dependency: 0.0,
+        }
+    }
+}
 
 impl ChorusParams {
     pub fn new(
@@ -163,8 +175,7 @@ impl Sequence {
             not_generate_until: None,
             bend: (0.0, 32.0),
             vibrato: (0.0, 32.0),
-            chorus: ChorusParams::new(1, 0.0, 0.0, 0.0, 0.0, 0.0),
-            // chorus: ChorusParams::new(1, 0.0, 0.5, 0.0, 0.0),
+            chorus: ChorusParams::default(),
             pow_fact: (1.0, 0.0),
             loop_len: DEFAULT_LOOP_LEN,
             spacial: default_spacial(),
