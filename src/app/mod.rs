@@ -9,14 +9,14 @@ use crate::{
         notes::{Note, Sequence},
         waves::WaveType,
     },
-    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME, TARGET_FPS,
+    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
 use egui::WidgetText;
-use instant::Duration;
+use instant::{Duration, Instant};
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -54,6 +54,9 @@ pub struct GuiApp {
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
+    instant: Instant,
+    fps: f64,
+    min_fps: f64,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -85,6 +88,9 @@ impl GuiApp {
             device: device,
             #[cfg(target_arch = "wasm32")]
             pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
+            instant: Instant::now(),
+            fps: 60.0,
+            min_fps: 60.0,
         };
         app.try_load_default(&cc.egui_ctx);
         app
@@ -192,7 +198,7 @@ impl App for GuiApp {
         }
         self.property_panel(ctx);
         self.timeline_panel(ctx);
-        ctx.request_repaint_after(Duration::from_millis(1000 / TARGET_FPS));
+        ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
