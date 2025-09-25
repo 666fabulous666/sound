@@ -126,15 +126,7 @@ pub struct Note {
     pub time: f64,
     pub duration: f64,
     pub interval: Interval,
-    pub wave_type: WaveType,
     pub volume: f64,
-    pub attack_decay: (f64, f64),
-    pub bend: (f64, f64),
-    pub vibrato: (f64, f64),
-    pub chorus: ChorusParams,
-    pub pow_fact: (f64, f64),
-    pub spacial: f64,
-    pub tolerance: (f64, f64),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -227,7 +219,6 @@ impl Sequence {
                 time: t + seq_start,
                 duration: *d,
                 interval: self.interval.clone(),
-                wave_type: self.wave_type,
                 volume: GLOBAL_VOLUME
                     * self.volume
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
@@ -238,13 +229,6 @@ impl Sequence {
                             .iter()
                             .map(|a| (a * (t + seq_start)).fract())
                             .sum::<f64>()),
-                attack_decay: self.attack_decay,
-                bend: self.bend,
-                vibrato: self.vibrato,
-                chorus: self.chorus.clone(),
-                pow_fact: self.pow_fact,
-                spacial: self.spacial,
-                tolerance: self.tolerance,
             })
             .for_each(|n| {
                 let to_push = n.draw(&notes_buffer, rng);
@@ -273,7 +257,14 @@ impl Sequence {
                         notes_buffer.push(NotesGroup {
                             token: self.token,
                             bend: self.bend,
+                            vibrato: self.vibrato,
                             notes: vec![p],
+                            wave_type: self.wave_type.clone(),
+                            chorus: self.chorus.clone(),
+                            attack_decay: self.attack_decay,
+                            pow_fact: self.pow_fact,
+                            spacial: self.spacial,
+                            tolerance: self.tolerance,
                         });
                     }
                 }
@@ -287,12 +278,18 @@ impl Note {
             Interval::RDTempered(degree, base, octave) => {
                 let others = context
                     .iter()
-                    .flat_map(|NotesGroup { notes, .. }| notes)
+                    .map(
+                        |NotesGroup {
+                             notes, tolerance, ..
+                         }| {
+                            notes.iter().filter(|n| {
+                                self.time < n.time + n.duration + tolerance.0
+                                    && n.time < self.time + self.duration + tolerance.1
+                            })
+                        },
+                    )
+                    .flatten()
                     // Proper interval overlap test:
-                    .filter(|n| {
-                        self.time < n.time + n.duration + self.tolerance.0
-                            && n.time < self.time + self.duration + self.tolerance.1
-                    })
                     .filter_map(|n| {
                         if let Interval::Tempered(d, _) = n.interval {
                             Some(d)
@@ -310,7 +307,6 @@ impl Note {
 
                 Self {
                     interval: Interval::Tempered(degree, *octave),
-                    chorus: self.chorus.clone(),
                     ..*self
                 }
             }

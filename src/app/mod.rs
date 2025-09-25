@@ -6,7 +6,7 @@ mod top_panel;
 
 use crate::{
     engine::{
-        notes::{Note, Sequence},
+        notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
     Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
@@ -43,7 +43,14 @@ const DRUM_WAVES: [WaveType; 3] = [WaveType::HiHat, WaveType::Kick, WaveType::Sn
 pub struct NotesGroup {
     pub token: Token,
     pub bend: (f64, f64),
+    pub vibrato: (f64, f64),
     pub notes: Vec<Note>,
+    pub wave_type: WaveType,
+    pub chorus: ChorusParams,
+    pub attack_decay: (f64, f64),
+    pub pow_fact: (f64, f64),
+    pub spacial: f64,
+    pub tolerance: (f64, f64),
 }
 
 pub struct GuiApp {

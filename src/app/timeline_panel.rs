@@ -138,7 +138,7 @@ impl GuiApp {
                             let tmp_inv = 1.0 / tmp;
                             let es: Vec<_> = (0..tmp as _)
                                 .map(|i| {
-                                    envelope(n.attack_decay.0, n.attack_decay.1, n.duration)(
+                                    envelope(seq.attack_decay.0, seq.attack_decay.1, n.duration)(
                                         n.duration * i as f64 * tmp_inv as f64,
                                     ) as f32
                                 })

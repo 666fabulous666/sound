@@ -42,6 +42,12 @@ pub fn stream(
                 for NotesGroup {
                     notes: notes_from_seq,
                     bend,
+                    vibrato,
+                    wave_type,
+                    chorus,
+                    attack_decay,
+                    pow_fact,
+                    spacial,
                     ..
                 } in notes.iter()
                 {
@@ -51,18 +57,18 @@ pub fn stream(
                             let volume = note.volume;
                             let dry = volume
                                 * generate_wave(
-                                    &note.wave_type,
+                                    wave_type,
                                     freq0 * note.interval.compute(),
                                     t,
                                     note.duration,
-                                    note.attack_decay,
+                                    *attack_decay,
                                     *bend,
-                                    note.vibrato,
-                                    &note.chorus,
-                                    note.pow_fact,
+                                    *vibrato,
+                                    chorus,
+                                    *pow_fact,
                                 );
-                            dry_left += (1.0 - note.spacial) * dry;
-                            dry_right += note.spacial * dry;
+                            dry_left += (1.0 - spacial) * dry;
+                            dry_right += spacial * dry;
                         }
                     }
                 }
