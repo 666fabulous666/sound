@@ -173,10 +173,10 @@ impl Sequence {
             attack_decay: default_attack_decay(),
             token,
             not_generate_until: None,
-            bend: (0.0, 32.0),
-            vibrato: (0.0, 32.0),
+            bend: default_bend(),
+            vibrato: default_vibrato(),
             chorus: ChorusParams::default(),
-            pow_fact: (1.0, 0.0),
+            pow_fact: default_pow_fact(),
             loop_len: DEFAULT_LOOP_LEN,
             spacial: default_spacial(),
             tolerance: default_tolerance(),
@@ -281,6 +281,18 @@ impl Sequence {
                 }
             });
     }
+}
+
+pub fn default_pow_fact() -> (f64, f64) {
+    (1.0, 0.0)
+}
+
+pub fn default_bend() -> (f64, f64) {
+    (0.0, 32.0)
+}
+
+pub fn default_vibrato() -> (f64, f64) {
+    (0.0, 12.0)
 }
 
 impl Note {

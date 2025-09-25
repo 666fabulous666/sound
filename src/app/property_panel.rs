@@ -3,7 +3,10 @@ use egui::ScrollArea;
 
 use crate::{
     app::{GuiApp, ALL_WAVES, DRUM_WAVES},
-    engine::notes::{ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence},
+    engine::notes::{
+        default_bend, default_pow_fact, default_vibrato, ChorusParams, DetRythm, Interval, RdRythm,
+        Rythm, Sequence,
+    },
     // range_slider::*,
 };
 
@@ -156,6 +159,11 @@ impl GuiApp {
                                         e.bend.0 = tmp_mag * 1e-4;
                                         e.bend.1 = bend.1;
                                     };
+                                    if ui.small_button("Default").clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .bend = default_bend();
+                                    };
                                 });
                                 ui.collapsing("Vibrato", |ui| {
                                     let mut vibrato = seq.vibrato;
@@ -174,6 +182,11 @@ impl GuiApp {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
+                                    };
+                                    if ui.small_button("Default").clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .vibrato = default_vibrato();
                                     };
                                 });
                             }
@@ -312,6 +325,11 @@ impl GuiApp {
                                             .1 = time_dep_pow_fact.signum()
                                             * time_dep_pow_fact
                                             * time_dep_pow_fact;
+                                    };
+                                    if ui.small_button("Default").clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .pow_fact = default_pow_fact();
                                     };
                                 })
                                 .header_response
