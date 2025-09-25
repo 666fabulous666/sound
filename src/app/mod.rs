@@ -15,7 +15,7 @@ use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
-use egui::WidgetText;
+use egui::{Color32, WidgetText};
 use instant::Duration;
 #[cfg(target_arch = "wasm32")]
 use instant::Instant;
@@ -130,11 +130,8 @@ impl GuiApp {
 
     fn hash_color(w: &WaveType) -> egui::Color32 {
         let txt = format!("{:?}", w.to_string());
-        let hash = hash32(&txt);
-        let a = (hash & 0xFF) as u8;
-        let b = ((hash >> 8) & 0xFF) as u8;
-        let c = ((hash >> 16) & 0xFF) as u8;
-        egui::Color32::from_rgb(a / 4 * 3, b / 7 * 3, c / 5 * 3)
+        let h = hash32(&txt) % 360;
+        hsl_to_color32(h as _, 0.25, 0.5)
     }
 
     fn now(&self) -> f64 {
@@ -329,4 +326,30 @@ impl GuiApp {
             eprintln!("Failed to parse embedded groove.json");
         }
     }
+}
+
+/// Convert HSL (0.0–360.0, 0.0–1.0, 0.0–1.0) to `Color32`.
+pub fn hsl_to_color32(h: f32, s: f32, l: f32) -> Color32 {
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let h_prime = h / 60.0;
+    let x = c * (1.0 - ((h_prime % 2.0) - 1.0).abs());
+
+    let (r1, g1, b1) = match h_prime as i32 {
+        0 => (c, x, 0.0),
+        1 => (x, c, 0.0),
+        2 => (0.0, c, x),
+        3 => (0.0, x, c),
+        4 => (x, 0.0, c),
+        5 => (c, 0.0, x),
+        _ => (0.0, 0.0, 0.0),
+    };
+
+    let m = l - c / 2.0;
+    let (r, g, b) = (r1 + m, g1 + m, b1 + m);
+
+    Color32::from_rgb(
+        (r * 255.0).round() as u8,
+        (g * 255.0).round() as u8,
+        (b * 255.0).round() as u8,
+    )
 }

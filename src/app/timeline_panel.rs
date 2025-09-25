@@ -23,13 +23,17 @@ impl GuiApp {
                 .fold(0.0f64, |acc, seq| acc.max(seq.loop_len));
 
             // grid
-            for s in (0..=16).map(|i| i as f64 * 4.0) {
-                let x = Self::t_to_x(rect, s, max_loop_len);
-                let col = if (s as i32) % 16 == 0 {
-                    egui::Color32::from_gray(120)
+            for s in 0..=max_loop_len as usize {
+                let x = Self::t_to_x(rect, s as f64, max_loop_len);
+                let base_col = egui::Color32::GRAY;
+                let col = if s % 16 == 0 {
+                    base_col.gamma_multiply(0.5)
+                } else if s % 4 == 0 {
+                    base_col.gamma_multiply(0.25)
                 } else {
-                    egui::Color32::from_gray(70)
+                    base_col.gamma_multiply(0.15)
                 };
+
                 painter.line_segment(
                     [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
                     egui::Stroke::new(1.0, col),
