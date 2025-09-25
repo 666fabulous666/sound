@@ -2,7 +2,7 @@ use egui::ScrollArea;
 // use egui_double_slider::DoubleSlider;
 
 use crate::{
-    app::{GuiApp, ALL_WAVES},
+    app::{GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::notes::{DetRythm, Interval, RdRythm, Rythm, Sequence},
     // range_slider::*,
 };
@@ -175,141 +175,148 @@ impl GuiApp {
                                         .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                                 };
                             });
-                            ui.collapsing("Chorus (Unison Detune)", |ui| {
-                                let mut chorus = seq.chorus;
+                            if !DRUM_WAVES.contains(&seq.wave_type) {
+                                ui.collapsing("Chorus (Unison Detune)", |ui| {
+                                    let mut chorus = seq.chorus;
 
-                                let n = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.voices, 1..=10)
-                                            .text("Voice layers"),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Each layer adds one detuned voice\n",
-                                        "above and below f₀.\n",
-                                        "Voices total = 1 + 2 × (steps − 1).",
-                                    ));
+                                    let n = ui
+                                        .add(
+                                            egui::Slider::new(&mut chorus.voices, 1..=10)
+                                                .text("Voice layers"),
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Each layer adds one detuned voice\n",
+                                            "above and below f₀.\n",
+                                            "Voices total = 1 + 2 × (steps − 1).",
+                                        ));
 
-                                let delta = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.delta, 0.0..=1.0)
-                                            // egui::Slider::new(&mut chorus.delta, 1.0..=1.1)
-                                            .text("Detune (Δf)")
-                                            .logarithmic(true),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Detune amount between voices around f₀.\n",
-                                        "\n",
-                                        "Use very small values for slow beating;\n",
-                                        "increase for a wider chorus.",
-                                    ));
+                                    let delta = ui
+                                        .add(
+                                            egui::Slider::new(&mut chorus.delta, 0.0..=1.0)
+                                                // egui::Slider::new(&mut chorus.delta, 1.0..=1.1)
+                                                .text("Detune (Δf)")
+                                                .logarithmic(true),
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Detune amount between voices around f₀.\n",
+                                            "\n",
+                                            "Use very small values for slow beating;\n",
+                                            "increase for a wider chorus.",
+                                        ));
 
-                                let delta_shift = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.delta_shift, -1.0..=1.0)
-                                            .text("Detune shift"), // .logarithmic(true),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Shift voices frequencies asymmetrically\n",
-                                        "to avoid beatings.",
-                                    ));
+                                    let delta_shift = ui
+                                        .add(
+                                            egui::Slider::new(&mut chorus.delta_shift, -1.0..=1.0)
+                                                .text("Detune shift"), // .logarithmic(true),
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Shift voices frequencies asymmetrically\n",
+                                            "to avoid beatings.",
+                                        ));
 
-                                let time_dep = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.time_dependency, -5.0..=5.0)
+                                    let time_dep = ui
+                                        .add(
+                                            egui::Slider::new(
+                                                &mut chorus.time_dependency,
+                                                -5.0..=5.0,
+                                            )
                                             .text("Detune over time"),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Modulates Δf over time.\n",
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Modulates Δf over time.\n",
+                                            "\n",
+                                            " > 0 : Δf increases over time.\n",
+                                            " < 0 : Δf decreases over time.\n",
+                                            " = 0 : static detune."
+                                        ));
+
+                                    ui.label("Weighting (around f₀)").on_hover_text(concat!(
+                                        "Sets how much outer voices contribute\n",
+                                        "relative to the center.\n",
                                         "\n",
-                                        " > 0 : Δf increases over time.\n",
-                                        " < 0 : Δf decreases over time.\n",
-                                        " = 0 : static detune."
+                                        " • |value| > 1 -> outer voices are amplified\n",
+                                        " • |value| = 1 -> constant voice levels\n",
+                                        " • |value| < 1 -> outer voices are attenuated\n",
+                                        "                  (so energy concentrates near f₀)\n",
+                                        " •  value < 0  -> outer voices are inverted in phase"
                                     ));
+                                    let symmetric = ui
+                                        .add(
+                                            egui::Slider::new(&mut chorus.sym, -2.0..=2.0)
+                                                .text("Even"),
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Even (symmetric) weighting across +/− Δf",
+                                        ));
 
-                                ui.label("Weighting (around f₀)").on_hover_text(concat!(
-                                    "Sets how much outer voices contribute\n",
-                                    "relative to the center.\n",
-                                    "\n",
-                                    " • |value| > 1 -> outer voices are amplified\n",
-                                    " • |value| = 1 -> constant voice levels\n",
-                                    " • |value| < 1 -> outer voices are attenuated\n",
-                                    "                  (so energy concentrates near f₀)\n",
-                                    " •  value < 0  -> outer voices are inverted in phase"
+                                    let asymmetric = ui
+                                        .add(
+                                            egui::Slider::new(&mut chorus.asym, -2.0..=2.0)
+                                                .text("Odd"),
+                                        )
+                                        .on_hover_text(concat!(
+                                            "Odd (asymmetric) weighting across +/− Δf.",
+                                        ));
+
+                                    if [n, delta, delta_shift, symmetric, asymmetric, time_dep]
+                                        .iter()
+                                        .any(|x| x.changed())
+                                    {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .chorus = chorus;
+                                    };
+                                })
+                                .header_response
+                                .on_hover_text(concat!(
+                                    "Adds multiple voices detuned\n",
+                                    "around the main frequency f₀\n",
+                                    "to create width and motion.",
                                 ));
-                                let symmetric = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.sym, -2.0..=2.0).text("Even"),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Even (symmetric) weighting across +/− Δf",
-                                    ));
 
-                                let asymmetric = ui
-                                    .add(
-                                        egui::Slider::new(&mut chorus.asym, -2.0..=2.0).text("Odd"),
-                                    )
-                                    .on_hover_text(concat!(
-                                        "Odd (asymmetric) weighting across +/− Δf.",
-                                    ));
-
-                                if [n, delta, delta_shift, symmetric, asymmetric, time_dep]
-                                    .iter()
-                                    .any(|x| x.changed())
-                                {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .chorus = chorus;
-                                };
-                            })
-                            .header_response
-                            .on_hover_text(concat!(
-                                "Adds multiple voices detuned\n",
-                                "around the main frequency f₀\n",
-                                "to create width and motion.",
-                            ));
-
-                            ui.collapsing("Power factor", |ui| {
-                                let mut pow_fact = seq.pow_fact.0;
-                                if ui
-                                    .add(
-                                        egui::Slider::new(&mut pow_fact, 0.0..=1000.0)
-                                            .logarithmic(true)
-                                            .text("Initial value"),
-                                    )
-                                    .changed()
-                                {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .pow_fact
-                                        .0 = pow_fact;
-                                };
-                                let mut time_dep_pow_fact =
-                                    seq.pow_fact.1.signum() * seq.pow_fact.1.abs().sqrt();
-                                if ui
-                                    .add(
-                                        egui::Slider::new(&mut time_dep_pow_fact, -10.0..=10.0)
-                                            .text("Evolution"),
-                                    )
-                                    .on_hover_text(concat!("Increase/Decrease over time."))
-                                    .changed()
-                                {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .pow_fact
-                                        .1 = time_dep_pow_fact.signum()
-                                        * time_dep_pow_fact
-                                        * time_dep_pow_fact;
-                                };
-                            })
-                            .header_response
-                            .on_hover_text(concat!(
-                                "Produces distortion or metallic timbre\n",
-                                "\n",
-                                " • |value| = 0 -> square wave\n",
-                                " • |value| < 1 -> distortion\n",
-                                " • |value| = 1 -> unchanged wave\n",
-                                " • |value| < 1 -> metallic",
-                            ));
+                                ui.collapsing("Power factor", |ui| {
+                                    let mut pow_fact = seq.pow_fact.0;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut pow_fact, 0.0..=1000.0)
+                                                .logarithmic(true)
+                                                .text("Initial value"),
+                                        )
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .pow_fact
+                                            .0 = pow_fact;
+                                    };
+                                    let mut time_dep_pow_fact =
+                                        seq.pow_fact.1.signum() * seq.pow_fact.1.abs().sqrt();
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut time_dep_pow_fact, -10.0..=10.0)
+                                                .text("Evolution"),
+                                        )
+                                        .on_hover_text(concat!("Increase/Decrease over time."))
+                                        .changed()
+                                    {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .pow_fact
+                                            .1 = time_dep_pow_fact.signum()
+                                            * time_dep_pow_fact
+                                            * time_dep_pow_fact;
+                                    };
+                                })
+                                .header_response
+                                .on_hover_text(concat!(
+                                    "Produces distortion or metallic timbre\n",
+                                    "\n",
+                                    " • |value| = 0 -> square wave\n",
+                                    " • |value| < 1 -> distortion\n",
+                                    " • |value| = 1 -> unchanged wave\n",
+                                    " • |value| < 1 -> metallic",
+                                ));
+                            };
                             ui.collapsing("Rythm", |ui| {
                                 {
                                     ui.horizontal(|ui| {

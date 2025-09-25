@@ -35,6 +35,8 @@ const ALL_WAVES: [WaveType; 8] = [
     WaveType::Snare,
 ];
 
+const DRUM_WAVES: [WaveType; 3] = [WaveType::HiHat, WaveType::Kick, WaveType::Snare];
+
 // ------------------------------------------------------------
 
 pub struct GuiApp {
