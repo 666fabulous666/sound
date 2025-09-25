@@ -714,12 +714,12 @@ impl GuiApp {
 
                                 {
                                     let mut changed = false;
-                                    let mut f = seq.interval.clone();
+                                    let mut interval = seq.interval.clone();
                                     if let Interval::RDTempered(
                                         ref mut nb_rd_steps,
                                         ref mut tones,
                                         ref mut octave,
-                                    ) = f
+                                    ) = interval
                                     {
                                         // octave
                                         ui.horizontal(|ui| {
@@ -766,26 +766,23 @@ impl GuiApp {
                                             for tone in -11..=11 {
                                                 let mut selected = tones.contains(&tone);
 
-                                                // show the checkbox; the label *is* the number
                                                 if ui
                                                     .checkbox(&mut selected, tone.to_string())
                                                     .changed()
                                                 {
                                                     if selected {
-                                                        // add if absent
                                                         if !tones.contains(&tone) {
                                                             tones.push(tone);
                                                             tones.sort_unstable();
                                                         }
                                                     } else {
-                                                        // remove if present
                                                         if let Some(pos) =
                                                             tones.iter().position(|&v| v == tone)
                                                         {
                                                             tones.remove(pos);
                                                         }
                                                     }
-                                                    changed = true;
+                                                    changed = !tones.is_empty();
                                                 }
                                             }
                                         });
@@ -793,16 +790,13 @@ impl GuiApp {
                                     if changed {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .interval = f;
+                                            .interval = interval;
                                     }
                                 }
                             });
                             ui.collapsing("Accents", |ui| {
-                                // Take current stored values
                                 let mut accents = seq.accents;
 
-                                // --- Base ---
-                                // Invert before showing in UI
                                 let mut mag_val = 1.0 / accents.0.max(f64::MIN_POSITIVE);
                                 let base_slider = ui.add(
                                     egui::Slider::new(&mut mag_val, 0.01..=100.0)
@@ -810,15 +804,12 @@ impl GuiApp {
                                         .logarithmic(true),
                                 );
                                 if base_slider.changed() {
-                                    // Invert back before storing
                                     accents.0 = 1.0 / mag_val;
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .accents = accents.clone();
                                 }
 
-                                // --- Generators ---
-                                // Work with inverses in the UI
                                 let mut gens: Vec<f64> = accents
                                     .1
                                     .iter()
@@ -828,8 +819,7 @@ impl GuiApp {
                                 let old_gens = gens.clone();
                                 Self::edit_vec(ui, &mut gens, Some("Generators"), 1.0);
 
-                                if gens != old_gens {
-                                    // Invert back before storing
+                                if gens != old_gens && !gens.contains(&0.0) {
                                     let restored: Vec<f64> = gens
                                         .into_iter()
                                         .map(|x| 1.0 / x.max(f64::MIN_POSITIVE))
