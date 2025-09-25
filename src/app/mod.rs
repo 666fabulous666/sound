@@ -9,7 +9,7 @@ use crate::{
         notes::{Note, Sequence},
         waves::WaveType,
     },
-    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
+    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME, TARGET_FPS,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -192,7 +192,7 @@ impl App for GuiApp {
         }
         self.property_panel(ctx);
         self.timeline_panel(ctx);
-        ctx.request_repaint_after(Duration::from_millis(8));
+        ctx.request_repaint_after(Duration::from_millis(1000 / TARGET_FPS));
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
