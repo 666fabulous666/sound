@@ -63,6 +63,26 @@ pub struct Sequence {
     pub accents: (f64, Vec<f64>),
 }
 
+pub fn default_pow_fact() -> (f64, f64) {
+    (1.0, 0.0)
+}
+
+pub fn default_attack_decay() -> (f64, f64) {
+    (4.0, 0.3333)
+}
+
+pub fn default_drum_attack_decay() -> (f64, f64) {
+    (100.0, 100.0)
+}
+
+pub fn default_bend() -> (f64, f64) {
+    (0.0, 32.0)
+}
+
+pub fn default_vibrato() -> (f64, f64) {
+    (0.0, 12.0)
+}
+
 fn default_accents() -> (f64, Vec<f64>) {
     (1.0, vec![0.5, 1.2, 2.5, 3.0])
 }
@@ -81,10 +101,6 @@ fn default_beat_offset() -> usize {
 
 fn default_volume() -> f64 {
     5.0
-}
-
-fn default_attack_decay() -> (f64, f64) {
-    (4.0, 0.3333)
 }
 fn default_delta_shift() -> f64 {
     0.0
@@ -281,18 +297,6 @@ impl Sequence {
                 }
             });
     }
-}
-
-pub fn default_pow_fact() -> (f64, f64) {
-    (1.0, 0.0)
-}
-
-pub fn default_bend() -> (f64, f64) {
-    (0.0, 32.0)
-}
-
-pub fn default_vibrato() -> (f64, f64) {
-    (0.0, 12.0)
 }
 
 impl Note {

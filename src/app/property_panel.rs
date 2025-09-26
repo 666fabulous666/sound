@@ -4,8 +4,8 @@ use egui::ScrollArea;
 use crate::{
     app::{GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::notes::{
-        default_bend, default_pow_fact, default_vibrato, ChorusParams, DetRythm, Interval, RdRythm,
-        Rythm, Sequence,
+        default_attack_decay, default_bend, default_drum_attack_decay, default_pow_fact,
+        default_vibrato, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
     // range_slider::*,
 };
@@ -96,6 +96,11 @@ impl GuiApp {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .wave_type = w_choice;
+                                    if DRUM_WAVES.contains(&w_choice) {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .attack_decay = default_drum_attack_decay()
+                                    }
                                 }
                             });
                             ui.collapsing("Sequence position", |ui| {
@@ -139,6 +144,23 @@ impl GuiApp {
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .attack_decay = attack_decay;
                                 };
+                                let default = if DRUM_WAVES.contains(&seq.wave_type) {
+                                    default_drum_attack_decay
+                                } else {
+                                    default_attack_decay
+                                };
+                                if attack.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .attack_decay
+                                        .0 = default().0;
+                                }
+                                if decay.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .attack_decay
+                                        .1 = default().1;
+                                }
                             });
                             if !DRUM_WAVES.contains(&seq.wave_type) {
                                 ui.collapsing("Bend", |ui| {
@@ -159,11 +181,11 @@ impl GuiApp {
                                         e.bend.0 = tmp_mag * 1e-4;
                                         e.bend.1 = bend.1;
                                     };
-                                    if ui.small_button("Default").clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .bend = default_bend();
-                                    };
+                                    // if ui.small_button("Default").clicked() {
+                                    //     edited_seq
+                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                    //         .bend = default_bend();
+                                    // };
                                     if mag.double_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
@@ -195,11 +217,11 @@ impl GuiApp {
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                                     };
-                                    if ui.small_button("Default").clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .vibrato = default_vibrato();
-                                    };
+                                    // if ui.small_button("Default").clicked() {
+                                    //     edited_seq
+                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                    //         .vibrato = default_vibrato();
+                                    // };
                                     if mag.double_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
@@ -342,11 +364,11 @@ impl GuiApp {
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus = chorus;
                                     };
-                                    if ui.small_button("Default").clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus = ChorusParams::default();
-                                    };
+                                    // if ui.small_button("Default").clicked() {
+                                    //     edited_seq
+                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                    //         .chorus = ChorusParams::default();
+                                    // };
                                 })
                                 .header_response
                                 .on_hover_text(concat!(
@@ -396,11 +418,11 @@ impl GuiApp {
                                             .pow_fact
                                             .1 = default_pow_fact().1;
                                     };
-                                    if ui.small_button("Default").clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .pow_fact = default_pow_fact();
-                                    };
+                                    // if ui.small_button("Default").clicked() {
+                                    //     edited_seq
+                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                    //         .pow_fact = default_pow_fact();
+                                    // };
                                 })
                                 .header_response
                                 .on_hover_text(concat!(

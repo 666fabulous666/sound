@@ -43,11 +43,12 @@ pub fn generate_wave(
     chorus: &ChorusParams,
     pow_fact: (f64, f64),
 ) -> f64 {
+    let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     match wave_type {
-        WaveType::HiHat => return drums::hi_hat(freq, bend_vib_time),
-        WaveType::Kick => return drums::kick(freq, bend_vib_time),
-        WaveType::Snare => return drums::snare(freq, bend_vib_time),
+        WaveType::HiHat => return envelope * drums::hi_hat(bend_vib_time, time),
+        WaveType::Kick => return envelope * drums::kick(bend_vib_time, time),
+        WaveType::Snare => return envelope * drums::snare(bend_vib_time, time),
         _ => {}
     }
     let f = |t: f64| match wave_type {
@@ -92,7 +93,7 @@ pub fn generate_wave(
         .sum::<f64>()
         / norm.sqrt()
         / (freq / 440.0).sqrt();
-    envelope(attack_decay.0, attack_decay.1, duration)(time) * sum_of_waves
+    envelope * sum_of_waves
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
     move |time: f64| {
