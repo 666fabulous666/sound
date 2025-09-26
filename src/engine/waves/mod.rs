@@ -2,7 +2,10 @@ use std::f64::consts::PI;
 
 use serde::{Deserialize, Serialize};
 
-use crate::engine::notes::ChorusParams;
+use crate::{
+    engine::notes::ChorusParams,
+    time_freq::{Freq, Time},
+};
 pub mod drums;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -34,21 +37,21 @@ impl ToString for &WaveType {
 
 pub fn generate_wave(
     wave_type: &WaveType,
-    freq: f64,
-    time: f64,
-    duration: f64,
+    freq: Freq,
+    time: Time,
+    duration: Time,
     attack_decay: (f64, f64),
     bend: (f64, f64),
-    vibrato: (f64, f64),
+    vibrato: (f64, Freq),
     chorus: &ChorusParams,
-    pow_fact: (f64, f64),
+    pow_fact: (f64, Freq),
 ) -> f64 {
     let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     match wave_type {
-        WaveType::HiHat => return envelope * drums::hi_hat(bend_vib_time, time),
-        WaveType::Kick => return envelope * drums::kick(bend_vib_time, time),
-        WaveType::Snare => return envelope * drums::snare(bend_vib_time, time),
+        WaveType::HiHat => return envelope * drums::hi_hat(freq, time), // WARNING: put back bend_vib_time instead of freq if it changed something
+        WaveType::Kick => return envelope * drums::kick(time),
+        WaveType::Snare => return envelope * drums::snare(time),
         _ => {}
     }
     let f = |t: f64| match wave_type {
@@ -71,7 +74,7 @@ pub fn generate_wave(
         }
         _ => unreachable!(),
     };
-    let phase = 2.0 * PI * freq * bend_vib_time;
+    let phase = freq.phase(bend_vib_time);
     let p = pow_fact.0 * (pow_fact.1 * time).exp2();
     let mut norm = 0.0;
     let sum_of_waves = (0..chorus.voices)
@@ -92,24 +95,24 @@ pub fn generate_wave(
         })
         .sum::<f64>()
         / norm.sqrt()
-        / (freq / 440.0).sqrt();
+        / (freq / Freq(440.0)).sqrt();
     envelope * sum_of_waves
 }
-pub fn envelope(attack: f64, decay: f64, note_duration: f64) -> impl Fn(f64) -> f64 {
-    move |time: f64| {
+pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
+    move |time: Time| {
         let time_fraction = time / note_duration;
         (time_fraction.powf(1.0 / attack) * (1.0 - time_fraction).powf(1.0 / decay)) as f64
     }
 }
 fn time_bend_vibrato(
-    time: f64,
+    time: Time,
     bend_mag: f64,
     bend_speed: f64,
     vibrato_mag: f64,
-    vibrato_freq: f64,
-) -> f64 {
-    time + bend_mag * (1.0 + time).powf(-bend_speed)
-        + vibrato_mag * (2.0 * PI * time * vibrato_freq).sin()
+    vibrato_freq: Freq,
+) -> Time {
+    time + Time(bend_mag * (Time(1.0) + time).as_secs().powf(-bend_speed))
+        + Time(vibrato_mag * (vibrato_freq.phase(time)).sin())
 }
 
 /// Deterministically "hash" an f64 into a pseudo-random f64 in [-1.0, 1.0).

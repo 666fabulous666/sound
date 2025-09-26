@@ -6,11 +6,12 @@ use std::sync::{atomic::AtomicU64, Arc};
 use crate::{
     app::NotesGroup,
     engine::{reverb::Reverb, waves::generate_wave},
+    time_freq::{DivByFreq, Freq},
     REVERB_BUFFER_LEN,
 };
 
 pub fn stream(
-    freq0: f64,
+    freq0: Freq,
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<Vec<NotesGroup>>>,
@@ -23,7 +24,7 @@ pub fn stream(
         panic!("not f32")
     }
     let config = config.config();
-    let sample_rate = config.sample_rate.0 as f64;
+    let sample_rate = Freq(config.sample_rate.0 as f64);
     // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
@@ -33,7 +34,8 @@ pub fn stream(
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
 
-            let mut now = clock.load(std::sync::atomic::Ordering::Relaxed) as f64 / sample_rate;
+            let mut now =
+                (clock.load(std::sync::atomic::Ordering::Relaxed) as f64).div_by(sample_rate);
 
             for frame in data.chunks_mut(channels_usize) {
                 let mut dry_left = 0.0;
@@ -83,7 +85,7 @@ pub fn stream(
                     frame[0] = (left + right) as f32;
                 }
 
-                now += 1.0 / sample_rate;
+                now += 1.0.div_by(sample_rate);
             }
 
             clock.fetch_add(frames as u64, std::sync::atomic::Ordering::Relaxed);

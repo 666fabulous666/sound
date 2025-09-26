@@ -6,6 +6,7 @@ use crate::{
     engine::notes::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
+    time_freq::{Freq, Time},
     // range_slider::*,
 };
 
@@ -104,25 +105,25 @@ impl GuiApp {
                             });
                             ui.collapsing("Sequence position", |ui| {
                                 ui.label("Sequence position");
-                                let mut t_min = seq.t_min;
-                                let mut t_max = seq.t_max;
+                                let mut t_min = seq.t_min.as_secs();
+                                let mut t_max = seq.t_max.as_secs();
                                 ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
                                 ui.add(
-                                    egui::Slider::new(&mut t_max, t_min..=seq.loop_len)
+                                    egui::Slider::new(&mut t_max, t_min..=seq.loop_len.as_secs())
                                         .text("t_max"),
                                 );
-                                t_max = t_max.clamp(t_min, seq.loop_len);
+                                t_max = t_max.clamp(t_min, seq.loop_len.as_secs());
                                 let step_f64 =
-                                    seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64;
-                                if (t_min - seq.t_min).abs() > f64::EPSILON {
+                                    Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
+                                if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .t_min = (t_min / step_f64).round() * step_f64;
+                                        .t_min = step_f64 * (Time(t_min) / step_f64).round();
                                 }
-                                if (t_max - seq.t_max).abs() > f64::EPSILON {
+                                if (Time(t_max) - seq.t_max).as_secs().abs() > f64::EPSILON {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .t_max = (t_max / step_f64).round() * step_f64;
+                                        .t_max = step_f64 * (Time(t_max) / step_f64).round();
                                 }
                             });
                             ui.collapsing("Envelope", |ui| {
@@ -206,7 +207,7 @@ impl GuiApp {
                                 );
 
                                 let fq = ui.add(
-                                    egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
+                                    egui::Slider::new(&mut vibrato.1, Freq(1.0)..=Freq(100.0))
                                         .text("Frequency")
                                         .logarithmic(true),
                                 );
@@ -276,7 +277,7 @@ impl GuiApp {
                                         .add(
                                             egui::Slider::new(
                                                 &mut chorus.time_dependency,
-                                                -5.0..=5.0,
+                                                Freq(-5.0)..=Freq(5.0),
                                             )
                                             .text("Detune over time"),
                                         )
@@ -387,21 +388,28 @@ impl GuiApp {
                                             .pow_fact
                                             .0 = pow_fact_initial;
                                     };
-                                    let mut time_dep_pow_fact =
-                                        seq.pow_fact.1.signum() * seq.pow_fact.1.abs().sqrt();
+                                    let mut time_dep_pow_fact = Freq(
+                                        seq.pow_fact.1.as_hz().signum()
+                                            * seq.pow_fact.1.as_hz().abs().sqrt(),
+                                    );
                                     let evol = ui
                                         .add(
-                                            egui::Slider::new(&mut time_dep_pow_fact, -10.0..=10.0)
-                                                .text("Evolution"),
+                                            egui::Slider::new(
+                                                &mut time_dep_pow_fact,
+                                                Freq(-10.0)..=Freq(10.0),
+                                            )
+                                            .text("Evolution"),
                                         )
                                         .on_hover_text(concat!("Increase/Decrease over time."));
                                     if evol.changed() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .pow_fact
-                                            .1 = time_dep_pow_fact.signum()
-                                            * time_dep_pow_fact
-                                            * time_dep_pow_fact;
+                                            .1 = Freq(
+                                            time_dep_pow_fact.as_hz().signum()
+                                                * time_dep_pow_fact.as_hz()
+                                                * time_dep_pow_fact.as_hz(),
+                                        );
                                     };
                                     if initial_val.double_clicked() {
                                         edited_seq
@@ -761,10 +769,10 @@ impl GuiApp {
                                             egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
                                         );
                                         if slider.changed() {
-                                            loop_len = loop_len.max(0.0);
+                                            loop_len = loop_len.max(Time(0.0));
                                             let tmp_edited_seq = edited_seq
                                                 .get_or_insert((&mut self.sequences)[sel].clone());
-                                            tmp_edited_seq.loop_len = loop_len.max(0.0);
+                                            tmp_edited_seq.loop_len = loop_len.max(Time(0.0));
                                             tmp_edited_seq.t_max =
                                                 tmp_edited_seq.t_max.min(loop_len);
                                         };

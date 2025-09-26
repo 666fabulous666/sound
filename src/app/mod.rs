@@ -9,6 +9,7 @@ use crate::{
         notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
+    time_freq::{Freq, Time},
     Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
@@ -43,14 +44,14 @@ const DRUM_WAVES: [WaveType; 3] = [WaveType::HiHat, WaveType::Kick, WaveType::Sn
 pub struct NotesGroup {
     pub token: Token,
     pub bend: (f64, f64),
-    pub vibrato: (f64, f64),
+    pub vibrato: (f64, Freq),
     pub notes: Vec<Note>,
     pub wave_type: WaveType,
     pub chorus: ChorusParams,
     pub attack_decay: (f64, f64),
-    pub pow_fact: (f64, f64),
+    pub pow_fact: (f64, Freq),
     pub spacial: f64,
-    pub tolerance: (f64, f64),
+    pub tolerance: (Time, Time),
 }
 
 pub struct GuiApp {
@@ -116,8 +117,8 @@ impl GuiApp {
         app
     }
 
-    fn t_to_x(rect: egui::Rect, t: f64, loop_len: f64) -> f32 {
-        rect.left() + t as f32 / loop_len as f32 * rect.width()
+    fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {
+        rect.left() + t.as_secs() as f32 / loop_len.as_secs() as f32 * rect.width()
     }
 
     fn brighten(col: egui::Color32) -> egui::Color32 {
@@ -136,8 +137,8 @@ impl GuiApp {
         hsl_to_color32(h as _, 0.25, 0.5)
     }
 
-    fn now(&self) -> f64 {
-        self.clock.load(std::sync::atomic::Ordering::Relaxed) as f64 / self.sample_rate
+    fn now(&self) -> Time {
+        Time(self.clock.load(std::sync::atomic::Ordering::Relaxed) as f64 / self.sample_rate)
     }
 
     fn exit(&self, ctx: &egui::Context) {
@@ -168,7 +169,7 @@ impl GuiApp {
         });
     }
 
-    fn retain_notes(&mut self, now: f64) {
+    fn retain_notes(&mut self, now: Time) {
         let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
             notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
         });
@@ -288,20 +289,20 @@ impl GuiApp {
     }
     fn draw_seq(&mut self, seq: &mut Sequence) {
         let now = self.now();
-        let seq_start = (now / seq.loop_len).floor() * seq.loop_len;
-        seq.draw(&mut self.notes, &mut self.rng, seq_start);
+        let seq_start = seq.loop_len * (now / seq.loop_len).floor();
+        seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
         seq.not_generate_until =
-            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
+            Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
 
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
     fn draw_seq_at(&mut self, a: usize) {
         let now = self.now();
         let seq = &mut self.sequences[a];
-        let seq_start = ((now + GENERATE_EARLY) / seq.loop_len).floor() * seq.loop_len;
-        seq.draw(&mut self.notes, &mut self.rng, seq_start);
+        let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
+        seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
         seq.not_generate_until =
-            Some(seq_start + seq.t_min + seq.repeat as f64 * seq.loop_len - GENERATE_EARLY);
+            Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
     fn drain_notes_from_seq(&mut self, tk: Token) {
         self.notes.retain(|NotesGroup { token, .. }| *token != tk);

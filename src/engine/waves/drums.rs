@@ -1,5 +1,7 @@
 use std::f64::consts::PI;
 
+use crate::time_freq::{DivByFreq, Freq, Time};
+
 /// A simple xorshift64* pseudo‐random number generator
 fn xorshift64(mut x: u64) -> u64 {
     x ^= x << 13;
@@ -18,20 +20,20 @@ fn prng_unit(seed: u64) -> f64 {
 
 /// Hi‐hat synthesis purely in direct time‐domain,
 /// using a deterministic PRNG based on frequency, time, and partial index.
-pub fn hi_hat(frequency: f64, time: f64) -> f64 {
+pub fn hi_hat(frequency: Freq, time: Time) -> f64 {
     // Envelope params
-    let tau = 0.020; // decay ≈ 20 ms
+    let tau = Time(0.020); // decay ≈ 20 ms
     let alpha = 0.2; // attack shape
     let noise_level = 0.25; // amount of noise mixed in
 
     // Amplitude envelope: E(t) = t^α * exp(-t / τ)
-    let env = time.powf(alpha) * (-time / tau).exp();
+    let env = time.as_secs().powf(alpha) * (-time / tau).exp();
 
     // Sum of inharmonic resonant partials
     let mut osc = 0.0;
     let k_partials = 8;
-    let freq_bits = frequency.to_bits();
-    let time_bits = time.to_bits();
+    let freq_bits = frequency.as_hz().to_bits();
+    let time_bits = time.as_secs().to_bits();
 
     for i in 0..k_partials {
         // Build a unique seed for this partial
@@ -52,11 +54,11 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
         let u2 = prng_unit(seed_base ^ 0xDEADBEEF_DEADBEEF);
         let phase = u2 * 2.0 * PI;
 
-        osc += ak * (2.0 * PI * fk * time + phase).sin();
+        osc += ak * (fk.phase(time) + phase).sin();
     }
 
     // Deterministic “noise” component (as before)
-    let raw = (time * 1e7).sin() * 1e6;
+    let raw = (time * Freq(1e7)).sin() * 1e6;
     let frac = raw.fract();
     let noise = 2.0 * frac - 1.0;
 
@@ -72,11 +74,11 @@ pub fn hi_hat(frequency: f64, time: f64) -> f64 {
 ///
 /// # Returns
 /// A single audio sample (f64) producing a short, punchy kick‐drum sound.
-pub fn kick(_frequency: f64, time: f64) -> f64 {
-    let frequency = 220.0;
+pub fn kick(time: Time) -> f64 {
+    let frequency = Freq(110.0);
     // ——— Envelope parameters ———
-    let amp_tau = 0.1; // main amplitude decay ≈ 200 ms
-    let sweep_rate = 10.0; // how quickly the pitch sweeps downward
+    let amp_tau = Time(0.1); // main amplitude decay ≈ 200 ms
+    let sweep_rate = Freq(10.0); // how quickly the pitch sweeps downward
     let noise_level = 0.15; // level of click‐noise on the attack
     let click_tau = 0.0025; // click‐noise decay ≈ 5 ms
 
@@ -88,15 +90,16 @@ pub fn kick(_frequency: f64, time: f64) -> f64 {
     //    instantaneous phase = 2π ∫₀ᵗ f(t') dt'
     //    with f(t) = frequency * exp(−sweep_rate * t)
     //    ⇒ ∫₀ᵗ f exp(−s t) dt = frequency * (1 − exp(−sweep_rate·t)) / sweep_rate
-    let phase = PI * frequency * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
+    let phase = frequency.phase((1.0 - (-sweep_rate * time).exp()).div_by(sweep_rate));
+    // let phase = PI * frequency * (1.0 - (-sweep_rate * time).exp()) / sweep_rate;
     let osc = phase.sin();
 
     // 3) Deterministic “click” noise on attack
-    let raw = (time * 1e7).sin() * 1e6;
+    let raw = (time * Freq(1e7)).sin() * 1e6;
     // fract can be negative, so wrap it into [0,1)
     let frac = (raw.fract() + 1.0).fract();
     let noise = 2.0 * frac - 1.0;
-    let click_env = (-time / click_tau).exp();
+    let click_env = (-time / Time(click_tau)).exp();
 
     // 4) Mix oscillator and click under their respective envelopes
     5.0 * (env * osc + noise_level * click_env * noise)
@@ -106,10 +109,10 @@ pub fn kick(_frequency: f64, time: f64) -> f64 {
 /// Combines a noisy “crack” with a pitched “body”
 /// - `frequency`: tuned pitch for the snare body (e.g. 200–300 Hz)
 /// - `time`: time in seconds
-pub fn snare(_frequency: f64, time: f64) -> f64 {
+pub fn snare(time: Time) -> f64 {
     // Envelope time‐constants
-    let noise_tau = 0.1; // noise decay ≈ 150 ms
-    let tone_tau = 0.2; // body decay ≈ 50 ms
+    let noise_tau = Time(0.1); // noise decay ≈ 150 ms
+    let tone_tau = Time(0.2); // body decay ≈ 50 ms
 
     // Levels
     let noise_level = 0.15;
@@ -121,14 +124,14 @@ pub fn snare(_frequency: f64, time: f64) -> f64 {
 
     // ===== NOISE “CRACK” =====
     // deterministic pseudo‐noise from time
-    let raw = (time * 1e7).sin() * 1e6;
+    let raw = (time * Freq(1e7)).sin() * 1e6;
     let frac = (raw.fract() + 1.0).fract();
     let noise = 2.0 * frac - 1.0;
 
     // ===== TONAL “BODY” =====
     // simple sine at fixed frequency, you could add a slight pitch-drop if desired
-    let tone = (2.0 * PI * 110.0 * time).sin();
+    let tone = Freq(110.0).phase(time).sin();
 
     5.0 * (env_noise * noise_level * noise + env_tone * tone_level * tone)
-        * (1.0 + 0.25 * kick(110.0, (time * 0.25).sqrt()))
+    // * (1.0 + 0.25 * kick(110.0, (time * 0.25).sqrt())) // WARNING: uncomment it if snare changed
 }

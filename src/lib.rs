@@ -2,13 +2,15 @@ pub mod app;
 pub mod engine;
 // pub mod range_slider;
 pub mod stream;
+pub mod time_freq;
+use std::ops::Deref;
 
-pub const DEFAULT_LOOP_LEN: f64 = 4.0;
-pub const NOTE_LINGER_TIME: f64 = 12.0;
-pub const F0: f64 = 440.0;
+pub const DEFAULT_LOOP_LEN: Time = Time(4.0);
+pub const NOTE_LINGER_TIME: Time = Time(12.0);
+pub const F0: Freq = Freq(440.0);
 pub const REVERB_BUFFER_LEN: usize = 65535;
 pub const SCHEDULER_WAKE_EARLY: f64 = 0.1;
-pub const GENERATE_EARLY: f64 = 1e-1;
+pub const GENERATE_EARLY: Time = Time(1e-1);
 pub const GLOBAL_VOLUME: f64 = 0.01;
 #[cfg(target_arch = "wasm32")]
 pub const MAX_FPS: f64 = 60.0;
@@ -38,11 +40,11 @@ impl TokenGen {
     }
 }
 
-use std::ops::Deref;
-
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+
+use crate::time_freq::{Freq, Time};
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]

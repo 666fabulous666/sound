@@ -1,5 +1,10 @@
 pub mod default_params;
-use crate::{app::NotesGroup, engine::waves::WaveType, Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME};
+use crate::{
+    app::NotesGroup,
+    engine::waves::WaveType,
+    time_freq::{Freq, Time},
+    Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME,
+};
 use default_params::*;
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, seq::index::sample};
@@ -23,8 +28,8 @@ pub enum Rythm {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
-    pub t_min: f64,
-    pub t_max: f64,
+    pub t_min: Time,
+    pub t_max: Time,
     pub chorus: ChorusParams,
     pub inclusions: Rythm,
     pub exclusions: Rythm,
@@ -41,20 +46,20 @@ pub struct Sequence {
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     #[serde(default = "default_vibrato")]
-    pub vibrato: (f64, f64),
+    pub vibrato: (f64, Freq),
     #[serde(default = "default_pow_fact")]
-    pub pow_fact: (f64, f64),
+    pub pow_fact: (f64, Freq),
     #[serde(default = "default_loop_len")]
-    pub loop_len: f64,
+    pub loop_len: Time,
     #[serde(default = "default_spacial")]
     pub spacial: f64,
     #[serde(default = "default_tolerance")]
-    pub tolerance: (f64, f64),
+    pub tolerance: (Time, Time),
     #[serde(default = "default_repeat")]
     pub repeat: usize,
     #[serde(default = "default_accents")]
     pub accents: (f64, Vec<f64>),
-    pub not_generate_until: Option<f64>, // TODO: should be accessed through a method
+    pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
 }
 
@@ -66,7 +71,7 @@ pub struct ChorusParams {
     pub delta_shift: f64,
     pub sym: f64,
     pub asym: f64,
-    pub time_dependency: f64,
+    pub time_dependency: Freq,
 }
 impl ChorusParams {
     pub fn new(
@@ -75,7 +80,7 @@ impl ChorusParams {
         delta_noise: f64,
         sym: f64,
         asym: f64,
-        time_dependency: f64,
+        time_dependency: Freq,
     ) -> Self {
         Self {
             voices: number_of_heads,
@@ -90,8 +95,8 @@ impl ChorusParams {
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
-    pub time: f64,
-    pub duration: f64,
+    pub time: Time,
+    pub duration: Time,
     pub interval: Interval,
     pub volume: f64,
 }
@@ -115,7 +120,7 @@ impl Interval {
 impl Sequence {
     pub fn new(token: Token) -> Self {
         Sequence {
-            t_min: 0.0,
+            t_min: Time(0.0),
             t_max: DEFAULT_LOOP_LEN,
             time_quantum: default_time_quantum(),
             exclusions: Rythm::Rd(RdRythm::default()),
@@ -143,7 +148,8 @@ impl Sequence {
         &self,
         notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
-        seq_start: f64,
+        seq_start: Time,
+        tempo: f64,
     ) {
         let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
@@ -163,7 +169,7 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let step_as_time = self.time_quantum.0 as f64 / self.time_quantum.1 as f64;
+        let step_as_time = Time(self.time_quantum.0 as f64 / self.time_quantum.1 as f64);
         let ts =
             (0..32768) // FIXME: do better
                 .filter(|i| inclusions.iter().any(|p| (i - self.beat_offset) % p == 0))
@@ -172,7 +178,7 @@ impl Sequence {
                         .iter()
                         .all(|s| (i + 1 - self.beat_offset) % s != 0)
                 })
-                .map(|i| self.t_min + i as f64 * step_as_time)
+                .map(|i| self.t_min + step_as_time * i as f64)
                 .take_while(|t| *t < self.t_max.min(self.loop_len));
         let ds = ts
             .clone()
@@ -193,7 +199,7 @@ impl Sequence {
                             .accents
                             .1
                             .iter()
-                            .map(|a| (a * (t + seq_start)).fract())
+                            .map(|a| ((t + seq_start) * *a).as_secs().fract())
                             .sum::<f64>()),
             })
             .for_each(|n| {
@@ -205,7 +211,7 @@ impl Sequence {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
                         Note {
-                            time: tmp.time + i as f64 * self.loop_len,
+                            time: tmp.time + self.loop_len * i as f64,
                             ..tmp
                         }
                     }) {
@@ -216,7 +222,7 @@ impl Sequence {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
                         Note {
-                            time: tmp.time + i as f64 * self.loop_len,
+                            time: tmp.time + self.loop_len * i as f64,
                             ..tmp
                         }
                     }) {

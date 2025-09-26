@@ -10,6 +10,7 @@ use crate::{
     app::GuiApp,
     engine::{notes::Sequence, reverb::Reverb},
     stream::stream,
+    F0,
 };
 
 impl GuiApp {
@@ -61,10 +62,11 @@ impl GuiApp {
                         self.start_stream(self.clock.clone());
                     }
                 }
+                ui.add(egui::Slider::new(&mut self.tempo, 10.0..=250.0));
 
-                if self.stream.is_some() {
-                    ui.label("stream");
-                }
+                // if self.stream.is_some() {
+                //     ui.label("stream");
+                // }
                 // ui.label(format!("#notes: {}", {
                 //     let tmp = self.notes.iter().map(|ng| ng.notes.len()).sum::<usize>();
                 //     tmp
@@ -107,7 +109,7 @@ impl GuiApp {
             .sample_rate()
             .0 as f64;
         self.stream = Some(stream(
-            440.0,
+            F0,
             &self.device,
             clock,
             self.shared_notes.clone(),

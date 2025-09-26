@@ -1,6 +1,7 @@
 use crate::{
     app::{GuiApp, NotesGroup},
     engine::{notes::Interval, waves::envelope},
+    time_freq::Time,
 };
 
 impl GuiApp {
@@ -20,11 +21,11 @@ impl GuiApp {
             let lane_gap = (lane_h - block_h) * 0.5;
             let max_loop_len = (&self.sequences)
                 .iter()
-                .fold(0.0f64, |acc, seq| acc.max(seq.loop_len));
+                .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
 
             // grid
-            for s in 0..=max_loop_len as usize {
-                let x = Self::t_to_x(rect, s as f64, max_loop_len);
+            for s in 0..=max_loop_len.as_secs() as usize {
+                let x = Self::t_to_x(rect, Time(s as f64), max_loop_len);
                 let base_col = egui::Color32::GRAY;
                 let col = if s % 16 == 0 {
                     base_col.gamma_multiply(0.5)
@@ -58,7 +59,7 @@ impl GuiApp {
 
                 let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
                 let block_rect_l = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, 0.0, max_loop_len), y0),
+                    egui::pos2(Self::t_to_x(rect, Time(0.0), max_loop_len), y0),
                     egui::pos2(x1, y1),
                 );
                 let block_rect_r = egui::Rect::from_min_max(
@@ -66,7 +67,7 @@ impl GuiApp {
                     egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
                 );
                 let track_rect = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, 0.0, max_loop_len), y0),
+                    egui::pos2(Self::t_to_x(rect, Time(0.0), max_loop_len), y0),
                     egui::pos2(Self::t_to_x(rect, max_loop_len, max_loop_len), y1),
                 );
                 let mut col = Self::hash_color(&seq.wave_type);
