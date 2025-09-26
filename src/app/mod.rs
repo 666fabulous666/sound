@@ -9,6 +9,7 @@ use crate::{
         notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
+    texts::{README_TEXT, WELCOME_TEXT},
     time_freq::{Freq, Time},
     Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
 };
@@ -75,6 +76,8 @@ pub struct GuiApp {
     #[cfg(target_arch = "wasm32")]
     fps: f64,
     min_fps: f64,
+    show_start: bool,
+    show_doc: bool,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -112,9 +115,47 @@ impl GuiApp {
             #[cfg(target_arch = "wasm32")]
             fps: 60.0,
             min_fps: 60.0,
+            show_start: true,
+            show_doc: false,
         };
         app.try_load_default(&cc.egui_ctx);
         app
+    }
+    fn start_page(&mut self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.add_space(8.0);
+            ui.heading("Welcome");
+            ui.separator();
+            ui.label(egui::RichText::new(WELCOME_TEXT));
+
+            ui.add_space(12.0);
+            ui.horizontal(|ui| {
+                if ui.button("Default Example").clicked() {
+                    self.try_load_default(ctx);
+                    self.show_start = false;
+                }
+                if ui.button("New Score").clicked() {
+                    self.new_score();
+                    self.selected = None;
+                    self.show_start = false;
+                }
+            });
+        });
+    }
+    fn doc_page(&mut self, ctx: &egui::Context) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.add_space(8.0);
+            ui.heading("README");
+            ui.separator();
+            ui.label(egui::RichText::new(README_TEXT));
+
+            ui.add_space(12.0);
+            ui.horizontal(|ui| {
+                if ui.button("Exit README").clicked() {
+                    self.show_doc = false;
+                }
+            });
+        });
     }
 
     fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {
@@ -216,6 +257,18 @@ impl App for GuiApp {
         }
         if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             self.exit(ctx);
+        }
+        if self.show_doc {
+            self.doc_page(ctx);
+            if self.show_doc {
+                return;
+            };
+        }
+        if self.show_start || self.sequences.is_empty() {
+            self.start_page(ctx);
+            if self.show_start {
+                return;
+            };
         }
         self.property_panel(ctx);
         self.timeline_panel(ctx);

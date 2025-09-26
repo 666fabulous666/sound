@@ -2,6 +2,7 @@ pub mod app;
 pub mod engine;
 // pub mod range_slider;
 pub mod stream;
+pub mod texts;
 pub mod time_freq;
 use std::ops::Deref;
 

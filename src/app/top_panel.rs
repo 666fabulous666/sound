@@ -38,31 +38,38 @@ impl GuiApp {
 
                 *load = if ui.button("Load…").clicked() {
                     self.stream = None;
+                    self.show_start = false;
                     true
                 } else {
                     false
                 };
-                *save = ui.button("Save…").clicked();
+                if !self.show_start {
+                    *save = ui.button("Save…").clicked();
+                    if ui
+                        .add(egui::Button::new(if self.stream.is_none() {
+                            "▶"
+                        } else {
+                            "⏸"
+                        }))
+                        .clicked()
+                        || ui.input(|i| i.key_pressed(egui::Key::Space))
+                    {
+                        if self.stream.is_some() {
+                            self.stream = None
+                        } else {
+                            self.start_stream(self.clock.clone());
+                        }
+                    }
+                };
+                if !self.show_doc {
+                    if ui.button("README").clicked() {
+                        self.show_doc = true;
+                    }
+                }
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     *exit = ui.button("Exit").clicked();
                 }
-                if ui
-                    .add(egui::Button::new(if self.stream.is_none() {
-                        "▶"
-                    } else {
-                        "⏸"
-                    }))
-                    .clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Space))
-                {
-                    if self.stream.is_some() {
-                        self.stream = None
-                    } else {
-                        self.start_stream(self.clock.clone());
-                    }
-                }
-                ui.add(egui::Slider::new(&mut self.tempo, 10.0..=250.0));
 
                 // if self.stream.is_some() {
                 //     ui.label("stream");
@@ -80,23 +87,25 @@ impl GuiApp {
                         .on_hover_text(format!("Minimum fps: {}", self.min_fps));
                 }
             });
-            ui.separator();
-            {
-                // let mut delays = self.delays.clone();
-                ui.columns(2, |cols| {
-                    Self::edit_vec(
-                        &mut cols[0],
-                        &mut self.delays.0,
-                        Some("Left Delays (ms)"),
-                        0.0,
-                    );
-                    Self::edit_vec(
-                        &mut cols[1],
-                        &mut self.delays.1,
-                        Some("Right Delays (ms)"),
-                        0.0,
-                    );
-                });
+            if !self.show_start {
+                ui.separator();
+                {
+                    // let mut delays = self.delays.clone();
+                    ui.columns(2, |cols| {
+                        Self::edit_vec(
+                            &mut cols[0],
+                            &mut self.delays.0,
+                            Some("Left Delays (ms)"),
+                            0.0,
+                        );
+                        Self::edit_vec(
+                            &mut cols[1],
+                            &mut self.delays.1,
+                            Some("Right Delays (ms)"),
+                            0.0,
+                        );
+                    });
+                }
             }
         });
     }
