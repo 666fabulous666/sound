@@ -4,8 +4,7 @@ use egui::ScrollArea;
 use crate::{
     app::{GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::notes::{
-        default_attack_decay, default_bend, default_drum_attack_decay, default_pow_fact,
-        default_vibrato, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
+        default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
     // range_slider::*,
 };

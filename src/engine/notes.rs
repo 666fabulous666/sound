@@ -1,4 +1,6 @@
+pub mod default_params;
 use crate::{app::NotesGroup, engine::waves::WaveType, Token, DEFAULT_LOOP_LEN, GLOBAL_VOLUME};
+use default_params::*;
 use itertools::Itertools;
 use rand::{prelude::SliceRandom, seq::index::sample};
 use serde::{Deserialize, Serialize};
@@ -40,70 +42,30 @@ pub struct Sequence {
     pub inclusions: Rythm,
     pub exclusions: Rythm,
     #[serde(default = "default_beat_offset")]
-    pub beat_offset: usize, // WARNING: relative to step
+    pub beat_offset: usize,
     pub interval: Interval,
     pub wave_type: WaveType,
     #[serde(default = "default_volume")]
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
+    #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     pub vibrato: (f64, f64),
     pub chorus: ChorusParams,
+    #[serde(default = "default_pow_fact")]
     pub pow_fact: (f64, f64),
-    pub token: Token,
-    pub not_generate_until: Option<f64>, // TODO: should be accessed through a method
     pub loop_len: f64,
     #[serde(default = "default_spacial")]
     pub spacial: f64,
     #[serde(default = "default_tolerance")]
     pub tolerance: (f64, f64),
+    #[serde(default = "default_repeat")]
     pub repeat: usize,
     #[serde(default = "default_accents")]
     pub accents: (f64, Vec<f64>),
-}
-
-pub fn default_pow_fact() -> (f64, f64) {
-    (1.0, 0.0)
-}
-
-pub fn default_attack_decay() -> (f64, f64) {
-    (4.0, 0.3333)
-}
-
-pub fn default_drum_attack_decay() -> (f64, f64) {
-    (100.0, 100.0)
-}
-
-pub fn default_bend() -> (f64, f64) {
-    (0.0, 32.0)
-}
-
-pub fn default_vibrato() -> (f64, f64) {
-    (0.0, 12.0)
-}
-
-fn default_accents() -> (f64, Vec<f64>) {
-    (1.0, vec![0.5, 1.2, 2.5, 3.0])
-}
-
-fn default_spacial() -> f64 {
-    0.5
-}
-
-fn default_tolerance() -> (f64, f64) {
-    (1.0, 0.0)
-}
-
-fn default_beat_offset() -> usize {
-    0
-}
-
-fn default_volume() -> f64 {
-    5.0
-}
-fn default_delta_shift() -> f64 {
-    0.0
+    pub not_generate_until: Option<f64>, // TODO: should be accessed through a method
+    pub token: Token,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -196,7 +158,7 @@ impl Sequence {
             loop_len: DEFAULT_LOOP_LEN,
             spacial: default_spacial(),
             tolerance: default_tolerance(),
-            repeat: 1,
+            repeat: default_repeat(),
             accents: default_accents(),
         }
     }
