@@ -179,52 +179,68 @@ impl GuiApp {
                 ui.add_space(8.0);
                 ui.separator();
 
+
                 // CTAs
                 ui.add_space(10.0);
                 ui.horizontal_wrapped(|ui| {
-                ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
-                    let default_pressed = ui.add(
-                        egui::widgets::Button::new(RichText::new("Default Example").size(16.0).strong())
-                            .min_size(Vec2::new(180.0, 36.0))
-                            .fill(accent)
-                            .stroke(Stroke::NONE)
-                            .corner_radius(10) // u8
-                    ).clicked();
+                    ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
+                        // Default Example
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new("Default Example").size(16.0).strong(),
+                                )
+                                .min_size(Vec2::new(180.0, 36.0))
+                                .fill(accent)
+                                .stroke(Stroke::NONE)
+                                .corner_radius(10),
+                            )
+                            .clicked()
+                        {
+                            self.try_load_default(ctx);
+                            self.show_start = false;
+                        }
 
-                    if default_pressed {
-                        self.try_load_default(ctx);
-                        self.show_start = false;
-                    }
+                        // New Score
+                        if ui
+                            .add(
+                                egui::Button::new(RichText::new("New Score").size(16.0))
+                                    .min_size(Vec2::new(160.0, 36.0))
+                                    .corner_radius(10),
+                            )
+                            .clicked()
+                        {
+                            self.new_score();
+                            self.selected = None;
+                            self.show_start = false;
+                        }
 
-                    let new_pressed = ui.add(
-                        egui::widgets::Button::new(RichText::new("New Score").size(16.0))
-                            .min_size(Vec2::new(160.0, 36.0))
-                            .corner_radius(10) // u8
-                    ).clicked();
+                        // Read full README
+                        if ui
+                            .add(
+                                egui::Button::new(RichText::new("Read Full README").size(16.0))
+                                    .min_size(Vec2::new(180.0, 36.0))
+                                    .corner_radius(10),
+                            )
+                            .clicked()
+                        {
+                            self.show_doc = true;
+                        }
 
-                    if new_pressed {
-                        self.new_score();
-                        self.selected = None;
-                        self.show_start = false;
-                    }
+                        // Open GitHub
+                        if ui
+                            .add(
+                                egui::Button::new(RichText::new("Open GitHub").size(16.0))
+                                    .min_size(Vec2::new(160.0, 36.0))
+                                    .corner_radius(10),
+                            )
+                            .clicked()
+                        {
+                            // open link
+                            ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/fmath92/sound"));
+                        }
+                    });
                 });
-
-                ui.add_space(6.0);
-                    if ui.link("Read the full README").clicked() {
-                        self.show_doc = true; // assumes you have this flag
-                    }
-                    ui.separator();
-                    ui.hyperlink_to("Open GitHub", "https://github.com/fmath92/sound");
-                });
-
-                ui.add_space(6.0);
-                ui.separator();
-                ui.add_space(2.0);
-                ui.label(
-                    RichText::new("Tip: use the top panel to Load and Save your sessions.")
-                        .color(weak_text)
-                        .italics()
-                );
             });
 
             ui.add_space(12.0);

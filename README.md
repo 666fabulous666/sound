@@ -29,7 +29,28 @@ No AI — **you** control the rules, the rest is beautiful randomness.
 - **Keyboard** — `↑`/`↓` to move selection between tracks.
 
 ---
+## 🧭 Top Panel (Global Controls)
 
+The **top panel** provides access to the main functions of the sequencer:
+
+- **New Score** – clears the current project and starts fresh.  
+- **Add Track** – inserts a new sequence track into the score. The audio stream will start automatically if not already running.  
+- **Load…** – load a previously saved score.  
+- **Save…** – save the current score to disk (only available outside the start screen).  
+- **▶ / ⏸ (Play/Pause)** – start or pause the audio engine. You can also use the **Space bar** shortcut.  
+- **README** – open the in-app documentation.  
+- **Exit** – close the application (desktop builds only).  
+
+🎵 **Audio Settings**  
+Below the buttons, you can edit the stereo **delays (ms)** separately for the left and right channels.  
+These control the built-in recursive reverb effect and shape the stereo image.  
+
+🕹️ **WebAssembly builds (WASM)**  
+- The panel also displays the current **FPS**.  
+- You can adjust the **minimum FPS** with a slider, trading off performance vs. responsiveness.  
+
+
+---
 ## Tracks & Property Panel
 
 Select a track to reveal its **Property Panel** on the left.
