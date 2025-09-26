@@ -1,3 +1,5 @@
+use crate::DEFAULT_LOOP_LEN;
+
 pub fn default_repeat() -> usize {
     1
 }
@@ -43,4 +45,10 @@ pub fn default_volume() -> f64 {
 }
 pub fn default_delta_shift() -> f64 {
     0.0
+}
+pub fn default_loop_len() -> f64 {
+    DEFAULT_LOOP_LEN
+}
+pub fn default_time_quantum() -> (usize, usize) {
+    (1, 8)
 }

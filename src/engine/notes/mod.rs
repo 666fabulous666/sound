@@ -38,23 +38,26 @@ pub enum Rythm {
 pub struct Sequence {
     pub t_min: f64,
     pub t_max: f64,
-    pub time_quantum: (usize, usize), // TODO: use proper fractions
+    pub chorus: ChorusParams,
     pub inclusions: Rythm,
     pub exclusions: Rythm,
-    #[serde(default = "default_beat_offset")]
-    pub beat_offset: usize,
     pub interval: Interval,
     pub wave_type: WaveType,
+    #[serde(default = "default_time_quantum")]
+    pub time_quantum: (usize, usize),
+    #[serde(default = "default_beat_offset")]
+    pub beat_offset: usize,
     #[serde(default = "default_volume")]
     pub volume: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
+    #[serde(default = "default_vibrato")]
     pub vibrato: (f64, f64),
-    pub chorus: ChorusParams,
     #[serde(default = "default_pow_fact")]
     pub pow_fact: (f64, f64),
+    #[serde(default = "default_loop_len")]
     pub loop_len: f64,
     #[serde(default = "default_spacial")]
     pub spacial: f64,
@@ -140,7 +143,7 @@ impl Sequence {
         Sequence {
             t_min: 0.0,
             t_max: DEFAULT_LOOP_LEN,
-            time_quantum: (1, 6),
+            time_quantum: default_time_quantum(),
             exclusions: Rythm::Rd(RdRythm::default()),
             inclusions: Rythm::Rd(RdRythm::default()),
             beat_offset: default_beat_offset(),
@@ -155,7 +158,7 @@ impl Sequence {
             vibrato: default_vibrato(),
             chorus: ChorusParams::default(),
             pow_fact: default_pow_fact(),
-            loop_len: DEFAULT_LOOP_LEN,
+            loop_len: default_loop_len(),
             spacial: default_spacial(),
             tolerance: default_tolerance(),
             repeat: default_repeat(),
