@@ -162,80 +162,78 @@ impl GuiApp {
                                         .1 = default().1;
                                 }
                             });
-                            if !DRUM_WAVES.contains(&seq.wave_type) {
-                                ui.collapsing("Bend", |ui| {
-                                    let mut bend = seq.bend;
-                                    let mut tmp_mag = bend.0 * 1e4;
-                                    let mag = ui.add(
-                                        egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
-                                            .text("Magnitude"),
-                                    );
-                                    let speed = ui.add(
-                                        egui::Slider::new(&mut bend.1, 1.0..=1000.0)
-                                            .text("Speed")
-                                            .logarithmic(true),
-                                    );
-                                    if mag.changed() || speed.changed() {
-                                        let e = edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone());
-                                        e.bend.0 = tmp_mag * 1e-4;
-                                        e.bend.1 = bend.1;
-                                    };
-                                    // if ui.small_button("Default").clicked() {
-                                    //     edited_seq
-                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                    //         .bend = default_bend();
-                                    // };
-                                    if mag.double_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .bend
-                                            .0 = default_bend().0;
-                                    };
-                                    if speed.double_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .bend
-                                            .1 = default_bend().1;
-                                    };
-                                });
-                                ui.collapsing("Vibrato", |ui| {
-                                    let mut vibrato = seq.vibrato;
-                                    let mut vibrato_mag_display = vibrato.0 * 1e6;
-                                    let mag = ui.add(
-                                        egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
-                                            .text("Magnitude"),
-                                    );
+                            ui.collapsing("Bend", |ui| {
+                                let mut bend = seq.bend;
+                                let mut tmp_mag = bend.0 * 1e4;
+                                let mag = ui.add(
+                                    egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
+                                        .text("Magnitude"),
+                                );
+                                let speed = ui.add(
+                                    egui::Slider::new(&mut bend.1, 1.0..=1000.0)
+                                        .text("Speed")
+                                        .logarithmic(true),
+                                );
+                                if mag.changed() || speed.changed() {
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
+                                    e.bend.0 = tmp_mag * 1e-4;
+                                    e.bend.1 = bend.1;
+                                };
+                                // if ui.small_button("Default").clicked() {
+                                //     edited_seq
+                                //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                //         .bend = default_bend();
+                                // };
+                                if mag.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .bend
+                                        .0 = default_bend().0;
+                                };
+                                if speed.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .bend
+                                        .1 = default_bend().1;
+                                };
+                            });
+                            ui.collapsing("Vibrato", |ui| {
+                                let mut vibrato = seq.vibrato;
+                                let mut vibrato_mag_display = vibrato.0 * 1e6;
+                                let mag = ui.add(
+                                    egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
+                                        .text("Magnitude"),
+                                );
 
-                                    let fq = ui.add(
-                                        egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
-                                            .text("Frequency")
-                                            .logarithmic(true),
-                                    );
-                                    if mag.changed() || fq.changed() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
-                                    };
-                                    // if ui.small_button("Default").clicked() {
-                                    //     edited_seq
-                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                    //         .vibrato = default_vibrato();
-                                    // };
-                                    if mag.double_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .vibrato
-                                            .0 = default_vibrato().0;
-                                    };
-                                    if fq.double_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .vibrato
-                                            .1 = default_vibrato().1;
-                                    };
-                                });
-                            }
+                                let fq = ui.add(
+                                    egui::Slider::new(&mut vibrato.1, 0.01..=100.0)
+                                        .text("Frequency")
+                                        .logarithmic(true),
+                                );
+                                if mag.changed() || fq.changed() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
+                                };
+                                // if ui.small_button("Default").clicked() {
+                                //     edited_seq
+                                //         .get_or_insert((&mut self.sequences)[sel].clone())
+                                //         .vibrato = default_vibrato();
+                                // };
+                                if mag.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .vibrato
+                                        .0 = default_vibrato().0;
+                                };
+                                if fq.double_clicked() {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .vibrato
+                                        .1 = default_vibrato().1;
+                                };
+                            });
                             if !DRUM_WAVES.contains(&seq.wave_type) {
                                 ui.collapsing("Chorus (Unison Detune)", |ui| {
                                     let mut chorus = seq.chorus;
