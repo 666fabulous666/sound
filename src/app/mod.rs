@@ -9,7 +9,7 @@ use crate::{
         notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
-    texts::{README_TEXT, WELCOME_TEXT},
+    texts::{README_MD, WELCOME_TEXT},
     time_freq::{Freq, Time},
     Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
 };
@@ -18,6 +18,7 @@ use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
 use egui::{Color32, WidgetText};
+use egui_commonmark::CommonMarkCache;
 use instant::Duration;
 #[cfg(target_arch = "wasm32")]
 use instant::Instant;
@@ -78,6 +79,7 @@ pub struct GuiApp {
     min_fps: f64,
     show_start: bool,
     show_doc: bool,
+    markdown_cache: CommonMarkCache,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -117,6 +119,7 @@ impl GuiApp {
             min_fps: 60.0,
             show_start: true,
             show_doc: false,
+            markdown_cache: egui_commonmark::CommonMarkCache::default(),
         };
         app.try_load_default(&cc.egui_ctx);
         app
@@ -143,21 +146,25 @@ impl GuiApp {
         });
     }
     fn doc_page(&mut self, ctx: &egui::Context) {
+        use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
+
+        // Keep a cache somewhere in your GuiApp struct:
+        //   markdown_cache: CommonMarkCache
+        // Initialize it once in new():
+        //   markdown_cache: CommonMarkCache::default(),
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.add_space(8.0);
             ui.heading("README");
             ui.separator();
-            ui.label(egui::RichText::new(README_TEXT));
+
+            CommonMarkViewer::new().show(ui, &mut self.markdown_cache, README_MD);
 
             ui.add_space(12.0);
-            ui.horizontal(|ui| {
-                if ui.button("Exit README").clicked() {
-                    self.show_doc = false;
-                }
-            });
+            if ui.button("Exit README").clicked() {
+                self.show_doc = false;
+            }
         });
     }
-
     fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {
         rect.left() + t.as_secs() as f32 / loop_len.as_secs() as f32 * rect.width()
     }

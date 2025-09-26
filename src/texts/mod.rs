@@ -19,9 +19,4 @@ I’d love your feedback — feel free to open an issue or suggestion on GitHub.
 
 Enjoy! "#;
 
-pub const README_TEXT: &str = r#"
-README
-
-## Title
-
-"#;
+pub const README_MD: &str = include_str!("../../README.md");
