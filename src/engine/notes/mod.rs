@@ -15,19 +15,6 @@ pub struct RdRythm {
 pub struct DetRythm {
     pub generators: Vec<usize>,
 }
-impl Default for DetRythm {
-    fn default() -> Self {
-        Self { generators: vec![] }
-    }
-}
-impl Default for RdRythm {
-    fn default() -> Self {
-        Self {
-            amount: 5,
-            length: 10,
-        }
-    }
-}
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum Rythm {
     Rd(RdRythm),
@@ -81,19 +68,6 @@ pub struct ChorusParams {
     pub asym: f64,
     pub time_dependency: f64,
 }
-impl Default for ChorusParams {
-    fn default() -> Self {
-        Self {
-            voices: 1,
-            delta: 0.02,
-            delta_shift: 0.15,
-            sym: 0.5,
-            asym: 0.0,
-            time_dependency: 0.0,
-        }
-    }
-}
-
 impl ChorusParams {
     pub fn new(
         number_of_heads: usize,

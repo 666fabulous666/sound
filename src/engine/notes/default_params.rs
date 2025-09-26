@@ -1,3 +1,4 @@
+use crate::engine::notes::{ChorusParams, DetRythm, RdRythm};
 use crate::DEFAULT_LOOP_LEN;
 
 pub fn default_repeat() -> usize {
@@ -51,4 +52,29 @@ pub fn default_loop_len() -> f64 {
 }
 pub fn default_time_quantum() -> (usize, usize) {
     (1, 8)
+}
+impl Default for ChorusParams {
+    fn default() -> Self {
+        Self {
+            voices: 1,
+            delta: 0.02,
+            delta_shift: 0.15,
+            sym: 0.5,
+            asym: 0.0,
+            time_dependency: 0.0,
+        }
+    }
+}
+impl Default for DetRythm {
+    fn default() -> Self {
+        Self { generators: vec![] }
+    }
+}
+impl Default for RdRythm {
+    fn default() -> Self {
+        Self {
+            amount: 5,
+            length: 10,
+        }
+    }
 }
