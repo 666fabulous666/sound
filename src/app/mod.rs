@@ -17,7 +17,7 @@ use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
-use egui::{Color32, WidgetText};
+use egui::{Color32, ScrollArea, WidgetText};
 use egui_commonmark::CommonMarkCache;
 use instant::Duration;
 #[cfg(target_arch = "wasm32")]
@@ -125,44 +125,135 @@ impl GuiApp {
         app
     }
     fn start_page(&mut self, ctx: &egui::Context) {
+        use egui::{Align, CornerRadius, Frame, RichText, Stroke, Vec2};
+        use epaint::Margin;
+
+        // Theme colors
+        let accent = ctx.style().visuals.selection.bg_fill;
+        let weak_text = ctx.style().visuals.weak_text_color();
+        let sep_stroke = Stroke::new(
+            1.0,
+            ctx.style().visuals.widgets.noninteractive.bg_stroke.color,
+        );
+
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.add_space(8.0);
-            ui.heading("Welcome");
-            ui.separator();
-            ui.label(egui::RichText::new(WELCOME_TEXT));
+        ui.add_space(12.0);
+
+        ui.vertical_centered(|ui| {
+            ui.set_max_width(720.0);
+
+            // Build a frame "card" with the new types
+            let mut card = Frame::new();
+            card.fill = ui.visuals().extreme_bg_color;
+            card.stroke = sep_stroke;
+            card.corner_radius = CornerRadius::same(14); // u8
+            card.inner_margin = Margin::same(16);        // i8
+            card.outer_margin = Margin::symmetric(12, 0);
+
+            card.show(ui, |ui| {
+                ui.add_space(4.0);
+                ui.label(RichText::new("Quantum Harmonics’ Oscillator").size(26.0).strong());
+                ui.label(RichText::new("A probability-driven music sequencer").color(weak_text));
+
+                ui.add_space(10.0);
+                ui.separator();
+
+                ui.add_space(10.0);
+                ui.spacing_mut().item_spacing.y = 6.0;
+
+                ui.label("This is not a Quantum Mechanics 101 course — oh no, no.");
+                ui.label("Here you’ll find a “quantum” music generator: a sequencer driven by randomness.");
+
+                ui.add_space(6.0);
+                bullet(ui, "Fine-tune instruments with pitch bend, vibrato, and chorus.");
+                bullet(ui, "Assign probabilities to both rhythm and harmony.");
+                bullet(ui, "Jam endlessly with virtual “quantum musicians.”");
+
+                ui.add_space(6.0);
+                ui.label(RichText::new("No AI: you remain the sole master of your music.").strong());
+
+                ui.add_space(6.0);
+                ui.label("Expect the unexpected. If you seek only safe and familiar sounds, you may not feel at home here.");
+                ui.label("If you’re ready to hear the unheard, take your time, experiment freely, and let the tooltips guide you.");
+
+                ui.add_space(8.0);
+                ui.separator();
+
+                // CTAs
+                ui.add_space(10.0);
+                ui.horizontal_wrapped(|ui| {
+                    let default_pressed = ui.add(
+                        egui::widgets::Button::new(RichText::new("Default Example").size(16.0).strong())
+                            .min_size(Vec2::new(180.0, 36.0))
+                            .fill(accent)
+                            .stroke(Stroke::NONE)
+                            .corner_radius(10) // u8
+                    ).clicked();
+
+                    if default_pressed {
+                        self.try_load_default(ctx);
+                        self.show_start = false;
+                    }
+
+                    let new_pressed = ui.add(
+                        egui::widgets::Button::new(RichText::new("New Score").size(16.0))
+                            .min_size(Vec2::new(160.0, 36.0))
+                            .corner_radius(10) // u8
+                    ).clicked();
+
+                    if new_pressed {
+                        self.new_score();
+                        self.selected = None;
+                        self.show_start = false;
+                    }
+                });
+
+                ui.add_space(6.0);
+                ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
+                    if ui.link("Read the full README").clicked() {
+                        self.show_doc = true; // assumes you have this flag
+                    }
+                    ui.separator();
+                    ui.hyperlink_to("Open GitHub", "https://github.com/fmath92/sound");
+                });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(2.0);
+                ui.label(
+                    RichText::new("Tip: use the top panel to Load and Save your sessions.")
+                        .color(weak_text)
+                        .italics()
+                );
+            });
 
             ui.add_space(12.0);
-            ui.horizontal(|ui| {
-                if ui.button("Default Example").clicked() {
-                    self.try_load_default(ctx);
-                    self.show_start = false;
-                }
-                if ui.button("New Score").clicked() {
-                    self.new_score();
-                    self.selected = None;
-                    self.show_start = false;
-                }
-            });
         });
+    });
+
+        fn bullet(ui: &mut egui::Ui, text: impl Into<String>) {
+            use egui::RichText;
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("•").strong());
+                ui.label(text.into());
+            });
+        }
     }
     fn doc_page(&mut self, ctx: &egui::Context) {
-        use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
-
-        // Keep a cache somewhere in your GuiApp struct:
-        //   markdown_cache: CommonMarkCache
-        // Initialize it once in new():
-        //   markdown_cache: CommonMarkCache::default(),
+        use egui_commonmark::CommonMarkViewer;
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("README");
-            ui.separator();
+            ScrollArea::vertical().show(ui, |ui| {
+                ui.heading("README");
+                ui.separator();
 
-            CommonMarkViewer::new().show(ui, &mut self.markdown_cache, README_MD);
+                CommonMarkViewer::new().show(ui, &mut self.markdown_cache, README_MD);
 
-            ui.add_space(12.0);
-            if ui.button("Exit README").clicked() {
-                self.show_doc = false;
-            }
+                ui.add_space(12.0);
+                if ui.button("Exit README").clicked() {
+                    self.show_doc = false;
+                }
+            });
         });
     }
     fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {

@@ -3148,6 +3148,7 @@ dependencies = [
  "egui",
  "egui_commonmark",
  "egui_double_slider",
+ "epaint",
  "getrandom 0.2.15",
  "hound",
  "instant",
