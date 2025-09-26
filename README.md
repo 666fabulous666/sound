@@ -206,3 +206,13 @@ Use the `Generators` list UI (`+` to add, right-click a value to remove).
 
 ---
 
+
+## Building
+
+```bash
+# Native
+cargo run --release
+
+# WASM (with trunk)
+cargo install trunk
+trunk serve            # or trunk build --release

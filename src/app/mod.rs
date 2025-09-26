@@ -182,6 +182,7 @@ impl GuiApp {
                 // CTAs
                 ui.add_space(10.0);
                 ui.horizontal_wrapped(|ui| {
+                ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
                     let default_pressed = ui.add(
                         egui::widgets::Button::new(RichText::new("Default Example").size(16.0).strong())
                             .min_size(Vec2::new(180.0, 36.0))
@@ -209,7 +210,6 @@ impl GuiApp {
                 });
 
                 ui.add_space(6.0);
-                ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
                     if ui.link("Read the full README").clicked() {
                         self.show_doc = true; // assumes you have this flag
                     }
