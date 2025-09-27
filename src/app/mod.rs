@@ -140,76 +140,98 @@ impl GuiApp {
         );
 
         egui::CentralPanel::default().show(ctx, |ui| {
-        ui.add_space(12.0);
+        ui.add_space(20.0);
 
         ui.vertical_centered(|ui| {
-            ui.set_max_width(720.0);
+            ui.set_max_width(820.0);
 
-            // Build a frame "card" with the new types
             let mut card = Frame::new();
             card.fill = ui.visuals().extreme_bg_color;
             card.stroke = sep_stroke;
-            card.corner_radius = CornerRadius::same(14); // u8
-            card.inner_margin = Margin::same(16);        // i8
-            card.outer_margin = Margin::symmetric(12, 0);
+            card.corner_radius = CornerRadius::same(16);
+            card.inner_margin = Margin::same(20);
+            card.outer_margin = Margin::symmetric(16, 0);
 
             card.show(ui, |ui| {
-                ui.add_space(4.0);
-                ui.label(RichText::new("Quantum Harmonics’ Oscillator").size(26.0).strong());
-                ui.label(RichText::new("A probability-driven music sequencer").color(weak_text));
+                ui.add_space(6.0);
+                ui.label(
+                    RichText::new("🎶 Quantum Harmonics’ Oscillator 🎶")
+                        .size(32.0)
+                        .strong(),
+                );
+                ui.label(
+                    RichText::new("A probability-driven music sequencer")
+                        .size(20.0)
+                        .color(weak_text),
+                );
 
-                ui.add_space(10.0);
+                ui.add_space(14.0);
                 ui.separator();
 
+                ui.add_space(14.0);
+                ui.spacing_mut().item_spacing.y = 10.0;
+
+                ui.label(
+                    RichText::new("This is not a Quantum Mechanics 101 course — oh no, no.")
+                        .size(18.0),
+                );
+                ui.label(
+                    RichText::new("Here you’ll find a “quantum” music generator: a sequencer driven by randomness.")
+                        .size(18.0),
+                );
+
                 ui.add_space(10.0);
-                ui.spacing_mut().item_spacing.y = 6.0;
-
-                ui.label("This is not a Quantum Mechanics 101 course — oh no, no.");
-                ui.label("Here you’ll find a “quantum” music generator: a sequencer driven by randomness.");
-
-                ui.add_space(6.0);
                 bullet(ui, "Fine-tune instruments with pitch bend, vibrato, and chorus.");
                 bullet(ui, "Assign probabilities to both rhythm and harmony.");
                 bullet(ui, "Jam endlessly with virtual “quantum musicians.”");
 
-                ui.add_space(6.0);
-                ui.label(RichText::new("No AI: you remain the sole master of your music.").strong());
+                ui.add_space(10.0);
+                ui.label(
+                    RichText::new("No AI: you remain the sole master of your music.")
+                        .size(18.0)
+                        .strong(),
+                );
 
-                ui.add_space(6.0);
-                ui.label("Expect the unexpected. If you seek only safe and familiar sounds, you may not feel at home here.");
-                ui.label("If you’re ready to hear the unheard, take your time, experiment freely, and let the tooltips guide you.");
+                ui.add_space(10.0);
+                ui.label(
+                    RichText::new("Expect the unexpected. If you seek only safe and familiar sounds, you may not feel at home here.")
+                        .size(17.0),
+                );
+                ui.label(
+                    RichText::new("If you’re ready to hear the unheard, take your time, experiment freely, and let the tooltips guide you.")
+                        .size(17.0),
+                );
 
-                ui.add_space(8.0);
+                ui.add_space(12.0);
                 ui.separator();
 
-
                 // CTAs
-                ui.add_space(10.0);
+                ui.add_space(16.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.with_layout(egui::Layout::left_to_right(Align::Center), |ui| {
-                        // Default Example
+                        // Bigger, more prominent buttons
+                        let btn_size = Vec2::new(200.0, 44.0);
+
                         if ui
                             .add(
                                 egui::Button::new(
-                                    RichText::new("Examples").size(16.0).strong(),
+                                    RichText::new("Examples").size(18.0).strong(),
                                 )
-                                .min_size(Vec2::new(180.0, 36.0))
+                                .min_size(btn_size)
                                 .fill(accent)
                                 .stroke(Stroke::NONE)
-                                .corner_radius(10),
+                                .corner_radius(12),
                             )
                             .clicked()
                         {
                             self.try_load_default(ctx);
-                            // self.show_start = false;
                         }
 
-                        // New Score
                         if ui
                             .add(
-                                egui::Button::new(RichText::new("New Score").size(16.0))
-                                    .min_size(Vec2::new(160.0, 36.0))
-                                    .corner_radius(10),
+                                egui::Button::new(RichText::new("New Score").size(18.0))
+                                    .min_size(btn_size)
+                                    .corner_radius(12),
                             )
                             .clicked()
                         {
@@ -218,43 +240,42 @@ impl GuiApp {
                             self.show_start = false;
                         }
 
-                        // Read full README
                         if ui
                             .add(
-                                egui::Button::new(RichText::new("Read Full README").size(16.0))
-                                    .min_size(Vec2::new(180.0, 36.0))
-                                    .corner_radius(10),
+                                egui::Button::new(RichText::new("Read Full README").size(18.0))
+                                    .min_size(btn_size)
+                                    .corner_radius(12),
                             )
                             .clicked()
                         {
                             self.show_doc = true;
                         }
 
-                        // Open GitHub
                         if ui
                             .add(
-                                egui::Button::new(RichText::new("Open GitHub").size(16.0))
-                                    .min_size(Vec2::new(160.0, 36.0))
-                                    .corner_radius(10),
+                                egui::Button::new(RichText::new("Open GitHub").size(18.0))
+                                    .min_size(btn_size)
+                                    .corner_radius(12),
                             )
                             .clicked()
                         {
-                            // open link
-                            ui.ctx().open_url(egui::OpenUrl::new_tab("https://github.com/fmath92/sound"));
+                            ui.ctx().open_url(egui::OpenUrl::new_tab(
+                                "https://github.com/fmath92/sound",
+                            ));
                         }
                     });
                 });
             });
 
-            ui.add_space(12.0);
+            ui.add_space(16.0);
         });
     });
 
         fn bullet(ui: &mut egui::Ui, text: impl Into<String>) {
             use egui::RichText;
             ui.horizontal(|ui| {
-                ui.label(RichText::new("•").strong());
-                ui.label(text.into());
+                ui.label(RichText::new("•").size(18.0).strong());
+                ui.label(RichText::new(text.into()).size(17.0));
             });
         }
     }
