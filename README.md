@@ -45,11 +45,6 @@ The **top panel** provides access to the main functions of the sequencer:
 Below the buttons, you can edit the stereo **delays (ms)** separately for the left and right channels.  
 These control the built-in recursive reverb effect and shape the stereo image.  
 
-🕹️ **WebAssembly builds (WASM)**  
-- The panel also displays the current **FPS**.  
-- You can adjust the **minimum FPS** with a slider, trading off performance vs. responsiveness.  
-
-
 ---
 ## Tracks & Property Panel
 

@@ -9,9 +9,9 @@ use crate::{
         notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
-    texts::{README_MD, WELCOME_TEXT},
+    texts::README_MD,
     time_freq::{Freq, Time},
-    Token, TokenGen, GENERATE_EARLY, GROOVE_JSON, NOTE_LINGER_TIME,
+    Token, TokenGen, GENERATE_EARLY, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -80,6 +80,8 @@ pub struct GuiApp {
     show_start: bool,
     show_doc: bool,
     markdown_cache: CommonMarkCache,
+    show_default_picker: bool,
+    default_pick_idx: usize,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -95,8 +97,8 @@ pub struct GuiState {
 }
 
 impl GuiApp {
-    pub fn new(cc: &CreationContext<'_>, device: Device) -> Self {
-        let mut app = Self {
+    pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
+        let app = Self {
             tempo: default_tempo(),
             selected: None,
             last_token: TokenGen(0),
@@ -120,8 +122,9 @@ impl GuiApp {
             show_start: true,
             show_doc: false,
             markdown_cache: egui_commonmark::CommonMarkCache::default(),
+            show_default_picker: false,
+            default_pick_idx: 0,
         };
-        app.try_load_default(&cc.egui_ctx);
         app
     }
     fn start_page(&mut self, ctx: &egui::Context) {
@@ -188,7 +191,7 @@ impl GuiApp {
                         if ui
                             .add(
                                 egui::Button::new(
-                                    RichText::new("Default Example").size(16.0).strong(),
+                                    RichText::new("Examples").size(16.0).strong(),
                                 )
                                 .min_size(Vec2::new(180.0, 36.0))
                                 .fill(accent)
@@ -198,7 +201,7 @@ impl GuiApp {
                             .clicked()
                         {
                             self.try_load_default(ctx);
-                            self.show_start = false;
+                            // self.show_start = false;
                         }
 
                         // New Score
@@ -372,6 +375,9 @@ impl App for GuiApp {
         if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
             self.exit(ctx);
         }
+        if self.show_default_picker {
+            self.default_picker_window(ctx);
+        }
         if self.show_doc {
             self.doc_page(ctx);
             if self.show_doc {
@@ -404,6 +410,61 @@ fn hash32(s: &str) -> u32 {
 }
 
 impl GuiApp {
+    fn default_picker_window(&mut self, ctx: &egui::Context) {
+        use egui::{Align, Layout, RichText};
+
+        egui::Window::new("Choose a default groove")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_min_width(420.0);
+
+                ui.label("Select a preset to load:");
+                ui.add_space(6.0);
+
+                egui::ScrollArea::vertical()
+                    .max_height(220.0)
+                    .show(ui, |ui| {
+                        for (i, (name, _json)) in GROOVE_DEFAULTS.iter().enumerate() {
+                            let selected = self.default_pick_idx == i;
+                            if ui.selectable_label(selected, *name).clicked() {
+                                self.default_pick_idx = i;
+                            }
+                        }
+                    });
+
+                ui.add_space(8.0);
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    if ui.button("Cancel").clicked() {
+                        self.show_default_picker = false;
+                    }
+
+                    ui.add_space(8.0);
+
+                    // Primary action
+                    if ui
+                        .add(
+                            egui::Button::new(RichText::new("Load preset").strong())
+                                .min_size(egui::vec2(140.0, 28.0)),
+                        )
+                        .clicked()
+                    {
+                        let (_name, json) = GROOVE_DEFAULTS[self.default_pick_idx];
+                        match serde_json::from_str::<GuiState>(json) {
+                            Ok(state) => {
+                                self.apply_loaded_state(state);
+                                self.show_default_picker = false;
+                                self.show_start = false;
+                            }
+                            Err(e) => {
+                                eprintln!("[default_picker] Failed to parse preset: {e}");
+                            }
+                        }
+                    }
+                });
+            });
+    }
     fn generate_notes(&mut self) {
         let now = self.now();
         let ids: Vec<_> = self
@@ -493,12 +554,15 @@ impl GuiApp {
             self.apply_loaded_state(state);
         }
     }
+    // fn try_load_default(&mut self, _ctx: &egui::Context) {
+    //     if let Ok(state) = serde_json::from_str::<GuiState>(GROOVE_JSON) {
+    //         self.apply_loaded_state(state);
+    //     } else {
+    //         eprintln!("Failed to parse embedded groove.json");
+    //     }
+    // }
     fn try_load_default(&mut self, _ctx: &egui::Context) {
-        if let Ok(state) = serde_json::from_str::<GuiState>(GROOVE_JSON) {
-            self.apply_loaded_state(state);
-        } else {
-            eprintln!("Failed to parse embedded groove.json");
-        }
+        self.show_default_picker = true;
     }
 }
 

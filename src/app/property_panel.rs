@@ -854,7 +854,7 @@ impl GuiApp {
                                             "Base octave where notes of this sequence are placed.",
                                         );
                                                 if ui
-                                                    .add(egui::DragValue::new(octave).range(-5..=5))
+                                                    .add(egui::Slider::new(octave, -4..=4))
                                                     .changed()
                                                 {
                                                     changed = true;
@@ -875,10 +875,7 @@ impl GuiApp {
                                             ),
                                                 );
                                                 if ui
-                                                    .add(
-                                                        egui::DragValue::new(nb_rd_steps)
-                                                            .range(0..=16),
-                                                    )
+                                                    .add(egui::Slider::new(nb_rd_steps, 0..=16))
                                                     .changed()
                                                 {
                                                     changed = true;

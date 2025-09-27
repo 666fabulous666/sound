@@ -17,7 +17,13 @@ pub const GLOBAL_VOLUME: f64 = 0.01;
 pub const MAX_FPS: f64 = 60.0;
 #[cfg(not(target_arch = "wasm32"))]
 pub const MAX_FPS: f64 = 120.0;
-const GROOVE_JSON: &str = include_str!("../assets/groove.json");
+pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
+    ("Classic Groove", include_str!("../assets/groove.json")),
+    (
+        "Spins of Birds",
+        include_str!("../assets/SpinsOfBirds.json"),
+    ),
+];
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Token(usize);
