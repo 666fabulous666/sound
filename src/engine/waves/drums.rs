@@ -1,5 +1,7 @@
 use std::f64::consts::PI;
 
+use egui::emath::Numeric;
+
 use crate::time_freq::{DivByFreq, Freq, Time};
 
 /// A simple xorshift64* pseudo‐random number generator
@@ -138,7 +140,7 @@ pub fn snare(time: Time) -> f64 {
 /// --- RIDE CYMBAL ---
 /// Metallic, sustained wash with a mid–high stick ping.
 /// Purely time-domain, deterministic (no RNG state).
-pub fn ride(time: Time) -> f64 {
+pub fn ride(frequency: Freq, time: Time) -> f64 {
     // ===== GLOBAL ENVELOPES =====
     // Long metallic decay for the wash:
     let wash_tau = Time(1.20); // ~1.2 s tail
@@ -157,8 +159,9 @@ pub fn ride(time: Time) -> f64 {
     // ===== INHARMONIC WASH (sum of many partials) =====
     // We generate a set of inharmonic partials in a cymbal-like band.
     // Frequencies are around a few hundred Hz up to several kHz.
-    let base = Freq(880.0); // base band anchor (not an audible fundamental)
-    let k_partials = 24; // more partials → denser wash
+    let base = Freq(880.0) - frequency.rem_euclid(Freq::new(55.0)); // base band anchor (not an audible fundamental)
+                                                                    // let base = frequency;
+    let k_partials = 64; // more partials → denser wash
 
     let mut wash = 0.0;
     for i in 0..k_partials {
@@ -181,9 +184,22 @@ pub fn ride(time: Time) -> f64 {
 
     // ===== STICK "PING" =====
     // A focused tone around 2–4 kHz with a little second partial.
-    let ping_f1 = Freq(2600.0);
-    let ping_f2 = Freq(3900.0);
-    let ping = 0.85 * (ping_f1.phase(time)).sin() + 0.35 * (ping_f2.phase(time)).sin();
+    // let ping: f64 = (0..12)
+    //     .map(|i| {
+    //         let seed = (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0xC3A5_C85C_97CB_3127;
+    //         let u = 1.0 + prng_unit(seed);
+    //         2000.0 * u as f64
+    //     })
+    //     .sum::<f64>()
+    //     / 12.0;
+    let ping_f1 = Freq(2611.0);
+    let ping_f2 = Freq(2813.0);
+    let ping_f3 = Freq(3223.0);
+    let ping_f4 = Freq(3999.0);
+    let ping = 0.4 * (ping_f1.phase(time)).sin()
+        + 0.3 * (ping_f2.phase(time)).sin()
+        + 0.2 * (ping_f3.phase(time)).sin()
+        + 0.1 * (ping_f4.phase(time)).sin();
 
     // ===== ATTACK CLICK (deterministic “noise”) =====
     let raw = (time * Freq(1e7)).sin() * 1e6;
