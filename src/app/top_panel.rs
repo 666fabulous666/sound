@@ -65,6 +65,11 @@ impl GuiApp {
                     }
                 };
                 if !self.show_doc {
+                    if ui.button("Examples").clicked() {
+                        self.try_load_default(ctx);
+                    }
+                }
+                if !self.show_doc {
                     if ui.button("README").clicked() {
                         self.show_doc = true;
                     }
