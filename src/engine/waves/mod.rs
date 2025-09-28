@@ -18,6 +18,7 @@ pub enum WaveType {
     HiHat,
     Kick,
     Snare,
+    Ride,
 }
 
 impl ToString for &WaveType {
@@ -31,6 +32,7 @@ impl ToString for &WaveType {
             WaveType::HiHat => "HiHat".into(),
             WaveType::Kick => "Kick".into(),
             WaveType::Snare => "Snare".into(),
+            WaveType::Ride => "Ride".into(),
         }
     }
 }
@@ -52,6 +54,7 @@ pub fn generate_wave(
         WaveType::HiHat => return envelope * drums::hi_hat(freq, time), // WARNING: put back bend_vib_time instead of freq if it changed something
         WaveType::Kick => return envelope * drums::kick(time),
         WaveType::Snare => return envelope * drums::snare(time),
+        WaveType::Ride => return envelope * drums::ride(time),
         _ => {}
     }
     let f = |t: f64| match wave_type {

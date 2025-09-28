@@ -135,3 +135,67 @@ pub fn snare(time: Time) -> f64 {
     5.0 * (env_noise * noise_level * noise + env_tone * tone_level * tone)
     // * (1.0 + 0.25 * kick(110.0, (time * 0.25).sqrt())) // WARNING: uncomment it if snare changed
 }
+/// --- RIDE CYMBAL ---
+/// Metallic, sustained wash with a mid–high stick ping.
+/// Purely time-domain, deterministic (no RNG state).
+pub fn ride(time: Time) -> f64 {
+    // ===== GLOBAL ENVELOPES =====
+    // Long metallic decay for the wash:
+    let wash_tau = Time(1.20); // ~1.2 s tail
+    let wash_alpha = 0.05; // very fast micro-attack
+    let wash_env = time.as_secs().powf(wash_alpha) * (-time / wash_tau).exp();
+
+    // Mid–high "ping" that dies faster than the wash:
+    let ping_tau = Time(0.40); // ~400 ms
+    let ping_env = (-time / ping_tau).exp();
+
+    // Tiny attack click (very short):
+    let click_tau = Time(0.003); // ~3 ms
+    let click_env = (-time / click_tau).exp();
+    let click_level = 0.10;
+
+    // ===== INHARMONIC WASH (sum of many partials) =====
+    // We generate a set of inharmonic partials in a cymbal-like band.
+    // Frequencies are around a few hundred Hz up to several kHz.
+    let base = Freq(880.0); // base band anchor (not an audible fundamental)
+    let k_partials = 24; // more partials → denser wash
+
+    let mut wash = 0.0;
+    for i in 0..k_partials {
+        // Stable, deterministic seeds per partial:
+        let seed = (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0xC3A5_C85C_97CB_3127;
+
+        // Inharmonic offset: spread partials roughly ×(2.5 .. 14) over base
+        let u1 = prng_unit(seed); // [0,1)
+        let band = 2.5 + u1 * (14.0 - 2.5); // ~ 2.5x .. 14x
+        let fk = base * band;
+
+        // Random phase per partial (but stable over time):
+        let phase = prng_unit(seed ^ 0xDEAD_BEEF_DEAD_BEEF) * 2.0 * PI;
+
+        // Smooth amplitude roll-off so higher partials contribute less:
+        let ak = 1.0 / (1.0 + 0.18 * ((i + 1) as f64));
+
+        wash += ak * (fk.phase(time) + phase).sin();
+    }
+
+    // ===== STICK "PING" =====
+    // A focused tone around 2–4 kHz with a little second partial.
+    let ping_f1 = Freq(2600.0);
+    let ping_f2 = Freq(3900.0);
+    let ping = 0.85 * (ping_f1.phase(time)).sin() + 0.35 * (ping_f2.phase(time)).sin();
+
+    // ===== ATTACK CLICK (deterministic “noise”) =====
+    let raw = (time * Freq(1e7)).sin() * 1e6;
+    let frac = (raw.fract() + 1.0).fract(); // wrap into [0,1)
+    let noise = 2.0 * frac - 1.0;
+
+    // ===== MIX =====
+    // Balance: wash dominates, ping sits on top, tiny click on the transient.
+    let out = 0.65 * wash_env * wash     // long metallic bed
+            + 0.45 * ping_env * ping     // stick definition
+            + click_level * click_env * noise;
+
+    // Gentle overall gain
+    0.9 * out
+}

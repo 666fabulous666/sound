@@ -29,7 +29,7 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
-const ALL_WAVES: [WaveType; 8] = [
+const ALL_WAVES: [WaveType; 9] = [
     WaveType::Mute,
     WaveType::Sine,
     WaveType::Square,
@@ -38,9 +38,15 @@ const ALL_WAVES: [WaveType; 8] = [
     WaveType::HiHat,
     WaveType::Kick,
     WaveType::Snare,
+    WaveType::Ride,
 ];
 
-const DRUM_WAVES: [WaveType; 3] = [WaveType::HiHat, WaveType::Kick, WaveType::Snare];
+const DRUM_WAVES: [WaveType; 4] = [
+    WaveType::HiHat,
+    WaveType::Kick,
+    WaveType::Snare,
+    WaveType::Ride,
+];
 
 #[derive(Clone)]
 pub struct NotesGroup {
