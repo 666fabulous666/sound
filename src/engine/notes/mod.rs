@@ -41,6 +41,8 @@ pub struct Sequence {
     pub beat_offset: usize,
     #[serde(default = "default_volume")]
     pub volume: f64,
+    #[serde(default = "default_normalization")]
+    pub normalization: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
     #[serde(default = "default_bend")]
@@ -142,6 +144,7 @@ impl Sequence {
             tolerance: default_tolerance(),
             repeat: default_repeat(),
             accents: default_accents(),
+            normalization: default_normalization(),
         }
     }
     pub fn draw(
@@ -191,8 +194,7 @@ impl Sequence {
                 time: t + seq_start,
                 duration: *d,
                 interval: self.interval.clone(),
-                volume: GLOBAL_VOLUME
-                    * self.volume
+                volume: GLOBAL_VOLUME * self.volume / self.normalization
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
                     / (self.accents.0
                         + self

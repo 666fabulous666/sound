@@ -24,15 +24,31 @@ impl GuiApp {
                 .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
 
             // grid
-            for s in 0..=max_loop_len.as_secs() as usize {
-                let x = Self::t_to_x(rect, Time(s as f64), max_loop_len);
-                let base_col = egui::Color32::GRAY;
-                let col = if s % 16 == 0 {
-                    base_col.gamma_multiply(0.5)
+            for s in 0..=max_loop_len.as_secs() as usize * 8 {
+                let x = Self::t_to_x(rect, Time(s as f64 / 8.0), max_loop_len);
+                let base_col = egui::Color32::CYAN;
+                let col = if s % 8 == 0 {
+                    base_col.gamma_multiply(0.75)
                 } else if s % 4 == 0 {
-                    base_col.gamma_multiply(0.25)
+                    base_col.gamma_multiply(0.5)
                 } else {
-                    base_col.gamma_multiply(0.15)
+                    base_col.gamma_multiply(0.25)
+                };
+
+                painter.line_segment(
+                    [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                    egui::Stroke::new(1.0, col),
+                );
+            }
+            for s in 0..=max_loop_len.as_secs() as usize * 6 {
+                let x = Self::t_to_x(rect, Time(s as f64 / 6.0), max_loop_len);
+                let base_col = egui::Color32::GOLD;
+                let col = if s % 6 == 0 {
+                    base_col.gamma_multiply(0.75)
+                } else if s % 3 == 0 {
+                    base_col.gamma_multiply(0.5)
+                } else {
+                    base_col.gamma_multiply(0.25)
                 };
 
                 painter.line_segment(
@@ -148,10 +164,6 @@ impl GuiApp {
                                     ) as f32
                                 })
                                 .collect();
-                            let max_e = es
-                                .iter()
-                                .max_by(|x, y| x.partial_cmp(y).unwrap())
-                                .unwrap_or(&1.0);
                             for (i, e) in es.iter().enumerate() {
                                 let fract = i as f32 * tmp_inv;
                                 let tmp = note_rect
@@ -162,7 +174,8 @@ impl GuiApp {
                                 painter.rect_filled(
                                     tmp,
                                     0.0,
-                                    egui::Color32::BLACK.gamma_multiply(e / max_e),
+                                    egui::Color32::BLACK
+                                        .gamma_multiply(e / seq.normalization as f32),
                                 );
                             }
                         }

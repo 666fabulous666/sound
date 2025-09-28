@@ -6,8 +6,8 @@ use crate::{
     engine::notes::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
-    time_freq::{Freq, Time},
-    // range_slider::*,
+    rescale_factor,
+    time_freq::{Freq, Time}, // range_slider::*,
 };
 
 impl GuiApp {
@@ -93,13 +93,12 @@ impl GuiApp {
                                         }
                                     });
                                 if w_choice != seq.wave_type {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .wave_type = w_choice;
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
+                                    e.wave_type = w_choice;
                                     if DRUM_WAVES.contains(&w_choice) {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .attack_decay = default_drum_attack_decay()
+                                        e.attack_decay = default_drum_attack_decay();
+                                        e.normalization = default_drum_normalization();
                                     }
                                 }
                             });
@@ -140,9 +139,10 @@ impl GuiApp {
                                         .logarithmic(true),
                                 );
                                 if attack.changed() || decay.changed() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .attack_decay = attack_decay;
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
+                                    e.attack_decay = attack_decay;
+                                    rescale_envelope(e);
                                 };
                                 let default = if DRUM_WAVES.contains(&seq.wave_type) {
                                     default_drum_attack_decay
@@ -150,16 +150,16 @@ impl GuiApp {
                                     default_attack_decay
                                 };
                                 if attack.double_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .attack_decay
-                                        .0 = default().0;
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
+                                    e.attack_decay.0 = default().0;
+                                    rescale_envelope(e);
                                 }
                                 if decay.double_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .attack_decay
-                                        .1 = default().1;
+                                    let e = edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone());
+                                    e.attack_decay.1 = default().1;
+                                    rescale_envelope(e);
                                 }
                             });
                             ui.collapsing("Bend", |ui| {
@@ -1003,5 +1003,14 @@ impl GuiApp {
                     }
                 });
             });
+    }
+}
+
+fn rescale_envelope(e: &mut Sequence) {
+    let a = 1.0 / e.attack_decay.0;
+    let b = 1.0 / e.attack_decay.1;
+    let rescale_factor = rescale_factor(a, b);
+    if rescale_factor.is_normal() {
+        e.normalization = rescale_factor
     }
 }

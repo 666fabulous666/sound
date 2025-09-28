@@ -1,6 +1,6 @@
 use crate::engine::notes::{ChorusParams, DetRythm, RdRythm};
 use crate::time_freq::{Freq, Time};
-use crate::DEFAULT_LOOP_LEN;
+use crate::{rescale_factor, DEFAULT_LOOP_LEN};
 
 pub fn default_repeat() -> usize {
     1
@@ -15,7 +15,7 @@ pub fn default_attack_decay() -> (f64, f64) {
 }
 
 pub fn default_drum_attack_decay() -> (f64, f64) {
-    (100.0, 100.0)
+    (5.0, 0.5)
 }
 
 pub fn default_bend() -> (f64, f64) {
@@ -44,6 +44,14 @@ pub fn default_beat_offset() -> usize {
 
 pub fn default_volume() -> f64 {
     5.0
+}
+pub fn default_normalization() -> f64 {
+    let (attack, decay) = default_attack_decay();
+    rescale_factor(1.0 / attack, 1.0 / decay)
+}
+pub fn default_drum_normalization() -> f64 {
+    let (attack, decay) = default_attack_decay();
+    rescale_factor(1.0 / attack, 1.0 / decay)
 }
 pub fn default_delta_shift() -> f64 {
     0.0

@@ -8,8 +8,8 @@
     <title>synth (web)</title>
     
 <script type="module">
-import init, * as bindings from '/sound/synth-a8080283e2132c73.js';
-const wasm = await init({ module_or_path: '/sound/synth-a8080283e2132c73_bg.wasm' });
+import init, * as bindings from '/sound/synth-e96a4d8c9edad759.js';
+const wasm = await init({ module_or_path: '/sound/synth-e96a4d8c9edad759_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -47,7 +47,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
       /* Optional: reduce rubber-banding effects where supported */
       body { overscroll-behavior: none; }
     </style>
-  <link rel="modulepreload" href="/sound/synth-a8080283e2132c73.js" crossorigin="anonymous" integrity="sha384-ym7f3FtT9aXLU2dGp3uthq6c5T5XEZDKZMk6Ks3EPmt8vZchzd8Nbso8r3mv6vDO"><link rel="preload" href="/sound/synth-a8080283e2132c73_bg.wasm" crossorigin="anonymous" integrity="sha384-+lsdgy1SHueUEAWCf1bQXBYhxs9vpPMI3kPem1ikERHc0GqtZDEg/SOnMHMnxqJW" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/sound/synth-e96a4d8c9edad759.js" crossorigin="anonymous" integrity="sha384-+tNqzoLRLQFuXC2w6RbYmeAi7BnXPElI5SW10Wpmj8m1o/Gl39jq5I4WBkJOCrZa"><link rel="preload" href="/sound/synth-e96a4d8c9edad759_bg.wasm" crossorigin="anonymous" integrity="sha384-6SYcwWIdPGK6or1Us50lSP9lQyCjdIVr+TjA3OF5oEpNtJnVpDGWFnboizKF03EH" as="fetch" type="application/wasm"></head>
   <body>
     <canvas id="the_canvas_id"></canvas>
   </body>
