@@ -1,5 +1,5 @@
 use crate::{
-    app::{GuiApp, NotesGroup},
+    app::{hsl_to_color32, GuiApp, NotesGroup},
     engine::{notes::Interval, waves::envelope},
     time_freq::Time,
 };
@@ -24,37 +24,35 @@ impl GuiApp {
                 .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
 
             // grid
-            for s in 0..=max_loop_len.as_secs() as usize * 8 {
-                let x = Self::t_to_x(rect, Time(s as f64 / 8.0), max_loop_len);
-                let base_col = egui::Color32::CYAN;
-                let col = if s % 8 == 0 {
-                    base_col.gamma_multiply(0.75)
-                } else if s % 4 == 0 {
-                    base_col.gamma_multiply(0.5)
-                } else {
-                    base_col.gamma_multiply(0.25)
-                };
+            // let sub_grids = [6, 8, 10, 14];
+            let sub_grids = self.sequences.iter().map(|s| s.time_quantum.1);
+            for sub_grid in sub_grids {
+                for s in 0..=2 * max_loop_len.as_secs() as usize * sub_grid {
+                    let x = Self::t_to_x(
+                        rect,
+                        Time(s as f64 / sub_grid as f64) - self.now().rem_euclid(max_loop_len),
+                        max_loop_len,
+                    );
+                    let base_col = hsl_to_color32(((279 * sub_grid) % 360) as _, 0.5, 0.5);
 
-                painter.line_segment(
-                    [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                    egui::Stroke::new(1.0, col),
-                );
-            }
-            for s in 0..=max_loop_len.as_secs() as usize * 6 {
-                let x = Self::t_to_x(rect, Time(s as f64 / 6.0), max_loop_len);
-                let base_col = egui::Color32::GOLD;
-                let col = if s % 6 == 0 {
-                    base_col.gamma_multiply(0.75)
-                } else if s % 3 == 0 {
-                    base_col.gamma_multiply(0.5)
-                } else {
-                    base_col.gamma_multiply(0.25)
-                };
+                    let col;
+                    let thickness;
+                    if s % sub_grid == 0 {
+                        col = base_col.gamma_multiply(0.75);
+                        thickness = 2.0;
+                    } else if s % (sub_grid / 2) == 0 {
+                        col = base_col.gamma_multiply(0.25);
+                        thickness = 1.0;
+                    } else {
+                        col = base_col.gamma_multiply(0.125);
+                        thickness = 1.0;
+                    };
 
-                painter.line_segment(
-                    [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                    egui::Stroke::new(1.0, col),
-                );
+                    painter.line_segment(
+                        [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                        egui::Stroke::new(thickness, col),
+                    );
+                }
             }
 
             // sequences
