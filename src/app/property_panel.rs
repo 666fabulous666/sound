@@ -15,8 +15,7 @@ impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
         let len = self.sequences.len();
         egui::SidePanel::left("props")
-            // .default_width(270.0)
-            .min_width(self.property_panel_width)
+            .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     enum Action {
@@ -841,6 +840,7 @@ impl GuiApp {
                                 {
                                     let mut changed = false;
                                     let mut interval = seq.interval.clone();
+                                    let mut shuffle = seq.shuffle;
                                     if let Interval::RDTempered(
                                         ref mut nb_rd_steps,
                                         ref mut tones,
@@ -907,11 +907,25 @@ impl GuiApp {
                                                 }
                                             }
                                         });
+                                        ui.separator();
+                                        changed |= ui
+                                            .checkbox(&mut shuffle, "Shuffle")
+                                            .on_hover_text(concat!(
+                                                "Generate notes from the sequence in a\n",
+                                                "random order, affecting which notes follow\n",
+                                                "one another.\n",
+                                                "\n",
+                                                "A note may only follow a previously\n",
+                                                "generated other one (see tolerance for\n",
+                                                "more settings about this point.",
+                                            ))
+                                            .changed()
                                     }
                                     if changed {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .interval = interval;
+                                        let e = edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone());
+                                        e.interval = interval;
+                                        e.shuffle = shuffle;
                                     }
                                 }
                             });
@@ -970,7 +984,13 @@ impl GuiApp {
                         Action::Delete => {
                             if let Some(sel) = self.selected {
                                 self.del_seq(sel);
-                                self.selected = None;
+                                self.selected = if sel > 0 {
+                                    Some(sel - 1)
+                                } else if self.sequences.len() > 1 {
+                                    Some(sel + 1)
+                                } else {
+                                    None
+                                };
                             }
                         }
                         Action::Clone => {

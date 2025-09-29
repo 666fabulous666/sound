@@ -431,7 +431,8 @@ impl GuiApp {
     fn draw_seq(&mut self, seq: &mut Sequence) {
         let now = self.now();
         let seq_start = seq.loop_len * (now / seq.loop_len).floor();
-        seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
+        // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
+        seq.draw(&mut self.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
@@ -441,7 +442,8 @@ impl GuiApp {
         let now = self.now();
         let seq = &mut self.sequences[a];
         let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
-        seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
+        // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
+        seq.draw(&mut self.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }

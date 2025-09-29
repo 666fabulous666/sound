@@ -30,6 +30,10 @@ pub fn default_accents() -> (f64, Vec<f64>) {
     (1.0, vec![0.5, 1.2, 2.5, 3.0])
 }
 
+pub fn default_shuffle() -> bool {
+    true
+}
+
 pub fn default_spacial() -> f64 {
     0.5
 }

@@ -61,6 +61,8 @@ pub struct Sequence {
     pub repeat: usize,
     #[serde(default = "default_accents")]
     pub accents: (f64, Vec<f64>),
+    #[serde(default = "default_shuffle")]
+    pub shuffle: bool,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
 }
@@ -145,6 +147,7 @@ impl Sequence {
             repeat: default_repeat(),
             accents: default_accents(),
             normalization: default_normalization(),
+            shuffle: default_shuffle(),
         }
     }
     pub fn draw(
@@ -152,7 +155,7 @@ impl Sequence {
         notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
-        tempo: f64,
+        // tempo: f64,
     ) {
         let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
@@ -190,7 +193,9 @@ impl Sequence {
             .map(|(t1, t2)| t2 - t1)
             .collect::<Vec<_>>();
         let mut tmp = ts.zip(ds.iter()).collect::<Vec<_>>();
-        tmp.shuffle(rng);
+        if self.shuffle {
+            tmp.shuffle(rng);
+        }
         tmp.into_iter()
             .map(|(t, d)| Note {
                 time: t + seq_start,
