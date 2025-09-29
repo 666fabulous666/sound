@@ -10,7 +10,12 @@ fn main() {
     let _ = {
         use eframe::NativeOptions;
 
-        let native_options = NativeOptions::default();
+        let native_options = NativeOptions {
+            viewport: egui::ViewportBuilder::default()
+                // .with_inner_size([1280.0, 720.0]) // optional "starting size"
+                .with_maximized(true),
+            ..Default::default()
+        };
         let _ = eframe::run_native(
             "Notes GUI",
             native_options,

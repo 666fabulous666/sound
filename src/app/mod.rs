@@ -90,6 +90,7 @@ pub struct GuiApp {
     show_default_picker: bool,
     default_pick_idx: usize,
     logo: Option<TextureHandle>,
+    property_panel_width: f32,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -133,6 +134,7 @@ impl GuiApp {
             show_default_picker: false,
             default_pick_idx: 0,
             logo: None,
+            property_panel_width: 270.0,
         };
         app
     }
@@ -274,7 +276,9 @@ impl App for GuiApp {
                 });
             }
         }
-        self.top_panel(ctx, &mut save, &mut load, &mut exit);
+        if !self.show_start {
+            self.top_panel(ctx, &mut save, &mut load, &mut exit);
+        }
         if save {
             self.save_state();
         }

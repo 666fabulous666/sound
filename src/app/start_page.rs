@@ -27,17 +27,29 @@ impl GuiApp {
             card.outer_margin = Margin::symmetric(16, 0);
 
             card.show(ui, |ui| {
-                ui.add_space(6.0);
-                ui.label(
-                    RichText::new("🎶 Quantum Harmonics’ Oscillator 🎶")
-                        .size(32.0)
-                        .strong(),
-                );
-                ui.label(
-                    RichText::new("A probability-driven music sequencer")
-                        .size(20.0)
-                        .color(weak_text),
-                );
+                ui.horizontal(|ui| {
+                    if let Some(logo) = &self.logo {
+                        let size = egui::Vec2::new(250.0, 125.0);
+                        ui.image((logo.id(), size));
+                    }
+                    ui.vertical(|ui| {
+                        ui.add_space(6.0);
+                        ui.label(
+                            // RichText::new("🎶 Quantum Harmonics’ Oscillator 🎶")
+                            //     .size(32.0)
+                            //     .strong(),
+                            RichText::new("' Oscillator")
+                                .size(64.0)
+                                .italics()
+                                .strong(),
+                        );
+                        ui.label(
+                            RichText::new("A probability-driven music sequencer")
+                                .size(20.0)
+                                .color(weak_text),
+                        );
+                    });
+                });
 
                 ui.add_space(14.0);
                 ui.separator();

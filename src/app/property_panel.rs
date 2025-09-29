@@ -15,7 +15,8 @@ impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
         let len = self.sequences.len();
         egui::SidePanel::left("props")
-            .default_width(250.0)
+            // .default_width(270.0)
+            .min_width(self.property_panel_width)
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     enum Action {
@@ -998,6 +999,7 @@ impl GuiApp {
                         }
                     }
                 });
+                self.property_panel_width = ui.available_width();
             });
     }
 }

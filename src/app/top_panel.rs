@@ -25,9 +25,8 @@ impl GuiApp {
     ) {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
-                // --- Logo on the left ---
                 if let Some(logo) = &self.logo {
-                    let size = egui::Vec2::new(250.0, 125.0);
+                    let size = egui::Vec2::new(self.property_panel_width - 3.5, 125.0);
                     ui.image((logo.id(), size));
                 }
                 ui.separator();
@@ -35,9 +34,6 @@ impl GuiApp {
                 ui.vertical(|ui| {
                     ui.add_space(10.0);
                     ui.horizontal(|ui| {
-                        // ui.separator();
-
-                        // --- Buttons next to it ---
                         if ui.button("New score").clicked() {
                             self.new_score();
                             self.selected = None;
@@ -58,6 +54,8 @@ impl GuiApp {
                         } else {
                             false
                         };
+
+                        // NOTE: already tested
                         if !self.show_start {
                             *save = ui.button("Save…").clicked();
                             if ui
@@ -80,8 +78,6 @@ impl GuiApp {
                             if ui.button("Examples").clicked() {
                                 self.try_load_default(ctx);
                             }
-                        }
-                        if !self.show_doc {
                             if ui.button("README").clicked() {
                                 self.show_doc = true;
                             }
