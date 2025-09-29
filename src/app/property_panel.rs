@@ -6,6 +6,7 @@ use crate::{
     engine::notes::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
+    layout_left,
     rescale_factor,
     time_freq::{Freq, Time}, // range_slider::*,
 };
@@ -576,8 +577,9 @@ impl GuiApp {
                                                 Self::edit_vec(
                                                     ui,
                                                     &mut gens,
-                                                    <Option<&str>>::None,
+                                                    // <Option<&str>>::None,
                                                     2,
+                                                    layout_left(),
                                                 );
                                                 if gens != old_val {
                                                     // TODO: do better
@@ -709,8 +711,9 @@ impl GuiApp {
                                                 Self::edit_vec(
                                                     ui,
                                                     &mut gens,
-                                                    <Option<&str>>::None,
+                                                    // <Option<&str>>::None,
                                                     2,
+                                                    layout_left(),
                                                 );
                                                 if gens != old_val {
                                                     // TODO: do better
@@ -934,7 +937,14 @@ impl GuiApp {
                                     .collect();
 
                                 let old_gens = gens.clone();
-                                Self::edit_vec(ui, &mut gens, Some("Generators"), 1.0);
+                                ui.label("Generators");
+                                Self::edit_vec(
+                                    ui,
+                                    &mut gens,
+                                    // Some("Generators"),
+                                    1.0,
+                                    layout_left(),
+                                );
 
                                 if gens != old_gens && !gens.contains(&0.0) {
                                     let restored: Vec<f64> = gens

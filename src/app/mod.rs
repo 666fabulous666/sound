@@ -17,7 +17,7 @@ use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
-use egui::{Color32, ScrollArea, WidgetText};
+use egui::{Color32, Layout, ScrollArea, WidgetText};
 use egui_commonmark::CommonMarkCache;
 use instant::Duration;
 #[cfg(target_arch = "wasm32")]
@@ -88,6 +88,7 @@ pub struct GuiApp {
     markdown_cache: CommonMarkCache,
     show_default_picker: bool,
     default_pick_idx: usize,
+    logo: Option<egui::TextureHandle>,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -130,8 +131,34 @@ impl GuiApp {
             markdown_cache: egui_commonmark::CommonMarkCache::default(),
             show_default_picker: false,
             default_pick_idx: 0,
+            logo: None,
         };
         app
+    }
+    pub fn load_logo(&mut self, ctx: &egui::Context) {
+        if self.logo.is_none() {
+            let image = if ctx.style().visuals.dark_mode {
+                let bytes = include_bytes!("../../assets/QuantumHarmonicsBlack.png");
+
+                image::load_from_memory(bytes)
+                    .expect("Failed to load logo")
+                    .to_rgba8()
+            } else {
+                let bytes = include_bytes!("../../assets/QuantumHarmonicsWhite.png");
+                image::load_from_memory(bytes)
+                    .expect("Failed to load logo")
+                    .to_rgba8()
+            };
+            let size = [image.width() as usize, image.height() as usize];
+
+            let pixels = image.into_vec();
+            let texture = ctx.load_texture(
+                "logo",
+                egui::ColorImage::from_rgba_unmultiplied(size, &pixels),
+                Default::default(),
+            );
+            self.logo = Some(texture);
+        }
     }
     fn start_page(&mut self, ctx: &egui::Context) {
         use egui::{Align, CornerRadius, Frame, RichText, Stroke, Vec2};
@@ -333,23 +360,26 @@ impl GuiApp {
     fn edit_vec<T: egui::emath::Numeric>(
         ui: &mut egui::Ui,
         mut vec: impl DerefMut<Target = Vec<T>>,
-        label: Option<impl Into<WidgetText>>,
+        // label: Option<impl Into<WidgetText>>,
         default_value: T,
+        layout: Layout,
     ) {
         ui.vertical(|ui| {
-            if let Some(label) = label {
-                ui.label(label);
-            }
+            // if let Some(label) = label {
+            //     ui.label(label);
+            // }
             ui.horizontal(|ui| {
-                vec.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked()); // TODO: return true
-                if ui
-                    .button("+")
-                    .on_hover_text("Right click an item to remove it.")
-                    .clicked()
-                {
-                    vec.push(default_value);
-                } else {
-                }
+                ui.with_layout(layout, |ui| {
+                    vec.retain_mut(|d| !ui.add(egui::DragValue::new(d)).secondary_clicked()); // TODO: return true
+                    if ui
+                        .button("+")
+                        .on_hover_text("Right click an item to remove it.")
+                        .clicked()
+                    {
+                        vec.push(default_value);
+                    } else {
+                    }
+                });
             });
         });
     }

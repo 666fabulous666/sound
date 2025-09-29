@@ -1,7 +1,5 @@
 use std::f64::consts::PI;
 
-use egui::emath::Numeric;
-
 use crate::time_freq::{DivByFreq, Freq, Time};
 
 /// A simple xorshift64* pseudo‐random number generator

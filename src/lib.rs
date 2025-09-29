@@ -28,6 +28,9 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         include_str!("../assets/SpinsOfBirds.json"),
     ),
 ];
+pub fn layout_left() -> Layout {
+    Layout::left_to_right(egui::Align::Min)
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Token(usize);
@@ -56,6 +59,7 @@ pub fn rescale_factor(a: f64, b: f64) -> f64 {
     (a.powf(a) * b.powf(b)) / denom.powf(denom)
 }
 
+use egui::Layout;
 use serde::{Deserialize, Serialize};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
