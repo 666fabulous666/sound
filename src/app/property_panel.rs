@@ -987,7 +987,7 @@ impl GuiApp {
                                 self.selected = if sel > 0 {
                                     Some(sel - 1)
                                 } else if self.sequences.len() > 1 {
-                                    Some(sel + 1)
+                                    Some(sel)
                                 } else {
                                     None
                                 };
@@ -996,6 +996,10 @@ impl GuiApp {
                         Action::Clone => {
                             if let Some(sel) = self.selected {
                                 self.clone_seq(sel);
+                                let last = self.sequences.len() - 1;
+                                for k in (sel + 1..last).rev() {
+                                    self.swap_seqs_at(k + 1, k);
+                                }
                             }
                         }
                         Action::Up => {
