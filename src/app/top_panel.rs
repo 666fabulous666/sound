@@ -23,14 +23,11 @@ impl GuiApp {
         load: &mut bool,
         exit: &mut bool,
     ) {
-        // make sure logo is loaded
-        self.load_logo(ctx);
-
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
                 // --- Logo on the left ---
                 if let Some(logo) = &self.logo {
-                    let size = egui::Vec2::new(180.0, 90.0);
+                    let size = egui::Vec2::new(250.0, 125.0);
                     ui.image((logo.id(), size));
                 }
                 ui.separator();
