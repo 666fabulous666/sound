@@ -30,7 +30,7 @@ impl GuiApp {
             ui.horizontal_centered(|ui| {
                 // --- Logo on the left ---
                 if let Some(logo) = &self.logo {
-                    let size = egui::Vec2::new(180.0, 92.0);
+                    let size = egui::Vec2::new(180.0, 90.0);
                     ui.image((logo.id(), size));
                 }
                 ui.separator();

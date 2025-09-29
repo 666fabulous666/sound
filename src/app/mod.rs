@@ -17,7 +17,7 @@ use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
-use egui::{Color32, Layout, ScrollArea, WidgetText};
+use egui::{Color32, Layout, ScrollArea, TextureHandle};
 use egui_commonmark::CommonMarkCache;
 use instant::Duration;
 #[cfg(target_arch = "wasm32")]
@@ -88,7 +88,7 @@ pub struct GuiApp {
     markdown_cache: CommonMarkCache,
     show_default_picker: bool,
     default_pick_idx: usize,
-    logo: Option<egui::TextureHandle>,
+    logo: Option<TextureHandle>,
 }
 
 fn default_delays() -> (Vec<f64>, Vec<f64>) {
@@ -138,13 +138,13 @@ impl GuiApp {
     pub fn load_logo(&mut self, ctx: &egui::Context) {
         if self.logo.is_none() {
             let image = if ctx.style().visuals.dark_mode {
-                let bytes = include_bytes!("../../assets/QuantumHarmonicsBlack.png");
+                let bytes = include_bytes!("../../assets/QuantumHarmonicsTmpWhite.png");
 
                 image::load_from_memory(bytes)
                     .expect("Failed to load logo")
                     .to_rgba8()
             } else {
-                let bytes = include_bytes!("../../assets/QuantumHarmonicsWhite.png");
+                let bytes = include_bytes!("../../assets/QuantumHarmonicsTmp.png");
                 image::load_from_memory(bytes)
                     .expect("Failed to load logo")
                     .to_rgba8()

@@ -29,6 +29,7 @@ arc-swap = "1.7.1"
 egui_commonmark = "0.21.1"
 epaint = "0.32.3"
 image = "0.25.8"
+# egui_extras = "0.32.3"
 
 # --- native-only ---
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
