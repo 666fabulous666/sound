@@ -128,8 +128,8 @@ impl Sequence {
             exclusions: Rythm::Rd(RdRythm::default()),
             inclusions: Rythm::Rd(RdRythm::default()),
             beat_offset: default_beat_offset(),
-            // interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
-            interval: Interval::RDTempered(2, vec![0, 5, 7], 0),
+            interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
+            // interval: Interval::RDTempered(2, vec![0, 5, 7], 0),
             wave_type: WaveType::Sine,
             volume: default_volume(),
             attack_decay: default_attack_decay(),
@@ -189,7 +189,9 @@ impl Sequence {
             .tuple_windows()
             .map(|(t1, t2)| t2 - t1)
             .collect::<Vec<_>>();
-        ts.zip(ds.iter())
+        let mut tmp = ts.zip(ds.iter()).collect::<Vec<_>>();
+        tmp.shuffle(rng);
+        tmp.into_iter()
             .map(|(t, d)| Note {
                 time: t + seq_start,
                 duration: *d,
