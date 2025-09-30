@@ -1,4 +1,4 @@
-use egui::ScrollArea;
+use egui::{RichText, ScrollArea};
 // use egui_double_slider::DoubleSlider;
 
 use crate::{
@@ -48,7 +48,12 @@ impl GuiApp {
                                     action = Action::Down;
                                 }
                                 // let mut tmp_mute = seq.mute.clone();
-                                if ui.button(if seq.mute { "Unute" } else { "Mute" }).clicked()
+                                if ui
+                                    .button(if seq.mute { "Unute" } else { "Mute" })
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Shortcut: \\").weak());
+                                    })
+                                    .clicked()
                                     || ui.input(|i| i.key_pressed(egui::Key::Backslash))
                                 {
                                     edited_seq
@@ -136,17 +141,26 @@ impl GuiApp {
                             });
                             ui.collapsing("Envelope", |ui| {
                                 let mut attack_decay = seq.attack_decay;
-                                let attack = ui.add(
-                                    egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
-                                        .text("Attack")
-                                        .show_value(true)
-                                        .logarithmic(true),
-                                );
-                                let decay = ui.add(
-                                    egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
-                                        .text("Decay")
-                                        .logarithmic(true),
-                                );
+                                let attack = ui
+                                    .add(
+                                        egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
+                                            .text("Attack")
+                                            .show_value(true)
+                                            .logarithmic(true),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
+                                let decay = ui
+                                    .add(
+                                        egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
+                                            .text("Decay")
+                                            .logarithmic(true),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
+
                                 if attack.changed() || decay.changed() {
                                     let e = edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone());
@@ -174,15 +188,25 @@ impl GuiApp {
                             ui.collapsing("Bend", |ui| {
                                 let mut bend = seq.bend;
                                 let mut tmp_mag = bend.0 * 1e4;
-                                let mag = ui.add(
-                                    egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
-                                        .text("Magnitude"),
-                                );
-                                let speed = ui.add(
-                                    egui::Slider::new(&mut bend.1, 1.0..=1000.0)
-                                        .text("Speed")
-                                        .logarithmic(true),
-                                );
+                                let mag = ui
+                                    .add(
+                                        egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
+                                            .text("Magnitude"),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
+
+                                let speed = ui
+                                    .add(
+                                        egui::Slider::new(&mut bend.1, 1.0..=1000.0)
+                                            .text("Speed")
+                                            .logarithmic(true),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
+
                                 if mag.changed() || speed.changed() {
                                     let e = edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone());
@@ -210,16 +234,25 @@ impl GuiApp {
                             ui.collapsing("Vibrato", |ui| {
                                 let mut vibrato = seq.vibrato;
                                 let mut vibrato_mag_display = vibrato.0 * 1e6;
-                                let mag = ui.add(
-                                    egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
-                                        .text("Magnitude"),
-                                );
+                                let mag = ui
+                                    .add(
+                                        egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
+                                            .text("Magnitude"),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
 
-                                let fq = ui.add(
-                                    egui::Slider::new(&mut vibrato.1, Freq(1.0)..=Freq(100.0))
-                                        .text("Frequency")
-                                        .logarithmic(true),
-                                );
+                                let fq = ui
+                                    .add(
+                                        egui::Slider::new(&mut vibrato.1, Freq(1.0)..=Freq(100.0))
+                                            .text("Frequency")
+                                            .logarithmic(true),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Default: double click").weak());
+                                    });
+
                                 if mag.changed() || fq.changed() {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
