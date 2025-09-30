@@ -2,6 +2,7 @@ use crate::{
     app::{hsl_to_color32, GuiApp, NotesGroup},
     engine::{notes::Interval, waves::envelope},
     time_freq::Time,
+    NOTE_LINGER_TIME,
 };
 
 impl GuiApp {
@@ -22,16 +23,19 @@ impl GuiApp {
             let max_loop_len = (&self.sequences)
                 .iter()
                 .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
+            let playhead = NOTE_LINGER_TIME.min(max_loop_len);
 
+            let track_display_length = max_loop_len + playhead;
             // grid
-            // let sub_grids = [6, 8, 10, 14];
-            let sub_grids = self.sequences.iter().map(|s| s.time_quantum.1);
+            let sub_grids = self.sequences.iter().map(|s| s.time_quantum.1 as isize);
             for sub_grid in sub_grids {
-                for s in 0..=2 * max_loop_len.as_secs() as usize * sub_grid {
+                let n = track_display_length.as_secs() as isize * sub_grid;
+                for s in -n..=2 * n {
                     let x = Self::t_to_x(
                         rect,
-                        Time(s as f64 / sub_grid as f64) - self.now().rem_euclid(max_loop_len),
-                        max_loop_len,
+                        Time(s as f64 / sub_grid as f64) - self.now().rem_euclid(max_loop_len)
+                            + playhead,
+                        track_display_length,
                     );
                     let base_col = hsl_to_color32(((279 * sub_grid) % 360) as _, 0.5, 0.5);
 
@@ -60,33 +64,94 @@ impl GuiApp {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
-                let x0 = Self::t_to_x(
-                    rect,
-                    (seq.t_min - current_time).rem_euclid(seq.loop_len),
-                    max_loop_len,
-                );
-                let x1 = Self::t_to_x(
-                    rect,
-                    (seq.t_max - current_time).rem_euclid(seq.loop_len),
-                    max_loop_len,
-                );
-
-                let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
-                let block_rect_l = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, Time(0.0), max_loop_len), y0),
-                    egui::pos2(x1, y1),
-                );
-                let block_rect_r = egui::Rect::from_min_max(
-                    egui::pos2(x0, y0),
-                    egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
-                );
                 let track_rect = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, Time(0.0), max_loop_len), y0),
-                    egui::pos2(Self::t_to_x(rect, max_loop_len, max_loop_len), y1),
+                    egui::pos2(Self::t_to_x(rect, Time::new(0.0), track_display_length), y0),
+                    egui::pos2(
+                        Self::t_to_x(rect, track_display_length, track_display_length),
+                        y1,
+                    ),
                 );
+                // let x0 = Self::t_to_x(
+                //     track_rect,
+                //     (seq.t_min - current_time).rem_euclid(seq.loop_len) + playhead,
+                //     track_display_length,
+                // );
+                // let x1 = Self::t_to_x(
+                //     track_rect,
+                //     (seq.t_max - current_time).rem_euclid(seq.loop_len) + playhead,
+                //     track_display_length,
+                // );
+
+                // let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
+                // let block_rect_l = egui::Rect::from_min_max(
+                //     egui::pos2(Self::t_to_x(track_rect, playhead, track_display_length), y0),
+                //     egui::pos2(x1, y1),
+                // );
+                // let block_rect_r = egui::Rect::from_min_max(
+                //     egui::pos2(x0, y0),
+                //     egui::pos2(
+                //         Self::t_to_x(track_rect, seq.loop_len + playhead, track_display_length),
+                //         y1,
+                //     ),
+                // );
+                // let mut col = Self::hash_color(&seq.wave_type);
+                // if self.selected == Some(idx) {
+                //     col = Self::brighten(col);
+                //     for k in -16..16 {
+                //         let tmp = (30 + k) as f32;
+                //         painter.rect_filled(
+                //             track_rect.expand2(egui::Vec2 {
+                //                 x: 0.0,
+                //                 y: k as f32,
+                //             }),
+                //             tmp.sqrt(),
+                //             col.gamma_multiply(1.0 / tmp),
+                //         );
+                //     }
+                // }
+
+                // if x0 < x1 {
+                //     painter.rect_filled(block_rect, 4.0, col);
+                //     painter.rect_stroke(
+                //         block_rect,
+                //         4.0,
+                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                //         egui::StrokeKind::Middle,
+                //     );
+                // } else {
+                //     painter.rect_filled(block_rect_l, 4.0, col);
+                //     painter.rect_stroke(
+                //         block_rect_l,
+                //         4.0,
+                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                //         egui::StrokeKind::Middle,
+                //     );
+                //     painter.rect_filled(block_rect_r, 4.0, col);
+                //     painter.rect_stroke(
+                //         block_rect_r,
+                //         4.0,
+                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
+                //         egui::StrokeKind::Middle,
+                //     );
+                // }
+                // --- WINDOW REPEATS: draw [t_min, t_max) modulo loop_len across the visible span ---
+
+                let loop_len = seq.loop_len;
+                let win_len = seq.t_max - seq.t_min;
+
+                // Where does this sequence’s window start, relative to the playhead-centered view?
+                // (shifted so that playhead is at `playhead` along the X axis)
+                let start0 = (seq.t_min - current_time).rem_euclid(loop_len) + playhead;
+
+                // How many repetitions do we need to cover the whole visible width?
+                let repeats =
+                    (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
+
+                // Color (highlight if selected)
                 let mut col = Self::hash_color(&seq.wave_type);
                 if self.selected == Some(idx) {
                     col = Self::brighten(col);
+                    // keep your selected-lane glow if you like:
                     for k in -16..16 {
                         let tmp = (30 + k) as f32;
                         painter.rect_filled(
@@ -100,29 +165,35 @@ impl GuiApp {
                     }
                 }
 
-                if x0 < x1 {
-                    painter.rect_filled(block_rect, 4.0, col);
-                    painter.rect_stroke(
-                        block_rect,
-                        4.0,
-                        egui::Stroke::new(1.0, egui::Color32::BLACK),
-                        egui::StrokeKind::Middle,
-                    );
-                } else {
-                    painter.rect_filled(block_rect_l, 4.0, col);
-                    painter.rect_stroke(
-                        block_rect_l,
-                        4.0,
-                        egui::Stroke::new(1.0, egui::Color32::BLACK),
-                        egui::StrokeKind::Middle,
-                    );
-                    painter.rect_filled(block_rect_r, 4.0, col);
-                    painter.rect_stroke(
-                        block_rect_r,
-                        4.0,
-                        egui::Stroke::new(1.0, egui::Color32::BLACK),
-                        egui::StrokeKind::Middle,
-                    );
+                // Draw each repeated window tile if it intersects the visible range [0, track_display_length)
+                for n in -repeats..repeats {
+                    let shift = loop_len * (n as f64);
+                    let s = start0 + shift;
+                    let e = s + win_len;
+
+                    // Skip if completely off-screen
+                    if e <= Time(0.0) || s >= track_display_length {
+                        continue;
+                    }
+
+                    // Clamp to visible range
+                    let s_clamped = s.max(Time(0.0));
+                    let e_clamped = e.min(track_display_length);
+
+                    let x_s = Self::t_to_x(track_rect, s_clamped, track_display_length);
+                    let x_e = Self::t_to_x(track_rect, e_clamped, track_display_length);
+
+                    if x_e > x_s {
+                        let block_rect =
+                            egui::Rect::from_min_max(egui::pos2(x_s, y0), egui::pos2(x_e, y1));
+                        painter.rect_filled(block_rect, 4.0, col);
+                        painter.rect_stroke(
+                            block_rect,
+                            4.0,
+                            egui::Stroke::new(1.0, egui::Color32::BLACK),
+                            egui::StrokeKind::Middle,
+                        );
+                    }
                 }
 
                 self.notes
@@ -138,15 +209,20 @@ impl GuiApp {
 
                             let note_rect = egui::Rect::from_min_max(
                                 egui::pos2(
-                                    Self::t_to_x(track_rect, n.time - current_time, max_loop_len),
+                                    Self::t_to_x(
+                                        track_rect,
+                                        n.time - current_time + playhead,
+                                        track_display_length,
+                                    ),
                                     0.5 * (track_rect.bottom() + track_rect.top())
                                         + dy * (degree as f32 + 0.5) / 24.0,
                                 ),
                                 egui::pos2(
                                     Self::t_to_x(
                                         track_rect,
-                                        (n.time + n.duration - current_time).min(seq.loop_len),
-                                        max_loop_len,
+                                        (n.time + n.duration - current_time).min(seq.loop_len)
+                                            + playhead,
+                                        track_display_length,
                                     ),
                                     0.5 * (track_rect.bottom() + track_rect.top())
                                         + dy * (degree as f32 - 0.5) / 24.0,
@@ -205,24 +281,40 @@ impl GuiApp {
                     egui::TextStyle::Body.resolve(ui.style()),
                     bar_color,
                 );
+
+                // double bar
                 if seq.loop_len != max_loop_len {
                     painter.line_segment(
                         [
-                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y0),
-                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len), y1),
+                            egui::pos2(
+                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length),
+                                y0,
+                            ),
+                            egui::pos2(
+                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length),
+                                y1,
+                            ),
                         ],
                         egui::Stroke::new(2.0, bar_color),
                     );
                     painter.line_segment(
                         [
-                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y0),
-                            egui::pos2(Self::t_to_x(rect, seq.loop_len, max_loop_len) + 4.0, y1),
+                            egui::pos2(
+                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length)
+                                    + 4.0,
+                                y0,
+                            ),
+                            egui::pos2(
+                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length)
+                                    + 4.0,
+                                y1,
+                            ),
                         ],
                         egui::Stroke::new(2.0, bar_color),
                     );
                     painter.circle_filled(
                         egui::pos2(
-                            Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                            Self::t_to_x(rect, seq.loop_len + playhead, track_display_length) - 4.0,
                             0.75 * y0 + 0.25 * y1,
                         ),
                         2.0,
@@ -230,7 +322,7 @@ impl GuiApp {
                     );
                     painter.circle_filled(
                         egui::pos2(
-                            Self::t_to_x(rect, seq.loop_len, max_loop_len) - 4.0,
+                            Self::t_to_x(rect, seq.loop_len + playhead, track_display_length) - 4.0,
                             0.25 * y0 + 0.75 * y1,
                         ),
                         2.0,
@@ -244,6 +336,13 @@ impl GuiApp {
                     self.selected = Some(idx);
                 }
             }
+            // grid
+            let x = Self::t_to_x(rect, playhead, track_display_length);
+
+            painter.line_segment(
+                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                egui::Stroke::new(3.0, egui::Color32::GOLD),
+            );
         });
     }
 }
