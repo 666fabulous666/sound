@@ -18,7 +18,6 @@ pub const MAX_FPS: f64 = 60.0;
 #[cfg(not(target_arch = "wasm32"))]
 pub const MAX_FPS: f64 = 120.0;
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
-    ("Classic Groove", include_str!("../assets/groove.json")),
     (
         "Video Game Groove",
         include_str!("../assets/GameGroove.json"),
@@ -27,6 +26,7 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         "Spins of Birds",
         include_str!("../assets/SpinsOfBirds.json"),
     ),
+    ("Classic Groove", include_str!("../assets/groove.json")),
 ];
 pub fn layout_left() -> Layout {
     Layout::left_to_right(egui::Align::Min)
