@@ -289,6 +289,7 @@ impl GuiApp {
                 if true {
                     let bar_pos = seq.loop_len * seq.repeat as f64 + playhead
                         - (self.now()).rem_euclid(seq.loop_len * seq.repeat as f64);
+                    let last_bar_pos = bar_pos - seq.loop_len * seq.repeat as f64;
                     let reps = ((self.now() / seq.loop_len) as usize).rem_euclid(seq.repeat);
                     painter.text(
                         egui::pos2(
@@ -325,6 +326,42 @@ impl GuiApp {
                     painter.circle_filled(
                         egui::pos2(
                             Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
+                            0.25 * y0 + 0.75 * y1,
+                        ),
+                        2.0,
+                        bar_color,
+                    );
+                    painter.line_segment(
+                        [
+                            egui::pos2(Self::t_to_x(rect, last_bar_pos, track_display_length), y0),
+                            egui::pos2(Self::t_to_x(rect, last_bar_pos, track_display_length), y1),
+                        ],
+                        egui::Stroke::new(2.0, bar_color),
+                    );
+                    painter.line_segment(
+                        [
+                            egui::pos2(
+                                Self::t_to_x(rect, last_bar_pos, track_display_length) - 4.0,
+                                y0,
+                            ),
+                            egui::pos2(
+                                Self::t_to_x(rect, last_bar_pos, track_display_length) - 4.0,
+                                y1,
+                            ),
+                        ],
+                        egui::Stroke::new(2.0, bar_color),
+                    );
+                    painter.circle_filled(
+                        egui::pos2(
+                            Self::t_to_x(rect, last_bar_pos, track_display_length) + 4.0,
+                            0.75 * y0 + 0.25 * y1,
+                        ),
+                        2.0,
+                        bar_color,
+                    );
+                    painter.circle_filled(
+                        egui::pos2(
+                            Self::t_to_x(rect, last_bar_pos, track_display_length) + 4.0,
                             0.25 * y0 + 0.75 * y1,
                         ),
                         2.0,
