@@ -202,7 +202,7 @@ impl GuiApp {
                     .iter()
                     .filter(|NotesGroup { token, .. }| *token == seq.token)
                     .flat_map(|NotesGroup { notes, .. }| notes.iter())
-                    .filter(|n| n.time < self.now() + seq.loop_len)
+                    // .filter(|n| n.time < self.now() + seq.loop_len)
                     .collect::<Vec<_>>()
                     .iter()
                     .for_each(|n| {
@@ -222,8 +222,8 @@ impl GuiApp {
                                 egui::pos2(
                                     Self::t_to_x(
                                         track_rect,
-                                        (n.time + n.duration - current_time).min(seq.loop_len)
-                                            + playhead,
+                                        // (n.time + n.duration - current_time).min(seq.loop_len) + playhead,
+                                        (n.time + n.duration - current_time) + playhead,
                                         track_display_length,
                                     ),
                                     0.5 * (track_rect.bottom() + track_rect.top())
