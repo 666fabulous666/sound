@@ -26,6 +26,7 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         "Spins of Birds",
         include_str!("../assets/SpinsOfBirds.json"),
     ),
+    ("Blue Jinn", include_str!("../assets/Blue Jinn.json")),
     ("Classic Groove", include_str!("../assets/groove.json")),
 ];
 pub fn layout_left() -> Layout {
