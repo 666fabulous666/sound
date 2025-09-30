@@ -47,7 +47,6 @@ impl GuiApp {
                                 if ui.button("Down").clicked() && sel + 1 < len {
                                     action = Action::Down;
                                 }
-                                // let mut tmp_mute = seq.mute.clone();
                                 if ui
                                     .button(if seq.mute { "Unute" } else { "Mute" })
                                     .on_hover_ui(|ui| {
@@ -66,26 +65,40 @@ impl GuiApp {
                                 ui.horizontal(|ui| {
                                     let mut tmp_volume = seq.volume.clone();
                                     ui.label("Volume:");
-                                    if ui
+                                    let vol = ui
                                         .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0))
-                                        .changed()
-                                    {
+                                        .on_hover_ui(|ui| {
+                                            ui.label(RichText::new("Default: right click").weak());
+                                        });
+                                    if vol.changed() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .volume = tmp_volume;
+                                    };
+                                    if vol.secondary_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .volume = default_volume();
                                     };
                                 });
                                 ui.horizontal(|ui| {
                                     let mut tmp_spacial = seq.spacial.clone();
                                     ui.label("Stereo:");
-                                    if ui
+                                    let stereo = ui
                                         .add(egui::Slider::new(&mut tmp_spacial, 0.0..=1.0))
-                                        .on_hover_text("0.5 is centered.")
-                                        .changed()
-                                    {
+                                        .on_hover_ui(|ui| {
+                                            ui.label("0.5 is centered");
+                                            ui.label(RichText::new("Default: right click").weak());
+                                        });
+                                    if stereo.changed() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .spacial = tmp_spacial.clamp(0.0, 1.0);
+                                    };
+                                    if stereo.secondary_clicked() {
+                                        edited_seq
+                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .spacial = default_spacial();
                                     };
                                 });
                             }
@@ -149,7 +162,7 @@ impl GuiApp {
                                             .logarithmic(true),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
                                 let decay = ui
                                     .add(
@@ -158,7 +171,7 @@ impl GuiApp {
                                             .logarithmic(true),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
 
                                 if attack.changed() || decay.changed() {
@@ -172,13 +185,13 @@ impl GuiApp {
                                 } else {
                                     default_attack_decay
                                 };
-                                if attack.double_clicked() {
+                                if attack.secondary_clicked() {
                                     let e = edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone());
                                     e.attack_decay.0 = default().0;
                                     rescale_envelope(e);
                                 }
-                                if decay.double_clicked() {
+                                if decay.secondary_clicked() {
                                     let e = edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone());
                                     e.attack_decay.1 = default().1;
@@ -194,7 +207,7 @@ impl GuiApp {
                                             .text("Magnitude"),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
 
                                 let speed = ui
@@ -204,7 +217,7 @@ impl GuiApp {
                                             .logarithmic(true),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
 
                                 if mag.changed() || speed.changed() {
@@ -213,18 +226,13 @@ impl GuiApp {
                                     e.bend.0 = tmp_mag * 1e-4;
                                     e.bend.1 = bend.1;
                                 };
-                                // if ui.small_button("Default").clicked() {
-                                //     edited_seq
-                                //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                //         .bend = default_bend();
-                                // };
-                                if mag.double_clicked() {
+                                if mag.secondary_clicked() {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .bend
                                         .0 = default_bend().0;
                                 };
-                                if speed.double_clicked() {
+                                if speed.secondary_clicked() {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .bend
@@ -240,7 +248,7 @@ impl GuiApp {
                                             .text("Magnitude"),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
 
                                 let fq = ui
@@ -250,7 +258,7 @@ impl GuiApp {
                                             .logarithmic(true),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: double click").weak());
+                                        ui.label(RichText::new("Default: right click").weak());
                                     });
 
                                 if mag.changed() || fq.changed() {
@@ -258,18 +266,13 @@ impl GuiApp {
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
                                 };
-                                // if ui.small_button("Default").clicked() {
-                                //     edited_seq
-                                //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                //         .vibrato = default_vibrato();
-                                // };
-                                if mag.double_clicked() {
+                                if mag.secondary_clicked() {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .vibrato
                                         .0 = default_vibrato().0;
                                 };
-                                if fq.double_clicked() {
+                                if fq.secondary_clicked() {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
                                         .vibrato
@@ -294,7 +297,6 @@ impl GuiApp {
                                     let delta = ui
                                         .add(
                                             egui::Slider::new(&mut chorus.delta, 0.0..=1.0)
-                                                // egui::Slider::new(&mut chorus.delta, 1.0..=1.1)
                                                 .text("Detune (Δf)")
                                                 .logarithmic(true),
                                         )
@@ -359,37 +361,37 @@ impl GuiApp {
                                             "Odd (asymmetric) weighting across +/− Δf.",
                                         ));
 
-                                    if voices.double_clicked() {
+                                    if voices.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
                                             .voices = ChorusParams::default().voices;
                                     };
-                                    if delta.double_clicked() {
+                                    if delta.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
                                             .delta = ChorusParams::default().delta;
                                     };
-                                    if delta_shift.double_clicked() {
+                                    if delta_shift.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
                                             .delta_shift = ChorusParams::default().delta_shift;
                                     };
-                                    if symmetric.double_clicked() {
+                                    if symmetric.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
                                             .sym = ChorusParams::default().sym;
                                     };
-                                    if asymmetric.double_clicked() {
+                                    if asymmetric.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
                                             .asym = ChorusParams::default().asym;
                                     };
-                                    if time_dep.double_clicked() {
+                                    if time_dep.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus
@@ -404,11 +406,6 @@ impl GuiApp {
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .chorus = chorus;
                                     };
-                                    // if ui.small_button("Default").clicked() {
-                                    //     edited_seq
-                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                    //         .chorus = ChorusParams::default();
-                                    // };
                                 })
                                 .header_response
                                 .on_hover_text(concat!(
@@ -453,23 +450,18 @@ impl GuiApp {
                                                 * time_dep_pow_fact.as_hz(),
                                         );
                                     };
-                                    if initial_val.double_clicked() {
+                                    if initial_val.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .pow_fact
                                             .0 = default_pow_fact().0;
                                     };
-                                    if evol.double_clicked() {
+                                    if evol.secondary_clicked() {
                                         edited_seq
                                             .get_or_insert((&mut self.sequences)[sel].clone())
                                             .pow_fact
                                             .1 = default_pow_fact().1;
                                     };
-                                    // if ui.small_button("Default").clicked() {
-                                    //     edited_seq
-                                    //         .get_or_insert((&mut self.sequences)[sel].clone())
-                                    //         .pow_fact = default_pow_fact();
-                                    // };
                                 })
                                 .header_response
                                 .on_hover_text(concat!(
@@ -615,13 +607,7 @@ impl GuiApp {
                                                 ));
                                                 let mut gens = det_rythm.generators;
                                                 let old_val = gens.clone();
-                                                Self::edit_vec(
-                                                    ui,
-                                                    &mut gens,
-                                                    // <Option<&str>>::None,
-                                                    2,
-                                                    layout_left(),
-                                                );
+                                                Self::edit_vec(ui, &mut gens, 2, layout_left());
                                                 if gens != old_val {
                                                     // TODO: do better
                                                     if let Rythm::Det(ref mut edited_det_rythm) =
@@ -635,7 +621,6 @@ impl GuiApp {
                                                             .into_iter()
                                                             .filter(|g| *g > 0)
                                                             .collect();
-                                                        // edited_det_rythm.generators = gens;
                                                     }
                                                 }
                                             });
@@ -749,13 +734,7 @@ impl GuiApp {
                                                 ));
                                                 let mut gens = det_rythm.generators;
                                                 let old_val = gens.clone();
-                                                Self::edit_vec(
-                                                    ui,
-                                                    &mut gens,
-                                                    // <Option<&str>>::None,
-                                                    2,
-                                                    layout_left(),
-                                                );
+                                                Self::edit_vec(ui, &mut gens, 2, layout_left());
                                                 if gens != old_val {
                                                     // TODO: do better
                                                     if let Rythm::Det(ref mut edited_det_rythm) =

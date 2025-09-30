@@ -74,7 +74,7 @@ impl Default for ChorusParams {
         Self {
             voices: 1,
             delta: 0.02,
-            delta_shift: 0.15,
+            delta_shift: default_delta_shift(),
             sym: 0.5,
             asym: 0.0,
             time_dependency: Freq(0.0),

@@ -1,3 +1,5 @@
+use egui::Align2;
+
 use crate::{
     app::{hsl_to_color32, GuiApp, NotesGroup},
     engine::{notes::Interval, waves::envelope},
@@ -256,10 +258,10 @@ impl GuiApp {
                     });
 
                 let bar_color = col.lerp_to_gamma(
-                    if self.selected == Some(idx) {
-                        egui::Color32::BLACK
+                    if ui.visuals().dark_mode {
+                        egui::Color32::WHITE
                     } else {
-                        egui::Color32::GRAY
+                        egui::Color32::BLACK
                     },
                     0.5,
                 );
@@ -283,38 +285,38 @@ impl GuiApp {
                 );
 
                 // double bar
-                if seq.loop_len != max_loop_len {
+                // if seq.loop_len != max_loop_len {
+                if true {
+                    let bar_pos = seq.loop_len + playhead - (self.now()).rem_euclid(seq.loop_len);
+                    let reps =
+                        seq.repeat - ((self.now() / seq.loop_len) as usize).rem_euclid(seq.repeat);
+                    painter.text(
+                        egui::pos2(
+                            Self::t_to_x(rect, bar_pos, track_display_length),
+                            y0 - 0.333 * lane_gap,
+                        ),
+                        Align2::CENTER_BOTTOM,
+                        format!("x{}", reps as u32),
+                        egui::TextStyle::Body.resolve(ui.style()),
+                        bar_color,
+                    );
                     painter.line_segment(
                         [
-                            egui::pos2(
-                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length),
-                                y0,
-                            ),
-                            egui::pos2(
-                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length),
-                                y1,
-                            ),
+                            egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y0),
+                            egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y1),
                         ],
                         egui::Stroke::new(2.0, bar_color),
                     );
                     painter.line_segment(
                         [
-                            egui::pos2(
-                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length)
-                                    + 4.0,
-                                y0,
-                            ),
-                            egui::pos2(
-                                Self::t_to_x(rect, seq.loop_len + playhead, track_display_length)
-                                    + 4.0,
-                                y1,
-                            ),
+                            egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length) + 4.0, y0),
+                            egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length) + 4.0, y1),
                         ],
                         egui::Stroke::new(2.0, bar_color),
                     );
                     painter.circle_filled(
                         egui::pos2(
-                            Self::t_to_x(rect, seq.loop_len + playhead, track_display_length) - 4.0,
+                            Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
                             0.75 * y0 + 0.25 * y1,
                         ),
                         2.0,
@@ -322,7 +324,7 @@ impl GuiApp {
                     );
                     painter.circle_filled(
                         egui::pos2(
-                            Self::t_to_x(rect, seq.loop_len + playhead, track_display_length) - 4.0,
+                            Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
                             0.25 * y0 + 0.75 * y1,
                         ),
                         2.0,
