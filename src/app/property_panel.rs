@@ -47,6 +47,14 @@ impl GuiApp {
                                 if ui.button("Down").clicked() && sel + 1 < len {
                                     action = Action::Down;
                                 }
+                                // let mut tmp_mute = seq.mute.clone();
+                                if ui.button(if seq.mute { "Unute" } else { "Mute" }).clicked()
+                                    || ui.input(|i| i.key_pressed(egui::Key::Backslash))
+                                {
+                                    edited_seq
+                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .mute ^= true;
+                                }
                             });
 
                             {

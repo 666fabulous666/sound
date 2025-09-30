@@ -41,6 +41,8 @@ pub struct Sequence {
     pub beat_offset: usize,
     #[serde(default = "default_volume")]
     pub volume: f64,
+    #[serde(default = "default_mute")]
+    pub mute: bool,
     #[serde(default = "default_normalization")]
     pub normalization: f64,
     #[serde(default = "default_attack_decay")]
@@ -134,6 +136,7 @@ impl Sequence {
             // interval: Interval::RDTempered(2, vec![0, 5, 7], 0),
             wave_type: WaveType::Sine,
             volume: default_volume(),
+            mute: default_mute(),
             attack_decay: default_attack_decay(),
             token,
             not_generate_until: None,
@@ -157,6 +160,9 @@ impl Sequence {
         seq_start: Time,
         // tempo: f64,
     ) {
+        if self.mute {
+            return;
+        }
         let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
