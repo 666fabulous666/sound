@@ -287,16 +287,16 @@ impl GuiApp {
                 // double bar
                 // if seq.loop_len != max_loop_len {
                 if true {
-                    let bar_pos = seq.loop_len + playhead - (self.now()).rem_euclid(seq.loop_len);
-                    let reps =
-                        seq.repeat - ((self.now() / seq.loop_len) as usize).rem_euclid(seq.repeat);
+                    let bar_pos = seq.loop_len * seq.repeat as f64 + playhead
+                        - (self.now()).rem_euclid(seq.loop_len * seq.repeat as f64);
+                    let reps = ((self.now() / seq.loop_len) as usize).rem_euclid(seq.repeat);
                     painter.text(
                         egui::pos2(
                             Self::t_to_x(rect, bar_pos, track_display_length),
                             y0 - 0.333 * lane_gap,
                         ),
                         Align2::CENTER_BOTTOM,
-                        format!("x{}", reps as u32),
+                        format!("{}/{}", reps as u32 + 1, seq.repeat),
                         egui::TextStyle::Body.resolve(ui.style()),
                         bar_color,
                     );
