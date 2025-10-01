@@ -1093,49 +1093,46 @@ impl GuiApp {
                                 }
                             });
                             ui.collapsing("Accents", |ui| {
-                                let mut accents = seq.accents;
+                                let seq_mut = &mut self.sequences[sel];
 
-                                let mut mag_val = 1.0 / accents.0.max(f64::MIN_POSITIVE);
-                                let base_slider = ui.add(
-                                    egui::Slider::new(&mut mag_val, 0.01..=100.0)
-                                        .text("Magnitude")
-                                        .logarithmic(true),
+                                // Magnitude shown as 1 / value; reset_to must be mapped the same way
+                                let def = default_accents(); // assumed (f64, Vec<f64>)
+                                let mut mag_disp = 1.0 / seq_mut.accents.0.max(f64::MIN_POSITIVE);
+                                let mag_resp = slider_with_reset(
+                                    ui,
+                                    &mut mag_disp,
+                                    0.01..=100.0,
+                                    "Magnitude",
+                                    None,
+                                    1.0 / def.0.max(f64::MIN_POSITIVE),
+                                    true, // logarithmic
                                 );
-                                if base_slider.changed() {
-                                    accents.0 = 1.0 / mag_val;
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .accents = accents.clone();
+                                if mag_resp.changed() {
+                                    seq_mut.accents.0 = 1.0 / mag_disp.max(f64::MIN_POSITIVE);
                                 }
 
-                                let mut gens: Vec<f64> = accents
+                                // Generators shown as 1 / each value
+                                let mut gens_disp: Vec<f64> = seq_mut
+                                    .accents
                                     .1
                                     .iter()
                                     .map(|&x| 1.0 / x.max(f64::MIN_POSITIVE))
                                     .collect();
 
-                                let old_gens = gens.clone();
+                                let old = gens_disp.clone();
                                 ui.label("Generators");
-                                Self::edit_vec(
-                                    ui,
-                                    &mut gens,
-                                    // Some("Generators"),
-                                    1.0,
-                                    layout_left(),
-                                );
+                                Self::edit_vec(ui, &mut gens_disp, 1.0, layout_left());
 
-                                if gens != old_gens && !gens.contains(&0.0) {
-                                    let restored: Vec<f64> = gens
+                                if gens_disp != old && !gens_disp.iter().any(|&v| v == 0.0) {
+                                    let restored: Vec<f64> = gens_disp
                                         .into_iter()
                                         .map(|x| 1.0 / x.max(f64::MIN_POSITIVE))
                                         .collect();
-
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .accents
-                                        .1 = restored;
+                                    seq_mut.accents.1 = restored;
                                 }
                             });
+
+
                         }
                     } else {
                         ui.label("Click a block to edit");
@@ -1211,7 +1208,7 @@ fn slider_with_reset<'a, N>(
 where
     N: egui::emath::Numeric + Copy,
 {
-    let resp = ui
+    let mut resp = ui
         .add(egui::Slider::new(value, range).text(label).logarithmic(log))
         .on_hover_ui(|ui| {
             ui.label(egui::RichText::new("Right-click to reset").weak());
@@ -1221,6 +1218,7 @@ where
         });
     if resp.secondary_clicked() {
         *value = reset_to;
+        resp.mark_changed();
     }
     resp
 }
