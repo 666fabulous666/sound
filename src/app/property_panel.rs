@@ -4,7 +4,13 @@ use std::fmt::Display;
 use egui::{RichText, ScrollArea};
 
 use crate::{
-    app::{property_panel::hover_texts::VOICE_LAYERS_TEXT, GuiApp, ALL_WAVES, DRUM_WAVES},
+    app::{
+        property_panel::hover_texts::{
+            ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT,
+            DETUNE_WEIGHTING_TEXT, SYM_DETUNE_TEXT, UNISSON_DETUNE_TEXT, VOICE_LAYERS_TEXT,
+        },
+        GuiApp, ALL_WAVES, DRUM_WAVES,
+    },
     engine::notes::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
@@ -94,8 +100,7 @@ impl GuiApp {
                                 }
                             });
 
-                                                        {
-
+                            {
                                 ui.horizontal(|ui| {
                                     let seq_mut = &mut self.sequences[sel];
                                     let mut vol = seq_mut.volume;
@@ -110,7 +115,9 @@ impl GuiApp {
                                         false,
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.label(egui::RichText::new("Hold + / - to change").weak());
+                                        ui.label(
+                                            egui::RichText::new("Hold + / - to change").weak(),
+                                        );
                                     });
 
                                     let (kb_changed, vol_after_kb) = ui.ctx().input(|i| {
@@ -128,7 +135,10 @@ impl GuiApp {
                                         (changed, v)
                                     });
 
-                                    if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed {
+                                    if vol_resp.changed()
+                                        || vol_resp.secondary_clicked()
+                                        || kb_changed
+                                    {
                                         seq_mut.volume = vol_after_kb;
                                     }
                                 });
@@ -148,12 +158,16 @@ impl GuiApp {
                                     )
                                     .on_hover_ui(|ui| {
                                         ui.label("0.5 is centered");
-                                        ui.label(egui::RichText::new("Right-click to reset").weak());
+                                        ui.label(
+                                            egui::RichText::new("Right-click to reset").weak(),
+                                        );
                                     });
 
                                     if pan_resp.changed() || pan_resp.secondary_clicked() {
                                         seq_mut.spacial = pan.clamp(0.0, 1.0);
-                                        if let Some(ng) = self.notes.iter_mut().find(|ng| ng.token == seq.token) {
+                                        if let Some(ng) =
+                                            self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        {
                                             ng.spacial = seq_mut.spacial;
                                         }
                                     }
@@ -269,7 +283,7 @@ impl GuiApp {
                             }
                             ui.collapsing("Envelope", |ui| {
                                 let mut attack = self.sequences[sel].attack_decay.0;
-                                let mut decay  = self.sequences[sel].attack_decay.1;
+                                let mut decay = self.sequences[sel].attack_decay.1;
 
                                 let def = if DRUM_WAVES.contains(&seq.wave_type) {
                                     default_drum_attack_decay()
@@ -296,16 +310,19 @@ impl GuiApp {
                                     true,
                                 );
 
-                                let changed =
-                                    attack_resp.changed() || attack_resp.secondary_clicked() ||
-                                    decay_resp.changed()  || decay_resp.secondary_clicked();
+                                let changed = attack_resp.changed()
+                                    || attack_resp.secondary_clicked()
+                                    || decay_resp.changed()
+                                    || decay_resp.secondary_clicked();
 
                                 if changed {
                                     let seq_mut = &mut self.sequences[sel];
                                     seq_mut.attack_decay = (attack, decay);
                                     rescale_envelope(seq_mut);
 
-                                    if let Some(ng) = self.notes.iter_mut().find(|ng| ng.token == seq.token) {
+                                    if let Some(ng) =
+                                        self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                    {
                                         ng.attack_decay = seq_mut.attack_decay;
                                     }
                                 }
@@ -414,8 +431,16 @@ impl GuiApp {
                                     let mut sym = seq_chorus.sym;
                                     let mut asym = seq_chorus.asym;
 
-                                    let voices_resp = slider_with_reset(ui, &mut voices, 1..=10, "Voice layers", None, ChorusParams::default().voices, false)
-                                        .on_hover_text(VOICE_LAYERS_TEXT);
+                                    let voices_resp = slider_with_reset(
+                                        ui,
+                                        &mut voices,
+                                        1..=10,
+                                        "Voice layers",
+                                        None,
+                                        ChorusParams::default().voices,
+                                        false,
+                                    )
+                                    .on_hover_text(VOICE_LAYERS_TEXT);
 
                                     let delta_resp = slider_with_reset(
                                         ui,
@@ -426,12 +451,7 @@ impl GuiApp {
                                         ChorusParams::default().delta,
                                         true,
                                     )
-                                    .on_hover_text(concat!(
-                                        "Detune amount between voices around f₀.\n",
-                                        "\n",
-                                        "Use very small values for slow beating;\n",
-                                        "increase for a wider chorus.",
-                                    ));
+                                    .on_hover_text(DETUNE_TEXT);
 
                                     let delta_shift_resp = slider_with_reset(
                                         ui,
@@ -442,7 +462,7 @@ impl GuiApp {
                                         ChorusParams::default().delta_shift,
                                         false,
                                     )
-                                    .on_hover_text("Shift voices frequencies asymmetrically to avoid beatings.");
+                                    .on_hover_text(DETUNE_SHIFT_TEXT);
 
                                     let time_dep_resp = slider_with_reset(
                                         ui,
@@ -453,20 +473,10 @@ impl GuiApp {
                                         ChorusParams::default().time_dependency,
                                         false,
                                     )
-                                    .on_hover_text(concat!(
-                                        "Modulates Δf over time.\n",
-                                        " > 0 : Δf increases over time.\n",
-                                        " < 0 : Δf decreases over time.\n",
-                                        " = 0 : static detune."
-                                    ));
+                                    .on_hover_text(DETUNE_TIME_DEP_TEXT);
 
-                                    ui.label("Weighting (around f₀)").on_hover_text(concat!(
-                                        "Sets how much outer voices contribute relative to the center.\n",
-                                        " • |value| > 1 -> outer voices amplified\n",
-                                        " • |value| = 1 -> constant voice levels\n",
-                                        " • |value| < 1 -> outer voices attenuated\n",
-                                        " •  value < 0  -> outer voices inverted in phase"
-                                    ));
+                                    ui.label("Weighting (around f₀)")
+                                        .on_hover_text(DETUNE_WEIGHTING_TEXT);
 
                                     let sym_resp = slider_with_reset(
                                         ui,
@@ -477,7 +487,7 @@ impl GuiApp {
                                         ChorusParams::default().sym,
                                         false,
                                     )
-                                    .on_hover_text("Even (symmetric) weighting across ±Δf");
+                                    .on_hover_text(SYM_DETUNE_TEXT);
 
                                     let asym_resp = slider_with_reset(
                                         ui,
@@ -488,7 +498,7 @@ impl GuiApp {
                                         ChorusParams::default().asym,
                                         false,
                                     )
-                                    .on_hover_text("Odd (asymmetric) weighting across ±Δf.");
+                                    .on_hover_text(ASYM_DETUNE_TEXT);
 
                                     let changed = voices_resp.changed()
                                         || voices_resp.secondary_clicked()
@@ -521,15 +531,11 @@ impl GuiApp {
                                         }
                                     }
                                 });
-                                header.header_response.on_hover_text(concat!(
-                                    "Adds multiple voices detuned\n",
-                                    "around the main frequency f₀\n",
-                                    "to create width and motion.",
-                                ));
+                                header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);
 
                                 let header = ui.collapsing("Power factor", |ui| {
                                     let token = self.sequences[sel].token;
-                                    let seq_pow = &mut self.sequences[sel].pow_fact; 
+                                    let seq_pow = &mut self.sequences[sel].pow_fact;
                                     let mut ng_pow_opt = self
                                         .notes
                                         .iter_mut()
@@ -539,11 +545,12 @@ impl GuiApp {
                                     let mut initial = seq_pow.0;
 
                                     let mut evol_disp = Freq(
-                                        seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt()
+                                        seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt(),
                                     );
 
                                     let def = default_pow_fact();
-                                    let def_evol_disp = Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
+                                    let def_evol_disp =
+                                        Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
 
                                     let initial_resp = slider_with_reset(
                                         ui,
@@ -566,8 +573,10 @@ impl GuiApp {
                                     )
                                     .on_hover_text("Increase/Decrease over time.");
 
-                                    let initial_changed = initial_resp.changed() || initial_resp.secondary_clicked();
-                                    let evol_changed    = evol_resp.changed()    || evol_resp.secondary_clicked();
+                                    let initial_changed =
+                                        initial_resp.changed() || initial_resp.secondary_clicked();
+                                    let evol_changed =
+                                        evol_resp.changed() || evol_resp.secondary_clicked();
 
                                     if initial_changed {
                                         seq_pow.0 = initial;
@@ -576,7 +585,11 @@ impl GuiApp {
                                         }
                                     }
                                     if evol_changed {
-                                        seq_pow.1 = Freq(evol_disp.as_hz().signum() * evol_disp.as_hz() * evol_disp.as_hz());
+                                        seq_pow.1 = Freq(
+                                            evol_disp.as_hz().signum()
+                                                * evol_disp.as_hz()
+                                                * evol_disp.as_hz(),
+                                        );
                                         if let Some(p) = ng_pow_opt.as_deref_mut() {
                                             p.1 = seq_pow.1;
                                         }
@@ -590,7 +603,6 @@ impl GuiApp {
                                     " • |value| = 1 -> unchanged wave\n",
                                     " • |value| > 1 -> metallic",
                                 ));
-
                             };
                             ui.collapsing("Rythm", |ui| {
                                 {
@@ -1105,8 +1117,6 @@ impl GuiApp {
                                     seq_mut.accents.1 = restored;
                                 }
                             });
-
-
                         }
                     } else {
                         ui.label("Click a block to edit");
