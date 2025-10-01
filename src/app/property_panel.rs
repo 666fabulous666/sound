@@ -7,7 +7,8 @@ use crate::{
     app::{
         property_panel::hover_texts::{
             ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT,
-            DETUNE_WEIGHTING_TEXT, SYM_DETUNE_TEXT, UNISSON_DETUNE_TEXT, VOICE_LAYERS_TEXT,
+            DETUNE_WEIGHTING_TEXT, POW_FACT_EVOL_TEXT, POW_FACT_TEXT, RANDOM_INCLUSION_TEXT,
+            SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, UNISSON_DETUNE_TEXT, VOICE_LAYERS_TEXT,
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
@@ -571,7 +572,7 @@ impl GuiApp {
                                         def_evol_disp,
                                         false,
                                     )
-                                    .on_hover_text("Increase/Decrease over time.");
+                                    .on_hover_text(POW_FACT_EVOL_TEXT);
 
                                     let initial_changed =
                                         initial_resp.changed() || initial_resp.secondary_clicked();
@@ -595,25 +596,13 @@ impl GuiApp {
                                         }
                                     }
                                 });
-                                header.header_response.on_hover_text(concat!(
-                                    "Produces distortion or metallic timbre\n",
-                                    "\n",
-                                    " • |value| = 0 -> square wave\n",
-                                    " • |value| < 1 -> distortion\n",
-                                    " • |value| = 1 -> unchanged wave\n",
-                                    " • |value| > 1 -> metallic",
-                                ));
+                                header.header_response.on_hover_text(POW_FACT_TEXT);
                             };
                             ui.collapsing("Rythm", |ui| {
                                 {
                                     ui.horizontal(|ui| {
                                         let mut tmp_quantum = seq.time_quantum.clone();
-                                        ui.label("Time quantum:").on_hover_text(concat!(
-                                            "Duration of the base time unit for beats.\n",
-                                            "\n",
-                                            "Rhythm inclusions and exclusions are tested\n",
-                                            "for divisibility against this quantum."
-                                        ));
+                                        ui.label("Time quantum:").on_hover_text(TIME_QUANTUM_TEXT);
                                         if ui
                                             .add(
                                                 egui::DragValue::new(&mut tmp_quantum.0)
@@ -665,15 +654,7 @@ impl GuiApp {
                                         Rythm::Rd(ref mut rd_rythm) => {
                                             ui.vertical(|ui| {
                                                 ui.label("Random inclusion generators:")
-                                                    .on_hover_text(concat!(
-                                                    "Rules that randomly place beats.\n",
-                                                    "\n",
-                                                    "A set of n inclusion generators is picked\n",
-                                                    "randomly from [1, N].\n",
-                                                    "\n",
-                                                    "Any beat whose time unit is a multiple of\n",
-                                                    "one of these values will be included."
-                                                ));
+                                                    .on_hover_text(RANDOM_INCLUSION_TEXT);
                                                 ui.horizontal(|ui| {
                                                     ui.label("n:");
                                                     if ui

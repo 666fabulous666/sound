@@ -32,3 +32,27 @@ pub const UNISSON_DETUNE_TEXT: &str = concat!(
     "around the main frequency f₀\n",
     "to create width and motion.",
 );
+pub const POW_FACT_EVOL_TEXT: &str = "Increase/Decrease over time.";
+pub const POW_FACT_TEXT: &str = concat!(
+    "Produces distortion or metallic timbre\n",
+    "\n",
+    " • |value| = 0 -> square wave\n",
+    " • |value| < 1 -> distortion\n",
+    " • |value| = 1 -> unchanged wave\n",
+    " • |value| > 1 -> metallic",
+);
+pub const TIME_QUANTUM_TEXT: &str = concat!(
+    "Duration of the base time unit for beats.\n",
+    "\n",
+    "Rhythm inclusions and exclusions are tested\n",
+    "for divisibility against this quantum."
+);
+pub const RANDOM_INCLUSION_TEXT: &str = concat!(
+    "Rules that randomly place beats.\n",
+    "\n",
+    "A set of n inclusion generators is picked\n",
+    "randomly from [1, N].\n",
+    "\n",
+    "Any beat whose time unit is a multiple of\n",
+    "one of these values will be included."
+);
