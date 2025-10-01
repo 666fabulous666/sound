@@ -410,6 +410,16 @@ impl GuiApp {
         let len = self.sequences.len();
         (i + 1..len).for_each(|k| self.regen_seq_at(k));
     }
+    fn edit_seq_esthetics_at(&mut self, sequence: Sequence, i: usize) {
+        self.notes
+            .iter_mut()
+            .filter(|n| n.token == sequence.token)
+            .for_each(|n| {
+                n.bend = sequence.bend.clone();
+                n.vibrato = sequence.vibrato.clone();
+            });
+        self.sequences[i] = sequence;
+    }
     fn del_seq(&mut self, a: usize) {
         let tk = self.sequences[a].token;
         self.drain_notes_from_seq(tk);

@@ -328,45 +328,71 @@ impl GuiApp {
                                 }
                             });
                             ui.collapsing("Bend", |ui| {
-                                let mut bend = seq.bend;
-                                let mut tmp_mag = bend.0 * 1e4;
-                                let mag = ui
-                                    .add(
-                                        egui::Slider::new(&mut tmp_mag, -200.0..=200.0)
-                                            .text("Magnitude"),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
+                                // We’ll edit the persistent sequence params…
+                                let seq_bend = &mut self.sequences[sel].bend; // (f64, f64)
+                                let token = seq.token;
 
-                                let speed = ui
-                                    .add(
-                                        egui::Slider::new(&mut bend.1, 1.0..=1000.0)
-                                            .text("Speed")
-                                            .logarithmic(true),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
+                                // …and also mirror changes into the live notes group (if present).
+                                let mut ng_bend_opt = self
+                                    .notes
+                                    .iter_mut()
+                                    .find(|ng| ng.token == token)
+                                    .map(|ng| &mut ng.bend);
 
-                                if mag.changed() || speed.changed() {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.bend.0 = tmp_mag * 1e-4;
-                                    e.bend.1 = bend.1;
+                                // Display magnitude in a friendlier scale (×1e4), keep native internally
+                                let mut mag_disp = seq_bend.0 * 1e4;
+                                let mut speed = seq_bend.1;
+
+                                // Sliders
+                                let mag_resp = slider_with_reset(
+                                    ui,
+                                    &mut mag_disp,
+                                    -200.0..=200.0,
+                                    "Magnitude",
+                                    default_bend().0 * 1e4,
+                                );
+
+                                // log slider needs a tiny custom call (so we can set .logarithmic(true))
+                                let speed_resp = {
+                                    let resp = ui
+                                        .add(
+                                            egui::Slider::new(&mut speed, 1.0..=1000.0)
+                                                .text("Speed")
+                                                .logarithmic(true),
+                                        )
+                                        .on_hover_ui(|ui| {
+                                            ui.label(
+                                                egui::RichText::new("Right-click to reset").weak(),
+                                            );
+                                        });
+                                    if resp.secondary_clicked() {
+                                        speed = default_bend().1;
+                                    }
+                                    resp
                                 };
-                                if mag.secondary_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .bend
-                                        .0 = default_bend().0;
-                                };
-                                if speed.secondary_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .bend
-                                        .1 = default_bend().1;
-                                };
+
+                                // Apply changes (if any) to both Sequence and live NotesGroup
+                                let mut changed = false;
+                                if mag_resp.changed() {
+                                    seq_bend.0 = mag_disp * 1e-4;
+                                    if let Some(b) = ng_bend_opt.as_deref_mut() {
+                                        b.0 = seq_bend.0;
+                                    }
+                                    changed = true;
+                                }
+                                if speed_resp.changed() {
+                                    seq_bend.1 = speed;
+                                    if let Some(b) = ng_bend_opt.as_deref_mut() {
+                                        b.1 = seq_bend.1;
+                                    }
+                                    changed = true;
+                                }
+
+                                // Optional: keyboard shortcuts (hold to adjust)
+                                if changed {
+                                    // no regeneration here by design
+                                    // (your audio/render loop will pick up the mutated NotesGroup immediately)
+                                }
                             });
                             ui.collapsing("Vibrato", |ui| {
                                 let mut vibrato = seq.vibrato;
@@ -1184,4 +1210,24 @@ fn rescale_envelope(e: &mut Sequence) {
     if rescale_factor.is_normal() {
         e.normalization = rescale_factor
     }
+}
+fn slider_with_reset<'a, N>(
+    ui: &mut egui::Ui,
+    value: &'a mut N,
+    range: std::ops::RangeInclusive<N>,
+    label: &str,
+    reset_to: N,
+) -> egui::Response
+where
+    N: egui::emath::Numeric + Copy,
+{
+    let resp = ui
+        .add(egui::Slider::new(value, range).text(label))
+        .on_hover_ui(|ui| {
+            ui.label(egui::RichText::new("Right-click to reset").weak());
+        });
+    if resp.secondary_clicked() {
+        *value = reset_to;
+    }
+    resp
 }
