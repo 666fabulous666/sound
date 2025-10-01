@@ -6,9 +6,12 @@ use egui::{RichText, ScrollArea};
 use crate::{
     app::{
         property_panel::hover_texts::{
-            ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT,
-            DETUNE_WEIGHTING_TEXT, POW_FACT_EVOL_TEXT, POW_FACT_TEXT, RANDOM_INCLUSION_TEXT,
-            SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, UNISSON_DETUNE_TEXT, VOICE_LAYERS_TEXT,
+            ASYM_DETUNE_TEXT, DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT,
+            DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
+            GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_EVOL_TEXT, POW_FACT_TEXT,
+            RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT, REPEAT_TEXT, SHUFFLE_TEXT,
+            SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT, UNISSON_DETUNE_TEXT,
+            VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT, VOICE_LAYERS_TEXT,
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
@@ -708,15 +711,7 @@ impl GuiApp {
                                         Rythm::Det(det_rythm) => {
                                             ui.vertical(|ui| {
                                                 ui.label("Deterministic inclusion generators:")
-                                                    .on_hover_text(concat!(
-                                                    "Rules that deterministically place beats.\n",
-                                                    "\n",
-                                                    "Choose inclusion generators: any beat whose\n",
-                                                    "time unit is a multiple of one of these\n",
-                                                    "values will be included.\n",
-                                                    "\n",
-                                                    "Generators ≤ 1 are ignored; use values > 1.",
-                                                ));
+                                                    .on_hover_text(DETERMINISTIC_INCLUSION_TEXT);
                                                 let mut gens = det_rythm.generators;
                                                 let old_val = gens.clone();
                                                 Self::edit_vec(ui, &mut gens, 2, layout_left());
@@ -763,20 +758,7 @@ impl GuiApp {
                                         Rythm::Rd(ref mut rd_rythm) => {
                                             ui.vertical(|ui| {
                                                 ui.label("Random exclusion generators:")
-                                                    .on_hover_text(concat!(
-                                                    "Rules that randomly skip beats.\n",
-                                                    "\n",
-                                                    "A set of n exclusion generators is picked\n",
-                                                    "randomly from [2, N+1].\n",
-                                                    "\n",
-                                                    "Any beat whose time unit shifted forward\n",
-                                                    "by 1 is a multiple of one of these\n",
-                                                    "values will be excluded, ensuring the\n",
-                                                    "first beat is never excluded.\n",
-                                                    "\n",
-                                                    "(Generator 1 is not allowed,\n",
-                                                    "as it would exclude every beat.)"
-                                                ));
+                                                    .on_hover_text(RANDOM_EXCLUSION_TEXT);
                                                 ui.horizontal(|ui| {
                                                     ui.label("n:");
                                                     if ui
@@ -830,20 +812,7 @@ impl GuiApp {
                                         Rythm::Det(det_rythm) => {
                                             ui.vertical(|ui| {
                                                 ui.label("Deterministic exclusion generators:")
-                                                    .on_hover_text(concat!(
-                                                    "Rules that deterministically skip beats.\n",
-                                                    "\n",
-                                                    "Choose exclusion generators: any beat whose\n",
-                                                    "time unit shifted forward by 1 is\n",
-                                                    "a multiple of one of these\n",
-                                                    "values will be excluded.\n",
-                                                    "\n",
-                                                    "Beats are tested with their time unit\n",
-                                                    "shifted forward by 1, ensuring\n",
-                                                    "the first beat is never excluded.\n",
-                                                    "\n",
-                                                    "Generators ≤ 1 are ignored; use values > 1."
-                                                ));
+                                                    .on_hover_text(DETERMINISTIC_EXCLUSION_TEXT);
                                                 let mut gens = det_rythm.generators;
                                                 let old_val = gens.clone();
                                                 Self::edit_vec(ui, &mut gens, 2, layout_left());
@@ -868,17 +837,8 @@ impl GuiApp {
                                     ui.separator();
                                     ui.horizontal(|ui| {
                                         let mut tmp_beat_offset = seq.beat_offset.clone();
-                                        ui.label("Groove offset:").on_hover_text(concat!(
-                                            "Shifts the rhythmic grid used to place notes.\n",
-                                            "\n",
-                                            "It offsets the index of the\n",
-                                            "time quanta tested for divisibility.\n",
-                                            "\n",
-                                            "This changes where note onsets are more likely\n",
-                                            "to occur, creating an off-beat feel.\n",
-                                            "\n",
-                                            "Expressed in the unit of the time quantum.",
-                                        ));
+                                        ui.label("Groove offset:")
+                                            .on_hover_text(GROOVE_OFFSET_TEXT);
                                         if ui
                                             .add(
                                                 egui::DragValue::new(&mut tmp_beat_offset)
@@ -893,13 +853,7 @@ impl GuiApp {
                                     });
                                     ui.horizontal(|ui| {
                                         let mut loop_len = seq.loop_len.clone();
-                                        ui.label("Loop length:").on_hover_text(concat!(
-                                            "Length of the loop for this sequence.\n",
-                                            "\n",
-                                            "When the end is reached, playback jumps\n",
-                                            "back to zero immediately, independent of\n",
-                                            "the loop lengths of other sequences."
-                                        ));
+                                        ui.label("Loop length:").on_hover_text(LOOP_LENGTH_TEXT);
                                         let slider = ui.add(
                                             egui::DragValue::new(&mut loop_len).range(0.0..=512.0),
                                         );
@@ -912,9 +866,7 @@ impl GuiApp {
                                                 tmp_edited_seq.t_max.min(loop_len);
                                         };
                                         let mut repeat = seq.repeat.clone();
-                                        ui.label("Repeat:").on_hover_text(concat!(
-                                            "How many times the sequence will be repeated.\n",
-                                        ));
+                                        ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
                                         let slider =
                                             ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
                                         if slider.changed() {
@@ -929,16 +881,7 @@ impl GuiApp {
                                 {
                                     ui.horizontal(|ui| {
                                         let mut tmp_tolerance = seq.tolerance.clone();
-                                        ui.label("Tolerance:").on_hover_text(concat!(
-                                            "Tolerance defines how much to look\n",
-                                            "before the note starts and after it ends.\n",
-                                            "\n",
-                                            "Use this to follow notes across their edges\n",
-                                            "while generating new notes.\n",
-                                            "Negative values are allowed.\n",
-                                            "\n",
-                                            "(See generating logics for more details)",
-                                        ));
+                                        ui.label("Tolerance:").on_hover_text(TOLERENCE_TEXT);
                                         ui.label("<-");
                                         if ui
                                             .add(
@@ -981,25 +924,15 @@ impl GuiApp {
                                     {
                                         // octave
                                         ui.horizontal(|ui| {
-                                            ui.label("Octave:").on_hover_text(
-                                            "Base octave where notes of this sequence are placed.",
-                                        );
+                                            ui.label("Octave:").on_hover_text(OCTAVE_TEXT);
                                             if ui.add(egui::Slider::new(octave, -4..=4)).changed() {
                                                 changed = true;
                                             };
                                         });
                                         // nb_rd_steps
                                         ui.horizontal(|ui| {
-                                            ui.label("Variation steps:").on_hover_text(concat!(
-                                                "Maximum number of random variations to apply.\n",
-                                                "\n",
-                                                "The note is chosen from visible ones\n",
-                                                "(based on tolerance),\n",
-                                                "then shifted step by step using\n",
-                                                "the allowed intervals.\n",
-                                                "\n",
-                                                "Higher values allow more chained shifts."
-                                            ));
+                                            ui.label("Variation steps:")
+                                                .on_hover_text(VARIATION_STEPS_TEXT);
                                             if ui
                                                 .add(egui::Slider::new(nb_rd_steps, 0..=16))
                                                 .changed()
@@ -1007,14 +940,8 @@ impl GuiApp {
                                                 changed = true;
                                             };
                                         });
-                                        // ----- RDTempered tones (–11 … 11) ---------------------------------
-                                        ui.label("Variation intervals:").on_hover_text(concat!(
-                                            "The set of semitone intervals used for variation.\n",
-                                            "\n",
-                                            "Each step shifts the note by one of these values.\n",
-                                            "Multiple steps can combine, wrapping around octaves\n",
-                                            "(12 semitones)."
-                                        ));
+                                        ui.label("Variation intervals:")
+                                            .on_hover_text(VARIATION_INTERVALS_TEXT);
                                         ui.horizontal_wrapped(|ui| {
                                             for tone in -11..=11 {
                                                 let mut selected = tones.contains(&tone);
@@ -1042,15 +969,7 @@ impl GuiApp {
                                         ui.separator();
                                         changed |= ui
                                             .checkbox(&mut shuffle, "Shuffle")
-                                            .on_hover_text(concat!(
-                                                "Generate notes from the sequence in a\n",
-                                                "random order, affecting which notes follow\n",
-                                                "one another.\n",
-                                                "\n",
-                                                "A note may only follow a previously\n",
-                                                "generated other one (see tolerance for\n",
-                                                "more settings about this point.",
-                                            ))
+                                            .on_hover_text(SHUFFLE_TEXT)
                                             .changed()
                                     }
                                     if changed {

@@ -3,7 +3,6 @@ pub const VOICE_LAYERS_TEXT: &str = concat!(
     "above and below f₀.\n",
     "Voices total = 1 + 2 × (layers − 1).",
 );
-
 pub const DETUNE_TEXT: &str = concat!(
     "Detune amount between voices around f₀.\n",
     "\n",
@@ -11,7 +10,6 @@ pub const DETUNE_TEXT: &str = concat!(
     "increase for a wider chorus.",
 );
 pub const DETUNE_SHIFT_TEXT: &str = "Shift voices frequencies asymmetrically to avoid beatings.";
-
 pub const DETUNE_TIME_DEP_TEXT: &str = concat!(
     "Modulates Δf over time.\n",
     " > 0 : Δf increases over time.\n",
@@ -55,4 +53,97 @@ pub const RANDOM_INCLUSION_TEXT: &str = concat!(
     "\n",
     "Any beat whose time unit is a multiple of\n",
     "one of these values will be included."
+);
+pub const DETERMINISTIC_INCLUSION_TEXT: &str = concat!(
+    "Rules that deterministically place beats.\n",
+    "\n",
+    "Choose inclusion generators: any beat whose\n",
+    "time unit is a multiple of one of these\n",
+    "values will be included.\n",
+    "\n",
+    "Generators ≤ 1 are ignored; use values > 1.",
+);
+pub const RANDOM_EXCLUSION_TEXT: &str = concat!(
+    "Rules that randomly skip beats.\n",
+    "\n",
+    "A set of n exclusion generators is picked\n",
+    "randomly from [2, N+1].\n",
+    "\n",
+    "Any beat whose time unit shifted forward\n",
+    "by 1 is a multiple of one of these\n",
+    "values will be excluded, ensuring the\n",
+    "first beat is never excluded.\n",
+    "\n",
+    "(Generator 1 is not allowed,\n",
+    "as it would exclude every beat.)"
+);
+pub const DETERMINISTIC_EXCLUSION_TEXT: &str = concat!(
+    "Rules that deterministically skip beats.\n",
+    "\n",
+    "Choose exclusion generators: any beat whose\n",
+    "time unit shifted forward by 1 is\n",
+    "a multiple of one of these\n",
+    "values will be excluded.\n",
+    "\n",
+    "Beats are tested with their time unit\n",
+    "shifted forward by 1, ensuring\n",
+    "the first beat is never excluded.\n",
+    "\n",
+    "Generators ≤ 1 are ignored; use values > 1."
+);
+pub const GROOVE_OFFSET_TEXT: &str = concat!(
+    "Shifts the rhythmic grid used to place notes.\n",
+    "\n",
+    "It offsets the index of the\n",
+    "time quanta tested for divisibility.\n",
+    "\n",
+    "This changes where note onsets are more likely\n",
+    "to occur, creating an off-beat feel.\n",
+    "\n",
+    "Expressed in the unit of the time quantum.",
+);
+pub const LOOP_LENGTH_TEXT: &str = concat!(
+    "Length of the loop for this sequence.\n",
+    "\n",
+    "When the end is reached, playback jumps\n",
+    "back to zero immediately, independent of\n",
+    "the loop lengths of other sequences."
+);
+pub const REPEAT_TEXT: &str = "How many times the sequence will be repeated.";
+pub const TOLERENCE_TEXT: &str = concat!(
+    "Tolerance defines how much to look\n",
+    "before the note starts and after it ends.\n",
+    "\n",
+    "Use this to follow notes across their edges\n",
+    "while generating new notes.\n",
+    "Negative values are allowed.\n",
+    "\n",
+    "(See generating logics for more details)",
+);
+pub const OCTAVE_TEXT: &str = "Base octave where notes of this sequence are placed.";
+pub const VARIATION_STEPS_TEXT: &str = concat!(
+    "Maximum number of random variations to apply.\n",
+    "\n",
+    "The note is chosen from visible ones\n",
+    "(based on tolerance),\n",
+    "then shifted step by step using\n",
+    "the allowed intervals.\n",
+    "\n",
+    "Higher values allow more chained shifts."
+);
+pub const VARIATION_INTERVALS_TEXT: &str = concat!(
+    "The set of semitone intervals used for variation.\n",
+    "\n",
+    "Each step shifts the note by one of these values.\n",
+    "Multiple steps can combine, wrapping around octaves\n",
+    "(12 semitones)."
+);
+pub const SHUFFLE_TEXT: &str = concat!(
+    "Generate notes from the sequence in a\n",
+    "random order, affecting which notes follow\n",
+    "one another.\n",
+    "\n",
+    "A note may only follow a previously\n",
+    "generated other one (see tolerance for\n",
+    "more settings about this point.",
 );
