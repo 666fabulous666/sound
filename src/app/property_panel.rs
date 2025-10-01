@@ -93,23 +93,54 @@ impl GuiApp {
 
                             {
                                 ui.horizontal(|ui| {
-                                    let mut tmp_volume = seq.volume.clone();
+                                    let mut tmp_volume = seq.volume;
                                     ui.label("Volume:");
                                     let vol = ui
                                         .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0))
                                         .on_hover_ui(|ui| {
                                             ui.label(RichText::new("Default: right click").weak());
+                                            ui.label(RichText::new("Shortcuts: +/-").weak());
                                         });
+
+                                    // Slider edited manually
                                     if vol.changed() {
                                         edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .get_or_insert(self.sequences[sel].clone())
                                             .volume = tmp_volume;
-                                    };
+                                    }
+
+                                    // Reset to default on right click
                                     if vol.secondary_clicked() {
                                         edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
+                                            .get_or_insert(self.sequences[sel].clone())
                                             .volume = default_volume();
-                                    };
+                                    }
+
+                                    // Keyboard control: +/- keys while held
+                                    ui.ctx().input(|i| {
+                                        let mut changed = false;
+                                        let base_step = 0.05;
+                                        let step = if i.modifiers.shift {
+                                            base_step * 10.0
+                                        } else {
+                                            base_step
+                                        };
+
+                                        if i.key_down(egui::Key::Plus) {
+                                            tmp_volume = (tmp_volume + step).min(32.0);
+                                            changed = true;
+                                        }
+                                        if i.key_down(egui::Key::Minus) {
+                                            tmp_volume = (tmp_volume - step).max(0.0);
+                                            changed = true;
+                                        }
+
+                                        if changed {
+                                            edited_seq
+                                                .get_or_insert(self.sequences[sel].clone())
+                                                .volume = tmp_volume;
+                                        }
+                                    });
                                 });
                                 ui.horizontal(|ui| {
                                     let mut tmp_spacial = seq.spacial.clone();
@@ -159,29 +190,97 @@ impl GuiApp {
                                     }
                                 }
                             });
-                            ui.collapsing("Sequence position", |ui| {
-                                ui.label("Sequence position");
+                            {
+                                // compute step once
+                                let step =
+                                    Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
+
+                                // ---- UI (runs only when open) ----
                                 let mut t_min = seq.t_min.as_secs();
                                 let mut t_max = seq.t_max.as_secs();
-                                ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
-                                ui.add(
-                                    egui::Slider::new(&mut t_max, t_min..=seq.loop_len.as_secs())
+
+                                egui::CollapsingHeader::new("Sequence position").show(ui, |ui| {
+                                    ui.add(
+                                        egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"),
+                                    );
+                                    ui.add(
+                                        egui::Slider::new(
+                                            &mut t_max,
+                                            t_min..=seq.loop_len.as_secs(),
+                                        )
                                         .text("t_max"),
-                                );
-                                t_max = t_max.clamp(t_min, seq.loop_len.as_secs());
-                                let step_f64 =
-                                    Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
-                                if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .t_min = step_f64 * (Time(t_min) / step_f64).round();
+                                    );
+
+                                    t_max = t_max.clamp(t_min, seq.loop_len.as_secs());
+
+                                    if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
+                                        edited_seq
+                                            .get_or_insert(self.sequences[sel].clone())
+                                            .t_min = step * (Time(t_min) / step).round();
+                                    }
+                                    if (Time(t_max) - seq.t_max).as_secs().abs() > f64::EPSILON {
+                                        edited_seq
+                                            .get_or_insert(self.sequences[sel].clone())
+                                            .t_max = step * (Time(t_max) / step).round();
+                                    }
+                                });
+
+                                // Only react to arrows if no text field wants the keyboard:
+                                if !ui.ctx().wants_keyboard_input() {
+                                    // Read keys & modifiers in one go
+                                    let (left, right, mods) = ui.ctx().input(|i| {
+                                        (
+                                            i.key_pressed(egui::Key::ArrowLeft),
+                                            i.key_pressed(egui::Key::ArrowRight),
+                                            i.modifiers,
+                                        )
+                                    });
+
+                                    if left || right {
+                                        let step = Time(
+                                            seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64,
+                                        );
+                                        let dir = if left { -1.0 } else { 1.0 };
+
+                                        // Logical "command": Ctrl on Windows/Linux, ⌘ on macOS.
+                                        let cmd = mods.command; // <- egui maps this for you
+                                        let alt = mods.alt;
+
+                                        // Start from the current values
+                                        let mut new_min = seq.t_min.as_secs();
+                                        let mut new_max = seq.t_max.as_secs();
+                                        let s = step.as_secs();
+
+                                        match (cmd, alt) {
+                                            // Only t_min (Ctrl / Command)
+                                            (true, false) => {
+                                                new_min = (new_min + dir * s).clamp(0.0, new_max);
+                                            }
+                                            // Only t_max (Alt)
+                                            (false, true) => {
+                                                new_max = (new_max + dir * s)
+                                                    .clamp(new_min, seq.loop_len.as_secs());
+                                            }
+                                            // Both or none → move window together
+                                            _ => {
+                                                // Shift both; keep span, clamp to [0, loop_len]
+                                                let span = new_max - new_min;
+                                                new_min = (new_min + dir * s).clamp(
+                                                    0.0,
+                                                    (seq.loop_len.as_secs() - span).max(0.0),
+                                                );
+                                                new_max =
+                                                    (new_min + span).min(seq.loop_len.as_secs());
+                                            }
+                                        }
+
+                                        let e =
+                                            edited_seq.get_or_insert(self.sequences[sel].clone());
+                                        e.t_min = Time(new_min);
+                                        e.t_max = Time(new_max);
+                                    }
                                 }
-                                if (Time(t_max) - seq.t_max).as_secs().abs() > f64::EPSILON {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .t_max = step_f64 * (Time(t_max) / step_f64).round();
-                                }
-                            });
+                            }
                             ui.collapsing("Envelope", |ui| {
                                 let mut attack_decay = seq.attack_decay;
                                 let attack = ui
