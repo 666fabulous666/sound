@@ -73,69 +73,6 @@ impl GuiApp {
                         y1,
                     ),
                 );
-                // let x0 = Self::t_to_x(
-                //     track_rect,
-                //     (seq.t_min - current_time).rem_euclid(seq.loop_len) + playhead,
-                //     track_display_length,
-                // );
-                // let x1 = Self::t_to_x(
-                //     track_rect,
-                //     (seq.t_max - current_time).rem_euclid(seq.loop_len) + playhead,
-                //     track_display_length,
-                // );
-
-                // let block_rect = egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
-                // let block_rect_l = egui::Rect::from_min_max(
-                //     egui::pos2(Self::t_to_x(track_rect, playhead, track_display_length), y0),
-                //     egui::pos2(x1, y1),
-                // );
-                // let block_rect_r = egui::Rect::from_min_max(
-                //     egui::pos2(x0, y0),
-                //     egui::pos2(
-                //         Self::t_to_x(track_rect, seq.loop_len + playhead, track_display_length),
-                //         y1,
-                //     ),
-                // );
-                // let mut col = Self::hash_color(&seq.wave_type);
-                // if self.selected == Some(idx) {
-                //     col = Self::brighten(col);
-                //     for k in -16..16 {
-                //         let tmp = (30 + k) as f32;
-                //         painter.rect_filled(
-                //             track_rect.expand2(egui::Vec2 {
-                //                 x: 0.0,
-                //                 y: k as f32,
-                //             }),
-                //             tmp.sqrt(),
-                //             col.gamma_multiply(1.0 / tmp),
-                //         );
-                //     }
-                // }
-
-                // if x0 < x1 {
-                //     painter.rect_filled(block_rect, 4.0, col);
-                //     painter.rect_stroke(
-                //         block_rect,
-                //         4.0,
-                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
-                //         egui::StrokeKind::Middle,
-                //     );
-                // } else {
-                //     painter.rect_filled(block_rect_l, 4.0, col);
-                //     painter.rect_stroke(
-                //         block_rect_l,
-                //         4.0,
-                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
-                //         egui::StrokeKind::Middle,
-                //     );
-                //     painter.rect_filled(block_rect_r, 4.0, col);
-                //     painter.rect_stroke(
-                //         block_rect_r,
-                //         4.0,
-                //         egui::Stroke::new(1.0, egui::Color32::BLACK),
-                //         egui::StrokeKind::Middle,
-                //     );
-                // }
                 // --- WINDOW REPEATS: draw [t_min, t_max) modulo loop_len across the visible span ---
 
                 let loop_len = seq.loop_len;

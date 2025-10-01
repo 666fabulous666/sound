@@ -35,16 +35,46 @@ impl GuiApp {
 
                             ui.heading(format!("Track {}", sel + 1));
                             ui.horizontal(|ui| {
-                                if ui.button("✖").clicked() {
+                                if ui
+                                    .button("✖")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Shortcut: Backspace").weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(egui::Key::Backspace))
+                                {
                                     action = Action::Delete;
                                 }
-                                if ui.button("Clone").clicked() {
+                                if ui
+                                    .button("Clone")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Shortcut: C").weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(egui::Key::C))
+                                {
                                     action = Action::Clone;
                                 }
-                                if ui.button("Up").clicked() && sel > 0 {
+                                if (ui
+                                    .button("Up")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Shortcut: U").weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(egui::Key::U)))
+                                    && sel > 0
+                                {
                                     action = Action::Up;
                                 }
-                                if ui.button("Down").clicked() && sel + 1 < len {
+                                if (ui
+                                    .button("Down")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new("Shortcut: D").weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(egui::Key::D)))
+                                    && sel + 1 < len
+                                {
                                     action = Action::Down;
                                 }
                                 if ui

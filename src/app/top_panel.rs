@@ -1,9 +1,9 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
 use cpal::traits::DeviceTrait;
-use egui::Layout;
 #[cfg(target_arch = "wasm32")]
 use egui::Slider;
+use egui::{Layout, RichText};
 
 #[cfg(target_arch = "wasm32")]
 use crate::MAX_FPS;
@@ -64,6 +64,9 @@ impl GuiApp {
                                 } else {
                                     "⏸"
                                 }))
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new("Shortcut: Space bar").weak());
+                                })
                                 .clicked()
                                 || ui.input(|i| i.key_pressed(egui::Key::Space))
                             {
@@ -84,7 +87,12 @@ impl GuiApp {
                         }
                         #[cfg(not(target_arch = "wasm32"))]
                         {
-                            *exit = ui.button("Exit").clicked();
+                            *exit = ui
+                                .button("Exit")
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new("Shortcut: Escape").weak());
+                                })
+                                .clicked();
                         }
                     });
                     if !self.show_start {
