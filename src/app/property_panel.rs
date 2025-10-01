@@ -1,8 +1,10 @@
+pub mod hover_texts;
+use std::fmt::Display;
+
 use egui::{RichText, ScrollArea};
-// use egui_double_slider::DoubleSlider;
 
 use crate::{
-    app::{GuiApp, ALL_WAVES, DRUM_WAVES},
+    app::{property_panel::hover_texts::VOICE_LAYERS_TEXT, GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::notes::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
@@ -185,11 +187,9 @@ impl GuiApp {
                                 }
                             });
                             {
-                                // compute step once
                                 let step =
                                     Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
 
-                                // ---- UI (runs only when open) ----
                                 let mut t_min = seq.t_min.as_secs();
                                 let mut t_max = seq.t_max.as_secs();
 
@@ -219,9 +219,7 @@ impl GuiApp {
                                     }
                                 });
 
-                                // Only react to arrows if no text field wants the keyboard:
                                 if !ui.ctx().wants_keyboard_input() {
-                                    // Read keys & modifiers in one go
                                     let (left, right, mods) = ui.ctx().input(|i| {
                                         (
                                             i.key_pressed(egui::Key::ArrowLeft),
@@ -236,28 +234,22 @@ impl GuiApp {
                                         );
                                         let dir = if left { -1.0 } else { 1.0 };
 
-                                        // Logical "command": Ctrl on Windows/Linux, ⌘ on macOS.
-                                        let cmd = mods.command; // <- egui maps this for you
+                                        let cmd = mods.command;
                                         let alt = mods.alt;
 
-                                        // Start from the current values
                                         let mut new_min = seq.t_min.as_secs();
                                         let mut new_max = seq.t_max.as_secs();
                                         let s = step.as_secs();
 
                                         match (cmd, alt) {
-                                            // Only t_min (Ctrl / Command)
                                             (true, false) => {
                                                 new_min = (new_min + dir * s).clamp(0.0, new_max);
                                             }
-                                            // Only t_max (Alt)
                                             (false, true) => {
                                                 new_max = (new_max + dir * s)
                                                     .clamp(new_min, seq.loop_len.as_secs());
                                             }
-                                            // Both or none → move window together
                                             _ => {
-                                                // Shift both; keep span, clamp to [0, loop_len]
                                                 let span = new_max - new_min;
                                                 new_min = (new_min + dir * s).clamp(
                                                     0.0,
@@ -415,28 +407,15 @@ impl GuiApp {
                                         .find(|ng| ng.token == token)
                                         .map(|ng| &mut ng.chorus);
 
-                                    // voices (int slider; no log)
                                     let mut voices = seq_chorus.voices;
-                                    let voices_resp = ui
-                                        .add(
-                                            egui::Slider::new(&mut voices, 1..=10)
-                                                .text("Voice layers"),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Each layer adds one detuned voice\n",
-                                            "above and below f₀.\n",
-                                            "Voices total = 1 + 2 × (layers − 1).",
-                                        ));
-                                    if voices_resp.secondary_clicked() {
-                                        voices = ChorusParams::default().voices;
-                                    }
-
-                                    // delta (Detune), delta_shift, time_dependency, sym, asym
                                     let mut delta = seq_chorus.delta;
                                     let mut delta_shift = seq_chorus.delta_shift;
                                     let mut time_dep = seq_chorus.time_dependency;
                                     let mut sym = seq_chorus.sym;
                                     let mut asym = seq_chorus.asym;
+
+                                    let voices_resp = slider_with_reset(ui, &mut voices, 1..=10, "Voice layers", None, ChorusParams::default().voices, false)
+                                        .on_hover_text(VOICE_LAYERS_TEXT);
 
                                     let delta_resp = slider_with_reset(
                                         ui,
@@ -550,22 +529,19 @@ impl GuiApp {
 
                                 let header = ui.collapsing("Power factor", |ui| {
                                     let token = self.sequences[sel].token;
-                                    let seq_pow = &mut self.sequences[sel].pow_fact; // (f64, Freq)
+                                    let seq_pow = &mut self.sequences[sel].pow_fact; 
                                     let mut ng_pow_opt = self
                                         .notes
                                         .iter_mut()
                                         .find(|ng| ng.token == token)
                                         .map(|ng| &mut ng.pow_fact);
 
-                                    // initial value (native)
                                     let mut initial = seq_pow.0;
 
-                                    // evolution displayed with signed sqrt mapping
                                     let mut evol_disp = Freq(
                                         seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt()
                                     );
 
-                                    // defaults (display mapping for evolution)
                                     let def = default_pow_fact();
                                     let def_evol_disp = Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
 
@@ -1095,8 +1071,7 @@ impl GuiApp {
                             ui.collapsing("Accents", |ui| {
                                 let seq_mut = &mut self.sequences[sel];
 
-                                // Magnitude shown as 1 / value; reset_to must be mapped the same way
-                                let def = default_accents(); // assumed (f64, Vec<f64>)
+                                let def = default_accents();
                                 let mut mag_disp = 1.0 / seq_mut.accents.0.max(f64::MIN_POSITIVE);
                                 let mag_resp = slider_with_reset(
                                     ui,
@@ -1105,13 +1080,12 @@ impl GuiApp {
                                     "Magnitude",
                                     None,
                                     1.0 / def.0.max(f64::MIN_POSITIVE),
-                                    true, // logarithmic
+                                    true,
                                 );
                                 if mag_resp.changed() {
                                     seq_mut.accents.0 = 1.0 / mag_disp.max(f64::MIN_POSITIVE);
                                 }
 
-                                // Generators shown as 1 / each value
                                 let mut gens_disp: Vec<f64> = seq_mut
                                     .accents
                                     .1
@@ -1138,7 +1112,6 @@ impl GuiApp {
                         ui.label("Click a block to edit");
                     }
 
-                    // -------- perform structural edit after UI borrow ends --------
                     match action {
                         Action::None => {}
                         Action::Delete => {
@@ -1206,12 +1179,12 @@ fn slider_with_reset<'a, N>(
     log: bool,
 ) -> egui::Response
 where
-    N: egui::emath::Numeric + Copy,
+    N: egui::emath::Numeric + Copy + Display,
 {
     let mut resp = ui
         .add(egui::Slider::new(value, range).text(label).logarithmic(log))
         .on_hover_ui(|ui| {
-            ui.label(egui::RichText::new("Right-click to reset").weak());
+            ui.label(egui::RichText::new(format!("Right-click to reset to {}", reset_to)).weak());
             if let Some(shortcut) = shortcut {
                 ui.label(egui::RichText::new(format!("Shortcut: {}", shortcut)).weak());
             }
