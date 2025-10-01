@@ -213,3 +213,70 @@ pub fn ride(frequency: Freq, time: Time) -> f64 {
     // Gentle overall gain
     0.9 * out
 }
+/// --- DARBUKA (DERBOUKA) ---
+/// Hybrid hit: low "doum" body + bright "tek" rim + short attack click.
+/// Purely time-domain and deterministic.
+pub fn darbuka(time: Time) -> f64 {
+    // ===== ENVELOPES =====
+    // Low body "doum": slower decay
+    let doum_tau = Time(0.15);
+    let doum_env = (-time / doum_tau).exp();
+
+    // Bright rim "tek": faster decay
+    let tek_tau = Time(0.02);
+    let tek_env = (-time / tek_tau).exp();
+
+    // Very short attack click
+    let click_tau = Time(0.0025);
+    let click_env = (-time / click_tau).exp();
+
+    // Subtle initial pitch rise on the rim (perceptual “snap”)
+    fn glide(freq: Freq, t: Time, amt: f64, tau: Time) -> f64 {
+        //  f(t) = f0 * (1 + amt * e^{-t/tau})
+        freq.as_hz() * (1.0 + amt * (-t / tau).exp())
+    }
+
+    // ===== LOW BODY (membrane-like modes near ~150 Hz) =====
+    // Ratios approximate circular membrane partials
+    let f0 = Freq(440.0);
+    let body = {
+        let ratios = [
+            (1.00, 1.00), // (ratio, relative decay scale)
+            (1.59, 0.85),
+            (2.14, 0.75),
+            (2.30, 0.65),
+        ];
+        let gains = [1.00, 0.70, 0.50, 0.40];
+        let mut s = 0.0;
+        for ((r, dscale), g) in ratios.into_iter().zip(gains) {
+            let f = Freq(f0.as_hz() * r);
+            let env = (-time / Time(doum_tau.as_secs() * dscale)).exp();
+            s += g * (f.phase(time)).sin() * env;
+        }
+        s
+    };
+
+    // ===== BRIGHT RIM / TEK (mid-high partials 1.8–5 kHz) =====
+    let tek = {
+        let base = Freq(2300.0);
+        let g1 = 0.55 * (Freq(glide(base, time, 0.03, Time(0.03))).phase(time)).sin();
+        let g2 = 0.35 * (Freq(glide(Freq(3300.0), time, 0.03, Time(0.03))).phase(time)).sin();
+        let g3 = 0.25 * (Freq(glide(Freq(4100.0), time, 0.02, Time(0.02))).phase(time)).sin();
+        let tmp = g1 + g2 + g3;
+        let tmp = tmp.signum() * tmp.powi(2);
+        tmp * tek_env
+    };
+
+    // ===== DETERMINISTIC ATTACK NOISE =====
+    let raw = (time * Freq(1e7)).sin() * 1e6;
+    let frac = (raw.fract() + 1.0).fract();
+    let noise = 2.0 * frac - 1.0;
+
+    // ===== MIX =====
+    let out = 0.75 * doum_env * body   // body resonance
+            + 0.60 * tek               // rim brightness
+            + 0.10 * click_env * noise; // attack click
+
+    // Gentle saturation to tame peaks
+    (out * 1.2).tanh()
+}

@@ -31,7 +31,7 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
-const ALL_WAVES: [WaveType; 9] = [
+const ALL_WAVES: [WaveType; 10] = [
     WaveType::Mute,
     WaveType::Sine,
     WaveType::Square,
@@ -41,13 +41,15 @@ const ALL_WAVES: [WaveType; 9] = [
     WaveType::Kick,
     WaveType::Snare,
     WaveType::Ride,
+    WaveType::Darbuka,
 ];
 
-const DRUM_WAVES: [WaveType; 4] = [
+const DRUM_WAVES: [WaveType; 5] = [
     WaveType::HiHat,
     WaveType::Kick,
     WaveType::Snare,
     WaveType::Ride,
+    WaveType::Darbuka,
 ];
 
 #[derive(Clone)]

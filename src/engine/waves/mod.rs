@@ -19,6 +19,7 @@ pub enum WaveType {
     Kick,
     Snare,
     Ride,
+    Darbuka,
 }
 
 impl ToString for &WaveType {
@@ -33,6 +34,7 @@ impl ToString for &WaveType {
             WaveType::Kick => "Kick".into(),
             WaveType::Snare => "Snare".into(),
             WaveType::Ride => "Ride".into(),
+            WaveType::Darbuka => "Darbuka".into(),
         }
     }
 }
@@ -55,6 +57,7 @@ pub fn generate_wave(
         WaveType::Kick => return envelope * drums::kick(time),
         WaveType::Snare => return envelope * drums::snare(time),
         WaveType::Ride => return envelope * drums::ride(freq, time),
+        WaveType::Darbuka => return envelope * drums::darbuka(time),
         _ => {}
     }
     let f = |t: f64| match wave_type {
