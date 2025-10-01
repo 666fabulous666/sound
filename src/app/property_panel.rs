@@ -8,6 +8,7 @@ use crate::{
     },
     layout_left,
     rescale_factor,
+    shortcuts::*,
     time_freq::{Freq, Time}, // range_slider::*,
 };
 
@@ -36,32 +37,32 @@ impl GuiApp {
                             ui.heading(format!("Track {}", sel + 1));
                             ui.horizontal(|ui| {
                                 if ui
-                                    .button("✖")
+                                    .button("Delete")
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Shortcut: Backspace").weak());
+                                        ui.label(RichText::new(shortcut(DELETE)).weak());
                                     })
                                     .clicked()
-                                    || ui.input(|i| i.key_pressed(egui::Key::Backspace))
+                                    || ui.input(|i| i.key_pressed(DELETE))
                                 {
                                     action = Action::Delete;
                                 }
                                 if ui
                                     .button("Clone")
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Shortcut: C").weak());
+                                        ui.label(RichText::new(shortcut(CLONE)).weak());
                                     })
                                     .clicked()
-                                    || ui.input(|i| i.key_pressed(egui::Key::C))
+                                    || ui.input(|i| i.key_pressed(CLONE))
                                 {
                                     action = Action::Clone;
                                 }
                                 if (ui
                                     .button("Up")
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Shortcut: U").weak());
+                                        ui.label(RichText::new(shortcut(SWAP_UP)).weak());
                                     })
                                     .clicked()
-                                    || ui.input(|i| i.key_pressed(egui::Key::U)))
+                                    || ui.input(|i| i.key_pressed(SWAP_UP)))
                                     && sel > 0
                                 {
                                     action = Action::Up;
@@ -69,10 +70,10 @@ impl GuiApp {
                                 if (ui
                                     .button("Down")
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Shortcut: D").weak());
+                                        ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
                                     })
                                     .clicked()
-                                    || ui.input(|i| i.key_pressed(egui::Key::D)))
+                                    || ui.input(|i| i.key_pressed(SWAP_DOWN)))
                                     && sel + 1 < len
                                 {
                                     action = Action::Down;
@@ -80,10 +81,10 @@ impl GuiApp {
                                 if ui
                                     .button(if seq.mute { "Unute" } else { "Mute" })
                                     .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Shortcut: \\").weak());
+                                        ui.label(RichText::new(shortcut(MUTE)).weak());
                                     })
                                     .clicked()
-                                    || ui.input(|i| i.key_pressed(egui::Key::Backslash))
+                                    || ui.input(|i| i.key_pressed(MUTE))
                                 {
                                     edited_seq
                                         .get_or_insert((&mut self.sequences)[sel].clone())
@@ -91,76 +92,69 @@ impl GuiApp {
                                 }
                             });
 
-                            {
+                                                        {
+
                                 ui.horizontal(|ui| {
-                                    let mut tmp_volume = seq.volume;
-                                    ui.label("Volume:");
-                                    let vol = ui
-                                        .add(egui::Slider::new(&mut tmp_volume, 0.0..=32.0))
-                                        .on_hover_ui(|ui| {
-                                            ui.label(RichText::new("Default: right click").weak());
-                                            ui.label(RichText::new("Shortcuts: +/-").weak());
-                                        });
+                                    let seq_mut = &mut self.sequences[sel];
+                                    let mut vol = seq_mut.volume;
 
-                                    // Slider edited manually
-                                    if vol.changed() {
-                                        edited_seq
-                                            .get_or_insert(self.sequences[sel].clone())
-                                            .volume = tmp_volume;
-                                    }
+                                    let vol_resp = slider_with_reset(
+                                        ui,
+                                        &mut vol,
+                                        0.0..=32.0,
+                                        "Volume",
+                                        Some("+ / - (Shift×10)"),
+                                        default_volume(),
+                                        false,
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(egui::RichText::new("Hold + / - to change").weak());
+                                    });
 
-                                    // Reset to default on right click
-                                    if vol.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert(self.sequences[sel].clone())
-                                            .volume = default_volume();
-                                    }
-
-                                    // Keyboard control: +/- keys while held
-                                    ui.ctx().input(|i| {
+                                    let (kb_changed, vol_after_kb) = ui.ctx().input(|i| {
+                                        let step = if i.modifiers.shift { 0.5 } else { 0.05 };
+                                        let mut v = vol;
                                         let mut changed = false;
-                                        let base_step = 0.05;
-                                        let step = if i.modifiers.shift {
-                                            base_step * 10.0
-                                        } else {
-                                            base_step
-                                        };
-
                                         if i.key_down(egui::Key::Plus) {
-                                            tmp_volume = (tmp_volume + step).min(32.0);
+                                            v = (v + step).min(32.0);
                                             changed = true;
                                         }
                                         if i.key_down(egui::Key::Minus) {
-                                            tmp_volume = (tmp_volume - step).max(0.0);
+                                            v = (v - step).max(0.0);
                                             changed = true;
                                         }
-
-                                        if changed {
-                                            edited_seq
-                                                .get_or_insert(self.sequences[sel].clone())
-                                                .volume = tmp_volume;
-                                        }
+                                        (changed, v)
                                     });
+
+                                    if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed {
+                                        seq_mut.volume = vol_after_kb;
+                                    }
                                 });
+
                                 ui.horizontal(|ui| {
-                                    let mut tmp_spacial = seq.spacial.clone();
-                                    ui.label("Stereo:");
-                                    let stereo = ui
-                                        .add(egui::Slider::new(&mut tmp_spacial, 0.0..=1.0))
-                                        .on_hover_ui(|ui| {
-                                            ui.label("0.5 is centered");
-                                            ui.label(RichText::new("Default: right click").weak());
-                                        });
-                                    if stereo.changed() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .spacial = tmp_spacial.clamp(0.0, 1.0);
-                                    };
-                                    if stereo.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .spacial = default_spacial();
-                                    };
+                                    let seq_mut = &mut self.sequences[sel];
+                                    let mut pan = seq_mut.spacial;
+
+                                    let pan_resp = slider_with_reset(
+                                        ui,
+                                        &mut pan,
+                                        0.0..=1.0,
+                                        "Stereo",
+                                        None,
+                                        default_spacial(),
+                                        false,
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label("0.5 is centered");
+                                        ui.label(egui::RichText::new("Right-click to reset").weak());
+                                    });
+
+                                    if pan_resp.changed() || pan_resp.secondary_clicked() {
+                                        seq_mut.spacial = pan.clamp(0.0, 1.0);
+                                        if let Some(ng) = self.notes.iter_mut().find(|ng| ng.token == seq.token) {
+                                            ng.spacial = seq_mut.spacial;
+                                        }
+                                    }
                                 });
                             }
 

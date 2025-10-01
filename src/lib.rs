@@ -1,6 +1,7 @@
 pub mod app;
 pub mod engine;
 // pub mod range_slider;
+pub mod shortcuts;
 pub mod stream;
 pub mod texts;
 pub mod time_freq;

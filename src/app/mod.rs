@@ -10,6 +10,7 @@ use crate::{
         notes::{ChorusParams, Note, Sequence},
         waves::WaveType,
     },
+    shortcuts::*,
     texts::README_MD,
     time_freq::{Freq, Time},
     Token, TokenGen, GENERATE_EARLY, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
@@ -262,14 +263,14 @@ impl App for GuiApp {
         if !self.sequences.is_empty() {
             let len = self.sequences.len();
 
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp)) {
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
                 self.selected = Some(match self.selected {
                     Some(n) => (n + len - 1) % len,
                     None => len - 1,
                 });
             }
 
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown)) {
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
                 self.selected = Some(match self.selected {
                     Some(n) => (n + 1) % len,
                     None => 0,
@@ -409,16 +410,6 @@ impl GuiApp {
         self.sequences[i] = sequence;
         let len = self.sequences.len();
         (i + 1..len).for_each(|k| self.regen_seq_at(k));
-    }
-    fn edit_seq_esthetics_at(&mut self, sequence: Sequence, i: usize) {
-        self.notes
-            .iter_mut()
-            .filter(|n| n.token == sequence.token)
-            .for_each(|n| {
-                n.bend = sequence.bend.clone();
-                n.vibrato = sequence.vibrato.clone();
-            });
-        self.sequences[i] = sequence;
     }
     fn del_seq(&mut self, a: usize) {
         let tk = self.sequences[a].token;
