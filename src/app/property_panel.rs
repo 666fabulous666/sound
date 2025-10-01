@@ -282,351 +282,345 @@ impl GuiApp {
                                 }
                             }
                             ui.collapsing("Envelope", |ui| {
-                                let mut attack_decay = seq.attack_decay;
-                                let attack = ui
-                                    .add(
-                                        egui::Slider::new(&mut attack_decay.0, 0.01..=100.0)
-                                            .text("Attack")
-                                            .show_value(true)
-                                            .logarithmic(true),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
-                                let decay = ui
-                                    .add(
-                                        egui::Slider::new(&mut attack_decay.1, 0.01..=100.0)
-                                            .text("Decay")
-                                            .logarithmic(true),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
+                                let mut attack = self.sequences[sel].attack_decay.0;
+                                let mut decay  = self.sequences[sel].attack_decay.1;
 
-                                if attack.changed() || decay.changed() {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.attack_decay = attack_decay;
-                                    rescale_envelope(e);
-                                };
-                                let default = if DRUM_WAVES.contains(&seq.wave_type) {
-                                    default_drum_attack_decay
+                                let def = if DRUM_WAVES.contains(&seq.wave_type) {
+                                    default_drum_attack_decay()
                                 } else {
-                                    default_attack_decay
+                                    default_attack_decay()
                                 };
-                                if attack.secondary_clicked() {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.attack_decay.0 = default().0;
-                                    rescale_envelope(e);
-                                }
-                                if decay.secondary_clicked() {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.attack_decay.1 = default().1;
-                                    rescale_envelope(e);
+
+                                let attack_resp = slider_with_reset(
+                                    ui,
+                                    &mut attack,
+                                    0.01..=100.0,
+                                    "Attack",
+                                    None,
+                                    def.0,
+                                    true,
+                                );
+                                let decay_resp = slider_with_reset(
+                                    ui,
+                                    &mut decay,
+                                    0.01..=100.0,
+                                    "Decay",
+                                    None,
+                                    def.1,
+                                    true,
+                                );
+
+                                let changed =
+                                    attack_resp.changed() || attack_resp.secondary_clicked() ||
+                                    decay_resp.changed()  || decay_resp.secondary_clicked();
+
+                                if changed {
+                                    let seq_mut = &mut self.sequences[sel];
+                                    seq_mut.attack_decay = (attack, decay);
+                                    rescale_envelope(seq_mut);
+
+                                    if let Some(ng) = self.notes.iter_mut().find(|ng| ng.token == seq.token) {
+                                        ng.attack_decay = seq_mut.attack_decay;
+                                    }
                                 }
                             });
-                            ui.collapsing("Bend", |ui| {
-                                // We’ll edit the persistent sequence params…
-                                let seq_bend = &mut self.sequences[sel].bend; // (f64, f64)
-                                let token = seq.token;
 
-                                // …and also mirror changes into the live notes group (if present).
+                            ui.collapsing("Bend", |ui| {
+                                let seq_bend = &mut self.sequences[sel].bend; // (f64, f64)
                                 let mut ng_bend_opt = self
                                     .notes
                                     .iter_mut()
-                                    .find(|ng| ng.token == token)
+                                    .find(|ng| ng.token == seq.token)
                                     .map(|ng| &mut ng.bend);
-
-                                // Display magnitude in a friendlier scale (×1e4), keep native internally
                                 let mut mag_disp = seq_bend.0 * 1e4;
                                 let mut speed = seq_bend.1;
-
-                                // Sliders
                                 let mag_resp = slider_with_reset(
                                     ui,
                                     &mut mag_disp,
                                     -200.0..=200.0,
                                     "Magnitude",
+                                    None,
                                     default_bend().0 * 1e4,
+                                    false,
                                 );
-
-                                // log slider needs a tiny custom call (so we can set .logarithmic(true))
-                                let speed_resp = {
-                                    let resp = ui
-                                        .add(
-                                            egui::Slider::new(&mut speed, 1.0..=1000.0)
-                                                .text("Speed")
-                                                .logarithmic(true),
-                                        )
-                                        .on_hover_ui(|ui| {
-                                            ui.label(
-                                                egui::RichText::new("Right-click to reset").weak(),
-                                            );
-                                        });
-                                    if resp.secondary_clicked() {
-                                        speed = default_bend().1;
-                                    }
-                                    resp
-                                };
-
-                                // Apply changes (if any) to both Sequence and live NotesGroup
-                                let mut changed = false;
+                                let speed_resp = slider_with_reset(
+                                    ui,
+                                    &mut speed,
+                                    1.0..=1000.0,
+                                    "Speed",
+                                    None,
+                                    default_bend().1,
+                                    true,
+                                );
                                 if mag_resp.changed() {
                                     seq_bend.0 = mag_disp * 1e-4;
                                     if let Some(b) = ng_bend_opt.as_deref_mut() {
                                         b.0 = seq_bend.0;
                                     }
-                                    changed = true;
                                 }
                                 if speed_resp.changed() {
                                     seq_bend.1 = speed;
                                     if let Some(b) = ng_bend_opt.as_deref_mut() {
                                         b.1 = seq_bend.1;
                                     }
-                                    changed = true;
-                                }
-
-                                // Optional: keyboard shortcuts (hold to adjust)
-                                if changed {
-                                    // no regeneration here by design
-                                    // (your audio/render loop will pick up the mutated NotesGroup immediately)
                                 }
                             });
                             ui.collapsing("Vibrato", |ui| {
-                                let mut vibrato = seq.vibrato;
-                                let mut vibrato_mag_display = vibrato.0 * 1e6;
-                                let mag = ui
-                                    .add(
-                                        egui::Slider::new(&mut vibrato_mag_display, 0.0..=1000.0)
-                                            .text("Magnitude"),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
+                                let token = self.sequences[sel].token;
+                                let seq_vibr = &mut self.sequences[sel].vibrato;
+                                let mut ng_vibr_opt = self
+                                    .notes
+                                    .iter_mut()
+                                    .find(|ng| ng.token == token)
+                                    .map(|ng| &mut ng.vibrato);
+                                let mut mag_disp = seq_vibr.0 * 1e6;
+                                let mut freq = seq_vibr.1;
+                                let mag_resp = slider_with_reset(
+                                    ui,
+                                    &mut mag_disp,
+                                    0.0..=1000.0,
+                                    "Magnitude",
+                                    None,
+                                    default_vibrato().0 * 1e6,
+                                    false,
+                                );
 
-                                let fq = ui
-                                    .add(
-                                        egui::Slider::new(&mut vibrato.1, Freq(1.0)..=Freq(100.0))
-                                            .text("Frequency")
-                                            .logarithmic(true),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new("Default: right click").weak());
-                                    });
+                                let fq_resp = slider_with_reset(
+                                    ui,
+                                    &mut freq,
+                                    Freq(1.0)..=Freq(100.0),
+                                    "Frequency",
+                                    None,
+                                    default_vibrato().1,
+                                    true,
+                                );
+                                let mag_changed =
+                                    mag_resp.changed() || mag_resp.secondary_clicked();
+                                let fq_changed = fq_resp.changed() || fq_resp.secondary_clicked();
 
-                                if mag.changed() || fq.changed() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .vibrato = (vibrato_mag_display * 1e-6, vibrato.1);
-                                };
-                                if mag.secondary_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .vibrato
-                                        .0 = default_vibrato().0;
-                                };
-                                if fq.secondary_clicked() {
-                                    edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
-                                        .vibrato
-                                        .1 = default_vibrato().1;
-                                };
+                                if mag_changed {
+                                    seq_vibr.0 = mag_disp * 1e-6;
+                                    if let Some(v) = ng_vibr_opt.as_deref_mut() {
+                                        v.0 = seq_vibr.0;
+                                    }
+                                }
+                                if fq_changed {
+                                    seq_vibr.1 = freq;
+                                    if let Some(v) = ng_vibr_opt.as_deref_mut() {
+                                        v.1 = seq_vibr.1;
+                                    }
+                                }
                             });
                             if !DRUM_WAVES.contains(&seq.wave_type) {
-                                ui.collapsing("Chorus (Unison Detune)", |ui| {
-                                    let mut chorus = seq.chorus;
+                                let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
+                                    let token = self.sequences[sel].token;
+                                    let seq_chorus = &mut self.sequences[sel].chorus;
+                                    let mut ng_chorus_opt = self
+                                        .notes
+                                        .iter_mut()
+                                        .find(|ng| ng.token == token)
+                                        .map(|ng| &mut ng.chorus);
 
-                                    let voices = ui
+                                    // voices (int slider; no log)
+                                    let mut voices = seq_chorus.voices;
+                                    let voices_resp = ui
                                         .add(
-                                            egui::Slider::new(&mut chorus.voices, 1..=10)
+                                            egui::Slider::new(&mut voices, 1..=10)
                                                 .text("Voice layers"),
                                         )
                                         .on_hover_text(concat!(
                                             "Each layer adds one detuned voice\n",
                                             "above and below f₀.\n",
-                                            "Voices total = 1 + 2 × (steps − 1).",
+                                            "Voices total = 1 + 2 × (layers − 1).",
                                         ));
+                                    if voices_resp.secondary_clicked() {
+                                        voices = ChorusParams::default().voices;
+                                    }
 
-                                    let delta = ui
-                                        .add(
-                                            egui::Slider::new(&mut chorus.delta, 0.0..=1.0)
-                                                .text("Detune (Δf)")
-                                                .logarithmic(true),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Detune amount between voices around f₀.\n",
-                                            "\n",
-                                            "Use very small values for slow beating;\n",
-                                            "increase for a wider chorus.",
-                                        ));
+                                    // delta (Detune), delta_shift, time_dependency, sym, asym
+                                    let mut delta = seq_chorus.delta;
+                                    let mut delta_shift = seq_chorus.delta_shift;
+                                    let mut time_dep = seq_chorus.time_dependency;
+                                    let mut sym = seq_chorus.sym;
+                                    let mut asym = seq_chorus.asym;
 
-                                    let delta_shift = ui
-                                        .add(
-                                            egui::Slider::new(&mut chorus.delta_shift, -1.0..=1.0)
-                                                .text("Detune shift"), // .logarithmic(true),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Shift voices frequencies asymmetrically\n",
-                                            "to avoid beatings.",
-                                        ));
+                                    let delta_resp = slider_with_reset(
+                                        ui,
+                                        &mut delta,
+                                        0.0..=1.0,
+                                        "Detune (Δf)",
+                                        None,
+                                        ChorusParams::default().delta,
+                                        true,
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Detune amount between voices around f₀.\n",
+                                        "\n",
+                                        "Use very small values for slow beating;\n",
+                                        "increase for a wider chorus.",
+                                    ));
 
-                                    let time_dep = ui
-                                        .add(
-                                            egui::Slider::new(
-                                                &mut chorus.time_dependency,
-                                                Freq(-5.0)..=Freq(5.0),
-                                            )
-                                            .text("Detune over time"),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Modulates Δf over time.\n",
-                                            "\n",
-                                            " > 0 : Δf increases over time.\n",
-                                            " < 0 : Δf decreases over time.\n",
-                                            " = 0 : static detune."
-                                        ));
+                                    let delta_shift_resp = slider_with_reset(
+                                        ui,
+                                        &mut delta_shift,
+                                        -1.0..=1.0,
+                                        "Detune shift",
+                                        None,
+                                        ChorusParams::default().delta_shift,
+                                        false,
+                                    )
+                                    .on_hover_text("Shift voices frequencies asymmetrically to avoid beatings.");
+
+                                    let time_dep_resp = slider_with_reset(
+                                        ui,
+                                        &mut time_dep,
+                                        Freq(-5.0)..=Freq(5.0),
+                                        "Detune over time",
+                                        None,
+                                        ChorusParams::default().time_dependency,
+                                        false,
+                                    )
+                                    .on_hover_text(concat!(
+                                        "Modulates Δf over time.\n",
+                                        " > 0 : Δf increases over time.\n",
+                                        " < 0 : Δf decreases over time.\n",
+                                        " = 0 : static detune."
+                                    ));
 
                                     ui.label("Weighting (around f₀)").on_hover_text(concat!(
-                                        "Sets how much outer voices contribute\n",
-                                        "relative to the center.\n",
-                                        "\n",
-                                        " • |value| > 1 -> outer voices are amplified\n",
+                                        "Sets how much outer voices contribute relative to the center.\n",
+                                        " • |value| > 1 -> outer voices amplified\n",
                                         " • |value| = 1 -> constant voice levels\n",
-                                        " • |value| < 1 -> outer voices are attenuated\n",
-                                        "                  (so energy concentrates near f₀)\n",
-                                        " •  value < 0  -> outer voices are inverted in phase"
+                                        " • |value| < 1 -> outer voices attenuated\n",
+                                        " •  value < 0  -> outer voices inverted in phase"
                                     ));
-                                    let symmetric = ui
-                                        .add(
-                                            egui::Slider::new(&mut chorus.sym, -2.0..=2.0)
-                                                .text("Even"),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Even (symmetric) weighting across +/− Δf",
-                                        ));
 
-                                    let asymmetric = ui
-                                        .add(
-                                            egui::Slider::new(&mut chorus.asym, -2.0..=2.0)
-                                                .text("Odd"),
-                                        )
-                                        .on_hover_text(concat!(
-                                            "Odd (asymmetric) weighting across +/− Δf.",
-                                        ));
+                                    let sym_resp = slider_with_reset(
+                                        ui,
+                                        &mut sym,
+                                        -2.0..=2.0,
+                                        "Even",
+                                        None,
+                                        ChorusParams::default().sym,
+                                        false,
+                                    )
+                                    .on_hover_text("Even (symmetric) weighting across ±Δf");
 
-                                    if voices.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .voices = ChorusParams::default().voices;
-                                    };
-                                    if delta.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .delta = ChorusParams::default().delta;
-                                    };
-                                    if delta_shift.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .delta_shift = ChorusParams::default().delta_shift;
-                                    };
-                                    if symmetric.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .sym = ChorusParams::default().sym;
-                                    };
-                                    if asymmetric.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .asym = ChorusParams::default().asym;
-                                    };
-                                    if time_dep.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus
-                                            .time_dependency =
-                                            ChorusParams::default().time_dependency;
-                                    };
-                                    if [voices, delta, delta_shift, symmetric, asymmetric, time_dep]
-                                        .iter()
-                                        .any(|x| x.changed())
-                                    {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .chorus = chorus;
-                                    };
-                                })
-                                .header_response
-                                .on_hover_text(concat!(
+                                    let asym_resp = slider_with_reset(
+                                        ui,
+                                        &mut asym,
+                                        -2.0..=2.0,
+                                        "Odd",
+                                        None,
+                                        ChorusParams::default().asym,
+                                        false,
+                                    )
+                                    .on_hover_text("Odd (asymmetric) weighting across ±Δf.");
+
+                                    let changed = voices_resp.changed()
+                                        || voices_resp.secondary_clicked()
+                                        || delta_resp.changed()
+                                        || delta_resp.secondary_clicked()
+                                        || delta_shift_resp.changed()
+                                        || delta_shift_resp.secondary_clicked()
+                                        || time_dep_resp.changed()
+                                        || time_dep_resp.secondary_clicked()
+                                        || sym_resp.changed()
+                                        || sym_resp.secondary_clicked()
+                                        || asym_resp.changed()
+                                        || asym_resp.secondary_clicked();
+
+                                    if changed {
+                                        seq_chorus.voices = voices;
+                                        seq_chorus.delta = delta;
+                                        seq_chorus.delta_shift = delta_shift;
+                                        seq_chorus.time_dependency = time_dep;
+                                        seq_chorus.sym = sym;
+                                        seq_chorus.asym = asym;
+
+                                        if let Some(ch) = ng_chorus_opt.as_deref_mut() {
+                                            ch.voices = seq_chorus.voices;
+                                            ch.delta = seq_chorus.delta;
+                                            ch.delta_shift = seq_chorus.delta_shift;
+                                            ch.time_dependency = seq_chorus.time_dependency;
+                                            ch.sym = seq_chorus.sym;
+                                            ch.asym = seq_chorus.asym;
+                                        }
+                                    }
+                                });
+                                header.header_response.on_hover_text(concat!(
                                     "Adds multiple voices detuned\n",
                                     "around the main frequency f₀\n",
                                     "to create width and motion.",
                                 ));
 
-                                ui.collapsing("Power factor", |ui| {
-                                    let mut pow_fact_initial = seq.pow_fact.0;
-                                    let initial_val = ui.add(
-                                        egui::Slider::new(&mut pow_fact_initial, 0.0..=1000.0)
-                                            .logarithmic(true)
-                                            .text("Initial value"),
+                                let header = ui.collapsing("Power factor", |ui| {
+                                    let token = self.sequences[sel].token;
+                                    let seq_pow = &mut self.sequences[sel].pow_fact; // (f64, Freq)
+                                    let mut ng_pow_opt = self
+                                        .notes
+                                        .iter_mut()
+                                        .find(|ng| ng.token == token)
+                                        .map(|ng| &mut ng.pow_fact);
+
+                                    // initial value (native)
+                                    let mut initial = seq_pow.0;
+
+                                    // evolution displayed with signed sqrt mapping
+                                    let mut evol_disp = Freq(
+                                        seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt()
                                     );
-                                    if initial_val.changed() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .pow_fact
-                                            .0 = pow_fact_initial;
-                                    };
-                                    let mut time_dep_pow_fact = Freq(
-                                        seq.pow_fact.1.as_hz().signum()
-                                            * seq.pow_fact.1.as_hz().abs().sqrt(),
+
+                                    // defaults (display mapping for evolution)
+                                    let def = default_pow_fact();
+                                    let def_evol_disp = Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
+
+                                    let initial_resp = slider_with_reset(
+                                        ui,
+                                        &mut initial,
+                                        0.0..=1000.0,
+                                        "Initial value",
+                                        None,
+                                        def.0,
+                                        true,
                                     );
-                                    let evol = ui
-                                        .add(
-                                            egui::Slider::new(
-                                                &mut time_dep_pow_fact,
-                                                Freq(-10.0)..=Freq(10.0),
-                                            )
-                                            .text("Evolution"),
-                                        )
-                                        .on_hover_text(concat!("Increase/Decrease over time."));
-                                    if evol.changed() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .pow_fact
-                                            .1 = Freq(
-                                            time_dep_pow_fact.as_hz().signum()
-                                                * time_dep_pow_fact.as_hz()
-                                                * time_dep_pow_fact.as_hz(),
-                                        );
-                                    };
-                                    if initial_val.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .pow_fact
-                                            .0 = default_pow_fact().0;
-                                    };
-                                    if evol.secondary_clicked() {
-                                        edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone())
-                                            .pow_fact
-                                            .1 = default_pow_fact().1;
-                                    };
-                                })
-                                .header_response
-                                .on_hover_text(concat!(
+
+                                    let evol_resp = slider_with_reset(
+                                        ui,
+                                        &mut evol_disp,
+                                        Freq(-10.0)..=Freq(10.0),
+                                        "Evolution",
+                                        None,
+                                        def_evol_disp,
+                                        false,
+                                    )
+                                    .on_hover_text("Increase/Decrease over time.");
+
+                                    let initial_changed = initial_resp.changed() || initial_resp.secondary_clicked();
+                                    let evol_changed    = evol_resp.changed()    || evol_resp.secondary_clicked();
+
+                                    if initial_changed {
+                                        seq_pow.0 = initial;
+                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
+                                            p.0 = seq_pow.0;
+                                        }
+                                    }
+                                    if evol_changed {
+                                        seq_pow.1 = Freq(evol_disp.as_hz().signum() * evol_disp.as_hz() * evol_disp.as_hz());
+                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
+                                            p.1 = seq_pow.1;
+                                        }
+                                    }
+                                });
+                                header.header_response.on_hover_text(concat!(
                                     "Produces distortion or metallic timbre\n",
                                     "\n",
                                     " • |value| = 0 -> square wave\n",
                                     " • |value| < 1 -> distortion\n",
                                     " • |value| = 1 -> unchanged wave\n",
-                                    " • |value| < 1 -> metallic",
+                                    " • |value| > 1 -> metallic",
                                 ));
+
                             };
                             ui.collapsing("Rythm", |ui| {
                                 {
@@ -1216,15 +1210,20 @@ fn slider_with_reset<'a, N>(
     value: &'a mut N,
     range: std::ops::RangeInclusive<N>,
     label: &str,
+    shortcut: Option<&str>,
     reset_to: N,
+    log: bool,
 ) -> egui::Response
 where
     N: egui::emath::Numeric + Copy,
 {
     let resp = ui
-        .add(egui::Slider::new(value, range).text(label))
+        .add(egui::Slider::new(value, range).text(label).logarithmic(log))
         .on_hover_ui(|ui| {
             ui.label(egui::RichText::new("Right-click to reset").weak());
+            if let Some(shortcut) = shortcut {
+                ui.label(egui::RichText::new(format!("Shortcut: {}", shortcut)).weak());
+            }
         });
     if resp.secondary_clicked() {
         *value = reset_to;
