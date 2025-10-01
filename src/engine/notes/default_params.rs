@@ -31,7 +31,7 @@ pub fn default_accents() -> (f64, Vec<f64>) {
 }
 
 pub fn default_shuffle() -> bool {
-    true
+    false
 }
 
 pub fn default_spacial() -> f64 {
