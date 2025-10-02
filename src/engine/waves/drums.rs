@@ -216,7 +216,7 @@ pub fn ride(frequency: Freq, time: Time) -> f64 {
 /// --- DARBUKA (DERBOUKA) ---
 /// Hybrid hit: low "doum" body + bright "tek" rim + short attack click.
 /// Purely time-domain and deterministic.
-pub fn darbuka(time: Time) -> f64 {
+pub fn darbuka(frequency: Freq, time: Time) -> f64 {
     // ===== ENVELOPES =====
     // Low body "doum": slower decay
     let doum_tau = Time(0.15);
@@ -238,7 +238,8 @@ pub fn darbuka(time: Time) -> f64 {
 
     // ===== LOW BODY (membrane-like modes near ~150 Hz) =====
     // Ratios approximate circular membrane partials
-    let f0 = Freq(440.0);
+    // let f0 = Freq(440.0);
+    let f0 = frequency;
     let body = {
         let ratios = [
             (1.00, 1.00), // (ratio, relative decay scale)

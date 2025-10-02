@@ -53,11 +53,11 @@ pub fn generate_wave(
     let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     match wave_type {
-        WaveType::HiHat => return envelope * drums::hi_hat(freq, time), // WARNING: put back bend_vib_time instead of freq if it changed something
-        WaveType::Kick => return envelope * drums::kick(time),
-        WaveType::Snare => return envelope * drums::snare(time),
-        WaveType::Ride => return envelope * drums::ride(freq, time),
-        WaveType::Darbuka => return envelope * drums::darbuka(time),
+        WaveType::HiHat => return envelope * drums::hi_hat(freq, bend_vib_time),
+        WaveType::Kick => return envelope * drums::kick(bend_vib_time),
+        WaveType::Snare => return envelope * drums::snare(bend_vib_time),
+        WaveType::Ride => return envelope * drums::ride(freq, bend_vib_time),
+        WaveType::Darbuka => return envelope * drums::darbuka(freq, bend_vib_time),
         _ => {}
     }
     let f = |t: f64| match wave_type {
