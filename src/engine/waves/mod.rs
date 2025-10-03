@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     engine::notes::ChorusParams,
+    sign_f,
     time_freq::{Freq, Time},
 };
 pub mod drums;
@@ -52,12 +53,14 @@ pub fn generate_wave(
 ) -> f64 {
     let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
+    let p = pow_fact.0 * (pow_fact.1 * time).exp2();
+    let disto = |x: f64| x.powf(p);
     match wave_type {
-        WaveType::HiHat => return envelope * drums::hi_hat(freq, bend_vib_time),
-        WaveType::Kick => return envelope * drums::kick(bend_vib_time),
-        WaveType::Snare => return envelope * drums::snare(bend_vib_time),
-        WaveType::Ride => return envelope * drums::ride(freq, bend_vib_time),
-        WaveType::Darbuka => return envelope * drums::darbuka(freq, bend_vib_time),
+        WaveType::HiHat => return envelope * sign_f(drums::hi_hat(bend_vib_time), disto),
+        WaveType::Kick => return envelope * sign_f(drums::kick(bend_vib_time), disto),
+        WaveType::Snare => return envelope * sign_f(drums::snare(bend_vib_time), disto),
+        WaveType::Ride => return envelope * sign_f(drums::ride(bend_vib_time), disto),
+        WaveType::Darbuka => return envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto),
         _ => {}
     }
     let f = |t: f64| match wave_type {
@@ -65,9 +68,11 @@ pub fn generate_wave(
         WaveType::Sine => t.sin(),
         WaveType::Square => {
             if t % (2.0 * PI) < PI {
-                0.25
+                // 0.25
+                1.0
             } else {
-                -0.25
+                // -0.25
+                1.0
             }
         }
         WaveType::Triangle => {
@@ -76,12 +81,12 @@ pub fn generate_wave(
         }
         WaveType::Sawtooth => {
             let t = t / (2.0 * PI);
-            0.5 * (t - (0.5 + t).floor())
+            t - (0.5 + t).floor()
+            // 0.5 * (t - (0.5 + t).floor())
         }
         _ => unreachable!(),
     };
     let phase = freq.phase(bend_vib_time);
-    let p = pow_fact.0 * (pow_fact.1 * time).exp2();
     let mut norm = 0.0;
     let sum_of_waves = (0..chorus.voices)
         .map(|k| {
@@ -92,8 +97,10 @@ pub fn generate_wave(
             let asym_pow_k = chorus.asym.powi(k as i32);
             let tmp1 = f(phase * delta1.powi(k as i32));
             let tmp2 = f(phase / delta2.powi(k as i32));
-            let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
-            let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
+            // let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
+            // let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
+            let tmp1 = sign_f(tmp1, disto);
+            let tmp2 = sign_f(tmp2, disto);
             let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
             norm += factor;
             let tmp = sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);

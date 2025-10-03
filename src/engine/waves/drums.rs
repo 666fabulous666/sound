@@ -1,6 +1,9 @@
 use std::f64::consts::PI;
 
-use crate::time_freq::{DivByFreq, Freq, Time};
+use crate::{
+    sign_f,
+    time_freq::{DivByFreq, Freq, Time},
+};
 
 /// A simple xorshift64* pseudo‐random number generator
 fn xorshift64(mut x: u64) -> u64 {
@@ -10,9 +13,6 @@ fn xorshift64(mut x: u64) -> u64 {
     x
 }
 
-fn sign_f<T: num_traits::Signed>(arg: T, f: impl Fn(T) -> T) -> T {
-    arg.signum() * f(arg.abs())
-}
 /// Generate a deterministic “pseudo‐random” f64 in [0.0, 1.0)
 /// from a 64‐bit seed.
 fn prng_unit(seed: u64) -> f64 {
@@ -57,9 +57,26 @@ fn glide(freq: Freq, t: Time, amt: f64, tau: Time) -> f64 {
 pub enum DrumParams {
     HiHat,
     Kick,
+    Bell,
+    Tom,
     Snare,
     Ride,
     Darbuka,
+}
+
+#[derive(Copy, Clone)]
+struct Layer {
+    env_tau: Time,
+    gain: f64,
+    signal: f64,
+}
+
+#[inline]
+fn mix_env_layers(time: Time, layers: &[Layer]) -> f64 {
+    layers
+        .iter()
+        .map(|l| l.gain * exp_env(time, l.env_tau) * l.signal)
+        .sum()
 }
 
 /// A single entry point that reproduces your per-drum functions exactly
@@ -102,47 +119,107 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
 
             env * osc + noise_level * env * noise
         }
-
-        DrumParams::Kick => {
-            // === your kick() numerics ===
-            let base = Freq(110.0); // original fixed base, ignore incoming `frequency` to match exactly
-            let amp_tau = Time(0.1);
-            let sweep_rate = Freq(10.0);
-            let noise_level = 0.15;
-            let click_tau = 0.0025_f64;
-
-            let env = exp_env(time, amp_tau);
-
-            // phase = 2π ∫ f0 e^{-s t} dt  ⇒ use your Time/Freq helpers as written
-            let phase = base.phase((1.0 - (-sweep_rate * time).exp()).div_by(sweep_rate));
-            let osc = phase.sin();
-
-            // original kick used *wrapped* fract for the click
-            let click_env = exp_env(time, Time(click_tau));
-            let noise = det_noise(time, /*wrapped=*/ true);
-
-            5.0 * (env * osc + noise_level * click_env * noise)
+        DrumParams::Kick => mix_env_layers(
+            time,
+            &[
+                Layer {
+                    env_tau: Time(0.1),
+                    gain: 5.0,
+                    signal: {
+                        let sweep_rate = Freq(10.0);
+                        frequency
+                            .phase((1.0 - (-sweep_rate * time).exp()).div_by(sweep_rate))
+                            .sin()
+                    },
+                },
+                Layer {
+                    env_tau: Time(0.1),
+                    gain: 5.0,
+                    signal: {
+                        let mut t = time.as_secs() + 1.0;
+                        let mut tt = t;
+                        for i in (1..=2).rev() {
+                            t = t.sqrt() / i as f64;
+                            tt += t;
+                        }
+                        (frequency * 0.25).phase(Time::new(tt)).sin()
+                    },
+                },
+                Layer {
+                    env_tau: Time(0.0025),
+                    gain: 0.75,
+                    signal: det_noise(time, true),
+                },
+            ],
+        ),
+        DrumParams::Tom => {
+            5.0 * mix_env_layers(
+                time,
+                &[
+                    Layer {
+                        env_tau: Time(0.1),
+                        gain: 1.0,
+                        signal: {
+                            let mut t = time.as_secs();
+                            let mut tt = t;
+                            for i in (2..=5).rev() {
+                                t = t.sqrt() / i as f64;
+                                tt += t;
+                            }
+                            frequency.phase(Time::new(tt)).sin()
+                        },
+                    },
+                    Layer {
+                        env_tau: Time(0.0025),
+                        gain: 0.15,
+                        signal: det_noise(time, true),
+                    },
+                ],
+            )
+        }
+        DrumParams::Bell => {
+            5.0 * mix_env_layers(
+                time,
+                &[
+                    Layer {
+                        env_tau: Time(0.1),
+                        gain: 1.0,
+                        signal: {
+                            let mut t = time.as_secs();
+                            let mut tt = t;
+                            for i in 1..=5 {
+                                t = t.sqrt() / i as f64;
+                                tt += tt; // WARNING: this += tt (not += t) is a mistake but I don't correct before knowing if it would sound the same
+                            }
+                            frequency.phase(Time::new(tt)).sin()
+                        },
+                    },
+                    Layer {
+                        env_tau: Time(0.0025),
+                        gain: 0.15,
+                        signal: det_noise(time, true),
+                    },
+                ],
+            )
         }
 
         DrumParams::Snare => {
-            // === your snare() numerics ===
-            let noise_tau = Time(0.1);
-            let tone_tau = Time(0.2);
-            let noise_level = 0.15;
-            let tone_level = 0.5;
-
-            let env_noise = exp_env(time, noise_tau);
-            let env_tone = exp_env(time, tone_tau);
-
-            // snare used *wrapped* fract noise
-            let noise = det_noise(time, /*wrapped=*/ true);
-
-            // fixed 110 Hz tone in original
-            let tone = Freq(110.0).phase(time).sin();
-
-            5.0 * (env_noise * noise_level * noise + env_tone * tone_level * tone)
+            5.0 * mix_env_layers(
+                time,
+                &[
+                    Layer {
+                        env_tau: Time(0.2),
+                        gain: 0.5,
+                        signal: frequency.phase(time).sin(),
+                    },
+                    Layer {
+                        env_tau: Time(0.1),
+                        gain: 0.15,
+                        signal: det_noise(time, true),
+                    },
+                ],
+            )
         }
-
         DrumParams::Ride => {
             // === your ride() numerics ===
             // envelopes
@@ -226,19 +303,22 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
 
             // rim / tek
             let tek = {
-                let g1 =
-                    0.55 * (Freq(glide(Freq(2300.0), time, 0.03, Time(0.03))).phase(time)).sin();
-                let g2 =
-                    0.35 * (Freq(glide(Freq(3300.0), time, 0.03, Time(0.03))).phase(time)).sin();
-                let g3 =
-                    0.25 * (Freq(glide(Freq(4100.0), time, 0.02, Time(0.02))).phase(time)).sin();
-                let tmp = g1 + g2 + g3;
-                let tmp = tmp.signum() * tmp.powi(2);
+                let partials = [
+                    (2300.0, 0.55, 0.03, 0.03),
+                    (3300.0, 0.35, 0.03, 0.03),
+                    (4100.0, 0.25, 0.02, 0.02),
+                ];
+                let mut s = 0.0;
+                for &(f, gain, amt, tau) in &partials {
+                    let freq = Freq(glide(Freq(f), time, amt, Time(tau)));
+                    s += gain * freq.phase(time).sin();
+                }
+                let tmp = sign_f(s, |x| x * x);
                 tmp * tek_env
             };
 
             // darbuka also used *wrapped* fract
-            let noise = det_noise(time, /*wrapped=*/ true);
+            let noise = det_noise(time, true);
 
             let out = 0.75 * doum_env * body + 0.60 * tek + 0.10 * click_env * noise;
 
@@ -247,19 +327,26 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
     }
 }
 
-pub fn hi_hat(frequency: Freq, time: Time) -> f64 {
-    drum(frequency, time, DrumParams::HiHat)
+pub fn hi_hat(time: Time) -> f64 {
+    drum(Freq(110.0), time, DrumParams::HiHat)
 }
 
 pub fn kick(time: Time) -> f64 {
     drum(Freq(110.0), time, DrumParams::Kick)
+}
+pub fn tom(frequency: Freq, time: Time) -> f64 {
+    drum(frequency, time, DrumParams::Kick)
+}
+
+pub fn bell(time: Time) -> f64 {
+    drum(Freq(110.0), time, DrumParams::Bell)
 }
 
 pub fn snare(time: Time) -> f64 {
     drum(Freq(110.0), time, DrumParams::Snare)
 }
 
-pub fn ride(_frequency: Freq, time: Time) -> f64 {
+pub fn ride(time: Time) -> f64 {
     drum(Freq(880.0), time, DrumParams::Ride)
 }
 

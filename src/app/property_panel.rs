@@ -204,87 +204,7 @@ impl GuiApp {
                                     }
                                 }
                             });
-                            {
-                                let step =
-                                    Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
 
-                                let mut t_min = seq.t_min.as_secs();
-                                let mut t_max = seq.t_max.as_secs();
-
-                                egui::CollapsingHeader::new("Sequence position").show(ui, |ui| {
-                                    ui.add(
-                                        egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"),
-                                    );
-                                    ui.add(
-                                        egui::Slider::new(
-                                            &mut t_max,
-                                            t_min..=seq.loop_len.as_secs(),
-                                        )
-                                        .text("t_max"),
-                                    );
-
-                                    t_max = t_max.clamp(t_min, seq.loop_len.as_secs());
-
-                                    if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
-                                        edited_seq
-                                            .get_or_insert(self.sequences[sel].clone())
-                                            .t_min = step * (Time(t_min) / step).round();
-                                    }
-                                    if (Time(t_max) - seq.t_max).as_secs().abs() > f64::EPSILON {
-                                        edited_seq
-                                            .get_or_insert(self.sequences[sel].clone())
-                                            .t_max = step * (Time(t_max) / step).round();
-                                    }
-                                });
-
-                                if !ui.ctx().wants_keyboard_input() {
-                                    let (left, right, mods) = ui.ctx().input(|i| {
-                                        (
-                                            i.key_pressed(egui::Key::ArrowLeft),
-                                            i.key_pressed(egui::Key::ArrowRight),
-                                            i.modifiers,
-                                        )
-                                    });
-
-                                    if left || right {
-                                        let step = Time(
-                                            seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64,
-                                        );
-                                        let dir = if left { -1.0 } else { 1.0 };
-
-                                        let cmd = mods.command;
-                                        let alt = mods.alt;
-
-                                        let mut new_min = seq.t_min.as_secs();
-                                        let mut new_max = seq.t_max.as_secs();
-                                        let s = step.as_secs();
-
-                                        match (cmd, alt) {
-                                            (true, false) => {
-                                                new_min = (new_min + dir * s).clamp(0.0, new_max);
-                                            }
-                                            (false, true) => {
-                                                new_max = (new_max + dir * s)
-                                                    .clamp(new_min, seq.loop_len.as_secs());
-                                            }
-                                            _ => {
-                                                let span = new_max - new_min;
-                                                new_min = (new_min + dir * s).clamp(
-                                                    0.0,
-                                                    (seq.loop_len.as_secs() - span).max(0.0),
-                                                );
-                                                new_max =
-                                                    (new_min + span).min(seq.loop_len.as_secs());
-                                            }
-                                        }
-
-                                        let e =
-                                            edited_seq.get_or_insert(self.sequences[sel].clone());
-                                        e.t_min = Time(new_min);
-                                        e.t_max = Time(new_max);
-                                    }
-                                }
-                            }
                             ui.collapsing("Envelope", |ui| {
                                 let mut attack = self.sequences[sel].attack_decay.0;
                                 let mut decay = self.sequences[sel].attack_decay.1;
@@ -536,71 +456,71 @@ impl GuiApp {
                                     }
                                 });
                                 header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);
-
-                                let header = ui.collapsing("Power factor", |ui| {
-                                    let token = self.sequences[sel].token;
-                                    let seq_pow = &mut self.sequences[sel].pow_fact;
-                                    let mut ng_pow_opt = self
-                                        .notes
-                                        .iter_mut()
-                                        .find(|ng| ng.token == token)
-                                        .map(|ng| &mut ng.pow_fact);
-
-                                    let mut initial = seq_pow.0;
-
-                                    let mut evol_disp = Freq(
-                                        seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt(),
-                                    );
-
-                                    let def = default_pow_fact();
-                                    let def_evol_disp =
-                                        Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
-
-                                    let initial_resp = slider_with_reset(
-                                        ui,
-                                        &mut initial,
-                                        0.0..=1000.0,
-                                        "Initial value",
-                                        None,
-                                        def.0,
-                                        true,
-                                    );
-
-                                    let evol_resp = slider_with_reset(
-                                        ui,
-                                        &mut evol_disp,
-                                        Freq(-10.0)..=Freq(10.0),
-                                        "Evolution",
-                                        None,
-                                        def_evol_disp,
-                                        false,
-                                    )
-                                    .on_hover_text(POW_FACT_EVOL_TEXT);
-
-                                    let initial_changed =
-                                        initial_resp.changed() || initial_resp.secondary_clicked();
-                                    let evol_changed =
-                                        evol_resp.changed() || evol_resp.secondary_clicked();
-
-                                    if initial_changed {
-                                        seq_pow.0 = initial;
-                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
-                                            p.0 = seq_pow.0;
-                                        }
-                                    }
-                                    if evol_changed {
-                                        seq_pow.1 = Freq(
-                                            evol_disp.as_hz().signum()
-                                                * evol_disp.as_hz()
-                                                * evol_disp.as_hz(),
-                                        );
-                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
-                                            p.1 = seq_pow.1;
-                                        }
-                                    }
-                                });
-                                header.header_response.on_hover_text(POW_FACT_TEXT);
                             };
+
+                            let header = ui.collapsing("Power factor", |ui| {
+                                let token = self.sequences[sel].token;
+                                let seq_pow = &mut self.sequences[sel].pow_fact;
+                                let mut ng_pow_opt = self
+                                    .notes
+                                    .iter_mut()
+                                    .find(|ng| ng.token == token)
+                                    .map(|ng| &mut ng.pow_fact);
+
+                                let mut initial = seq_pow.0;
+
+                                let mut evol_disp = Freq(
+                                    seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt(),
+                                );
+
+                                let def = default_pow_fact();
+                                let def_evol_disp =
+                                    Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
+
+                                let initial_resp = slider_with_reset(
+                                    ui,
+                                    &mut initial,
+                                    0.0..=1000.0,
+                                    "Initial value",
+                                    None,
+                                    def.0,
+                                    true,
+                                );
+
+                                let evol_resp = slider_with_reset(
+                                    ui,
+                                    &mut evol_disp,
+                                    Freq(-10.0)..=Freq(10.0),
+                                    "Evolution",
+                                    None,
+                                    def_evol_disp,
+                                    false,
+                                )
+                                .on_hover_text(POW_FACT_EVOL_TEXT);
+
+                                let initial_changed =
+                                    initial_resp.changed() || initial_resp.secondary_clicked();
+                                let evol_changed =
+                                    evol_resp.changed() || evol_resp.secondary_clicked();
+
+                                if initial_changed {
+                                    seq_pow.0 = initial;
+                                    if let Some(p) = ng_pow_opt.as_deref_mut() {
+                                        p.0 = seq_pow.0;
+                                    }
+                                }
+                                if evol_changed {
+                                    seq_pow.1 = Freq(
+                                        evol_disp.as_hz().signum()
+                                            * evol_disp.as_hz()
+                                            * evol_disp.as_hz(),
+                                    );
+                                    if let Some(p) = ng_pow_opt.as_deref_mut() {
+                                        p.1 = seq_pow.1;
+                                    }
+                                }
+                            });
+                            header.header_response.on_hover_text(POW_FACT_TEXT);
                             ui.collapsing("Rythm", |ui| {
                                 {
                                     ui.horizontal(|ui| {
@@ -632,6 +552,96 @@ impl GuiApp {
                                                 .1 = tmp_quantum.1;
                                         };
                                     });
+                                }
+                                ui.separator();
+                                {
+                                    let step =
+                                        Time(seq.time_quantum.0 as f64 / seq.time_quantum.1 as f64);
+
+                                    let mut t_min = seq.t_min.as_secs();
+                                    let mut t_max = seq.t_max.as_secs();
+
+                                    egui::CollapsingHeader::new("Sequence position").show(
+                                        ui,
+                                        |ui| {
+                                            ui.add(
+                                                egui::Slider::new(&mut t_min, 0.0..=t_max)
+                                                    .text("t_min"),
+                                            );
+                                            ui.add(
+                                                egui::Slider::new(
+                                                    &mut t_max,
+                                                    t_min..=seq.loop_len.as_secs(),
+                                                )
+                                                .text("t_max"),
+                                            );
+
+                                            t_max = t_max.clamp(t_min, seq.loop_len.as_secs());
+
+                                            if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
+                                                edited_seq
+                                                    .get_or_insert(self.sequences[sel].clone())
+                                                    .t_min = step * (Time(t_min) / step).round();
+                                            }
+                                            if (Time(t_max) - seq.t_max).as_secs().abs()
+                                                > f64::EPSILON
+                                            {
+                                                edited_seq
+                                                    .get_or_insert(self.sequences[sel].clone())
+                                                    .t_max = step * (Time(t_max) / step).round();
+                                            }
+                                        },
+                                    );
+
+                                    if !ui.ctx().wants_keyboard_input() {
+                                        let (left, right, mods) = ui.ctx().input(|i| {
+                                            (
+                                                i.key_pressed(egui::Key::ArrowLeft),
+                                                i.key_pressed(egui::Key::ArrowRight),
+                                                i.modifiers,
+                                            )
+                                        });
+
+                                        if left || right {
+                                            let step = Time(
+                                                seq.time_quantum.0 as f64
+                                                    / seq.time_quantum.1 as f64,
+                                            );
+                                            let dir = if left { -1.0 } else { 1.0 };
+
+                                            let cmd = mods.command;
+                                            let alt = mods.alt;
+
+                                            let mut new_min = seq.t_min.as_secs();
+                                            let mut new_max = seq.t_max.as_secs();
+                                            let s = step.as_secs();
+
+                                            match (cmd, alt) {
+                                                (true, false) => {
+                                                    new_min =
+                                                        (new_min + dir * s).clamp(0.0, new_max);
+                                                }
+                                                (false, true) => {
+                                                    new_max = (new_max + dir * s)
+                                                        .clamp(new_min, seq.loop_len.as_secs());
+                                                }
+                                                _ => {
+                                                    let span = new_max - new_min;
+                                                    new_min = (new_min + dir * s).clamp(
+                                                        0.0,
+                                                        (seq.loop_len.as_secs() - span).max(0.0),
+                                                    );
+                                                    new_max = (new_min + span)
+                                                        .min(seq.loop_len.as_secs());
+                                                }
+                                            }
+
+                                            let e = edited_seq
+                                                .get_or_insert(self.sequences[sel].clone());
+                                            e.t_min = Time(new_min);
+                                            e.t_max = Time(new_max);
+                                        }
+                                    }
                                 }
                                 ui.separator();
                                 {

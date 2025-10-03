@@ -35,6 +35,10 @@ pub fn layout_left() -> Layout {
     Layout::left_to_right(egui::Align::Min)
 }
 
+pub fn sign_f<T: num_traits::Signed>(arg: T, f: impl Fn(T) -> T) -> T {
+    arg.signum() * f(arg.abs())
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Token(usize);
 
