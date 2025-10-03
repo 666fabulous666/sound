@@ -31,6 +31,7 @@ arc-swap = "1.7.1"
 egui_commonmark = "0.21.1"
 epaint = "0.32.3"
 image = "0.25.8"
+num-traits = "0.2.19"
 # egui_extras = "0.32.3"
 
 # --- native-only ---
