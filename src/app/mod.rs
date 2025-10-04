@@ -62,6 +62,7 @@ pub struct NotesGroup {
     pub chorus: ChorusParams,
     pub attack_decay: (f64, f64),
     pub pow_fact: (f64, Freq),
+    pub volume: f64,
     pub spacial: f64,
     pub tolerance: (Time, Time),
 }

@@ -50,13 +50,14 @@ pub fn stream(
                     attack_decay,
                     pow_fact,
                     spacial,
+                    volume,
                     ..
                 } in notes.iter()
                 {
                     for note in notes_from_seq {
                         if note.time < now && now <= note.time + note.duration {
                             let t = now - note.time;
-                            let volume = note.volume;
+                            let volume = volume * note.volume;
                             let dry = volume
                                 * generate_wave(
                                     wave_type,

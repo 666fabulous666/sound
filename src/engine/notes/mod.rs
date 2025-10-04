@@ -207,7 +207,7 @@ impl Sequence {
                 time: t + seq_start,
                 duration: *d,
                 interval: self.interval.clone(),
-                volume: GLOBAL_VOLUME * self.volume / self.normalization
+                volume: GLOBAL_VOLUME / self.normalization
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
                     / (self.accents.0
                         + self
@@ -251,6 +251,7 @@ impl Sequence {
                             attack_decay: self.attack_decay,
                             pow_fact: self.pow_fact,
                             spacial: self.spacial,
+                            volume: self.volume,
                             tolerance: self.tolerance,
                         });
                     }

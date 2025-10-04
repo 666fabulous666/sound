@@ -144,6 +144,11 @@ impl GuiApp {
                                         || kb_changed
                                     {
                                         seq_mut.volume = vol_after_kb;
+                                        if let Some(ng) =
+                                            self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        {
+                                            ng.volume = seq_mut.volume;
+                                        }
                                     }
                                 });
 

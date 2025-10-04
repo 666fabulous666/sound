@@ -66,21 +66,48 @@ pub enum DrumParams {
 
 #[derive(Copy, Clone)]
 struct Layer {
-    env_tau: Time,
+    tau: Time,
     gain: f64,
     signal: f64,
+}
+impl Layer {
+    fn basic(tau: Time, gain: f64) -> impl Fn(Time, Freq) -> Self {
+        move |time, freq| Layer {
+            tau,
+            gain,
+            signal: freq.phase(time).sin(),
+        }
+    }
+    fn sweep(tau: Time, gain: f64, sweep_rate: Freq) -> impl Fn(Time, Freq) -> Self {
+        move |time, frequency| Layer {
+            tau,
+            gain,
+            signal: {
+                frequency
+                    .phase(((-sweep_rate * time).exp()).div_by(sweep_rate))
+                    .sin()
+            },
+        }
+    }
+    fn noise(tau: Time, gain: f64) -> impl Fn(Time, Freq) -> Self {
+        move |time, _freq| Layer {
+            tau,
+            gain,
+            signal: det_noise(time, true),
+        }
+    }
 }
 
 #[inline]
 fn mix_env_layers(time: Time, layers: &[Layer]) -> f64 {
     layers
         .iter()
-        .map(|l| l.gain * exp_env(time, l.env_tau) * l.signal)
+        .map(|l| l.gain * exp_env(time, l.tau) * l.signal)
         .sum()
 }
 
 /// A single entry point that reproduces your per-drum functions exactly
-pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
+pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
     match params {
         DrumParams::HiHat => {
             // === your hi_hat unchanged numerics ===
@@ -92,7 +119,7 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
 
             let mut osc = 0.0;
             let k_partials = 8;
-            let freq_bits = frequency.as_hz().to_bits();
+            let freq_bits = freq.as_hz().to_bits();
             let time_bits = time.as_secs().to_bits();
 
             for i in 0..k_partials {
@@ -102,7 +129,7 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
                 // δ_k ∈ [0.1, 1.5]
                 let u1 = prng_unit(seed_base);
                 let delta = 0.1 + u1 * (1.5 - 0.1);
-                let fk = frequency * (1.0 + delta);
+                let fk = freq * (1.0 + delta);
 
                 // roll-off
                 let ak = 1.0 / (1.0 + 0.5 * ((i + 1) as f64));
@@ -122,42 +149,72 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
         DrumParams::Kick => mix_env_layers(
             time,
             &[
-                Layer {
-                    env_tau: Time(0.1),
-                    gain: 5.0,
-                    signal: {
-                        let sweep_rate = Freq(10.0);
-                        frequency
-                            .phase((1.0 - (-sweep_rate * time).exp()).div_by(sweep_rate))
-                            .sin()
-                    },
-                },
-                Layer {
-                    env_tau: Time(0.1),
-                    gain: 5.0,
-                    signal: {
-                        let mut t = time.as_secs() + 1.0;
-                        let mut tt = t;
-                        for i in (1..=2).rev() {
-                            t = t.sqrt() / i as f64;
-                            tt += t;
-                        }
-                        (frequency * 0.25).phase(Time::new(tt)).sin()
-                    },
-                },
-                Layer {
-                    env_tau: Time(0.0025),
-                    gain: 0.75,
-                    signal: det_noise(time, true),
-                },
+                Layer::sweep(Time(0.1), 5.0, Freq(10.0))(time, freq),
+                Layer::basic(Time(0.05), 1.0)(time, freq),
+                Layer::noise(Time(0.01), 0.1)(time, freq),
             ],
         ),
+        DrumParams::Snare => mix_env_layers(
+            time,
+            &[
+                Layer::basic(Time(0.2), 0.75)(time, freq),
+                Layer::noise(Time(0.1), 0.25)(time, freq),
+            ],
+        ),
+        DrumParams::Darbuka => {
+            // === your darbuka() numerics ===
+            let doum_tau = Time(0.15);
+            let doum_env = exp_env(time, doum_tau);
+
+            let tek_tau = Time(0.02);
+            let tek_env = exp_env(time, tek_tau);
+
+            let click_tau = Time(0.0025);
+            let click_env = exp_env(time, click_tau);
+
+            // body (membrane-like modes), uses incoming `frequency` like original
+            let f0 = freq;
+            let body = {
+                let ratios = [(1.00, 1.00), (1.59, 0.85), (2.14, 0.75), (2.30, 0.65)];
+                let gains = [1.00, 0.70, 0.50, 0.40];
+                let mut s = 0.0;
+                for ((r, dscale), g) in ratios.into_iter().zip(gains) {
+                    let f = Freq(f0.as_hz() * r);
+                    let env = exp_env(time, Time(doum_tau.as_secs() * dscale));
+                    s += g * (f.phase(time)).sin() * env;
+                }
+                s
+            };
+
+            // rim / tek
+            let tek = {
+                let partials = [
+                    (2300.0, 0.55, 0.03, 0.03),
+                    (3300.0, 0.35, 0.03, 0.03),
+                    (4100.0, 0.25, 0.02, 0.02),
+                ];
+                let mut s = 0.0;
+                for &(f, gain, amt, tau) in &partials {
+                    let freq = Freq(glide(Freq(f), time, amt, Time(tau)));
+                    s += gain * freq.phase(time).sin();
+                }
+                let tmp = sign_f(s, |x| x * x);
+                tmp * tek_env
+            };
+
+            // darbuka also used *wrapped* fract
+            let noise = det_noise(time, true);
+
+            let out = 0.75 * doum_env * body + 0.60 * tek + 0.10 * click_env * noise;
+
+            (out * 1.2).tanh()
+        }
         DrumParams::Tom => {
             5.0 * mix_env_layers(
                 time,
                 &[
                     Layer {
-                        env_tau: Time(0.1),
+                        tau: Time(0.1),
                         gain: 1.0,
                         signal: {
                             let mut t = time.as_secs();
@@ -166,11 +223,11 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
                                 t = t.sqrt() / i as f64;
                                 tt += t;
                             }
-                            frequency.phase(Time::new(tt)).sin()
+                            freq.phase(Time::new(tt)).sin()
                         },
                     },
                     Layer {
-                        env_tau: Time(0.0025),
+                        tau: Time(0.0025),
                         gain: 0.15,
                         signal: det_noise(time, true),
                     },
@@ -182,20 +239,29 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
                 time,
                 &[
                     Layer {
-                        env_tau: Time(0.1),
-                        gain: 1.0,
+                        tau: Time(0.1),
+                        gain: 5.0,
                         signal: {
-                            let mut t = time.as_secs();
-                            let mut tt = t;
-                            for i in 1..=5 {
-                                t = t.sqrt() / i as f64;
-                                tt += tt; // WARNING: this += tt (not += t) is a mistake but I don't correct before knowing if it would sound the same
-                            }
-                            frequency.phase(Time::new(tt)).sin()
+                            let sweep_rate = Freq(100.0);
+                            freq.phase((1.0 + (-sweep_rate * time).exp()).div_by(sweep_rate))
+                                .sin()
                         },
                     },
+                    // Layer {
+                    //     env_tau: Time(0.1),
+                    //     gain: 1.0,
+                    //     signal: {
+                    //         let mut t = time.as_secs();
+                    //         let mut tt = t;
+                    //         for i in 1..=5 {
+                    //             t = t.sqrt() / i as f64;
+                    //             tt += tt; // WARNING: this += tt (not += t) is a mistake but I don't correct before knowing if it would sound the same
+                    //         }
+                    //         frequency.phase(Time::new(tt)).sin()
+                    //     },
+                    // },
                     Layer {
-                        env_tau: Time(0.0025),
+                        tau: Time(0.0025),
                         gain: 0.15,
                         signal: det_noise(time, true),
                     },
@@ -203,23 +269,21 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
             )
         }
 
-        DrumParams::Snare => {
-            5.0 * mix_env_layers(
-                time,
-                &[
-                    Layer {
-                        env_tau: Time(0.2),
-                        gain: 0.5,
-                        signal: frequency.phase(time).sin(),
-                    },
-                    Layer {
-                        env_tau: Time(0.1),
-                        gain: 0.15,
-                        signal: det_noise(time, true),
-                    },
-                ],
-            )
-        }
+        // DrumParams::Snare => mix_env_layers(
+        //     time,
+        //     &[
+        //         Layer {
+        //             tau: Time(0.2),
+        //             gain: 0.75,
+        //             signal: freq.phase(time).sin(),
+        //         },
+        //         Layer {
+        //             tau: Time(0.1),
+        //             gain: 0.25,
+        //             signal: det_noise(time, true),
+        //         },
+        //     ],
+        // ),
         DrumParams::Ride => {
             // === your ride() numerics ===
             // envelopes
@@ -235,7 +299,7 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
             let click_level = 0.10;
 
             // inharmonic wash
-            let base = frequency;
+            let base = freq;
             let k_partials = 64;
             let mut wash = 0.0;
             for i in 0..k_partials {
@@ -274,55 +338,6 @@ pub fn drum(frequency: Freq, time: Time, params: DrumParams) -> f64 {
                 0.65 * wash_env * wash + 0.45 * ping_env * ping + click_level * click_env * noise;
 
             0.9 * out
-        }
-
-        DrumParams::Darbuka => {
-            // === your darbuka() numerics ===
-            let doum_tau = Time(0.15);
-            let doum_env = exp_env(time, doum_tau);
-
-            let tek_tau = Time(0.02);
-            let tek_env = exp_env(time, tek_tau);
-
-            let click_tau = Time(0.0025);
-            let click_env = exp_env(time, click_tau);
-
-            // body (membrane-like modes), uses incoming `frequency` like original
-            let f0 = frequency;
-            let body = {
-                let ratios = [(1.00, 1.00), (1.59, 0.85), (2.14, 0.75), (2.30, 0.65)];
-                let gains = [1.00, 0.70, 0.50, 0.40];
-                let mut s = 0.0;
-                for ((r, dscale), g) in ratios.into_iter().zip(gains) {
-                    let f = Freq(f0.as_hz() * r);
-                    let env = exp_env(time, Time(doum_tau.as_secs() * dscale));
-                    s += g * (f.phase(time)).sin() * env;
-                }
-                s
-            };
-
-            // rim / tek
-            let tek = {
-                let partials = [
-                    (2300.0, 0.55, 0.03, 0.03),
-                    (3300.0, 0.35, 0.03, 0.03),
-                    (4100.0, 0.25, 0.02, 0.02),
-                ];
-                let mut s = 0.0;
-                for &(f, gain, amt, tau) in &partials {
-                    let freq = Freq(glide(Freq(f), time, amt, Time(tau)));
-                    s += gain * freq.phase(time).sin();
-                }
-                let tmp = sign_f(s, |x| x * x);
-                tmp * tek_env
-            };
-
-            // darbuka also used *wrapped* fract
-            let noise = det_noise(time, true);
-
-            let out = 0.75 * doum_env * body + 0.60 * tek + 0.10 * click_env * noise;
-
-            (out * 1.2).tanh()
         }
     }
 }
