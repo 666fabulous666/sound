@@ -1,4 +1,4 @@
-use crate::engine::notes::{ChorusParams, DetRythm, RdRythm};
+use crate::engine::score::{ChorusParams, DetRythm, RdRythm};
 use crate::time_freq::{Freq, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
 

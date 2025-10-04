@@ -9,7 +9,7 @@ use egui::{Layout, RichText};
 use crate::MAX_FPS;
 use crate::{
     app::GuiApp,
-    engine::{notes::Sequence, reverb::Reverb},
+    engine::{reverb::Reverb, score::Sequence},
     layout_left,
     stream::stream,
     F0,

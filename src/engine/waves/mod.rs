@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    engine::notes::ChorusParams,
+    engine::score::ChorusParams,
     sign_f,
     time_freq::{Freq, Time},
 };

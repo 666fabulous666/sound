@@ -2,7 +2,7 @@ use egui::Align2;
 
 use crate::{
     app::{hsl_to_color32, GuiApp, NotesGroup},
-    engine::{notes::Interval, waves::envelope},
+    engine::{score::Interval, waves::envelope},
     time_freq::Time,
     NOTE_LINGER_TIME,
 };

@@ -15,7 +15,7 @@ use crate::{
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
-    engine::notes::{
+    engine::score::{
         default_params::*, ChorusParams, DetRythm, Interval, RdRythm, Rythm, Sequence,
     },
     layout_left,
