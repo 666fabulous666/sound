@@ -7,7 +7,7 @@ mod top_panel;
 
 use crate::{
     engine::{
-        score::{ChorusParams, Note, Sequence},
+        score::{modname::Note, ChorusParams, Sequence},
         waves::WaveType,
     },
     shortcuts::*,
@@ -57,7 +57,7 @@ pub struct NotesGroup {
     pub token: Token,
     pub bend: (f64, f64),
     pub vibrato: (f64, Freq),
-    pub notes: Vec<Note>,
+    pub notes: Vec<modname::Note>,
     pub wave_type: WaveType,
     pub chorus: ChorusParams,
     pub attack_decay: (f64, f64),

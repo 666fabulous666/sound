@@ -99,13 +99,7 @@ impl ChorusParams {
     }
 }
 
-#[derive(Deserialize, Clone)]
-pub struct Note {
-    pub time: Time,
-    pub duration: Time,
-    pub interval: Interval,
-    pub volume: f64,
-}
+mod note;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum Interval {
@@ -133,7 +127,6 @@ impl Sequence {
             inclusions: Rythm::Rd(RdRythm::default()),
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
-            // interval: Interval::RDTempered(2, vec![0, 5, 7], 0),
             wave_type: WaveType::Sine,
             volume: default_volume(),
             mute: default_mute(),
@@ -203,7 +196,7 @@ impl Sequence {
             tmp.shuffle(rng);
         }
         tmp.into_iter()
-            .map(|(t, d)| Note {
+            .map(|(t, d)| note::Note {
                 time: t + seq_start,
                 duration: *d,
                 interval: self.interval.clone(),
@@ -225,7 +218,7 @@ impl Sequence {
                 {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
-                        Note {
+                        note::Note {
                             time: tmp.time + self.loop_len * i as f64,
                             ..tmp
                         }
@@ -236,7 +229,7 @@ impl Sequence {
                 } else {
                     for p in (0..self.repeat).map(|i| {
                         let tmp = to_push.clone();
-                        Note {
+                        note::Note {
                             time: tmp.time + self.loop_len * i as f64,
                             ..tmp
                         }
@@ -260,7 +253,7 @@ impl Sequence {
     }
 }
 
-impl Note {
+impl note::Note {
     pub fn draw(&self, context: &[NotesGroup], rng: &mut rand::prelude::ThreadRng) -> Self {
         match &self.interval {
             Interval::RDTempered(degree, base, octave) => {
