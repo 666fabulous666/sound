@@ -7,7 +7,7 @@ mod top_panel;
 
 use crate::{
     engine::{
-        score::{note::Note, ChorusParams, Sequence},
+        score::{note::Note, sequence::Sequence, ChorusParams},
         waves::WaveType,
     },
     shortcuts::*,
