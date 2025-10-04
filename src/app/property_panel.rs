@@ -186,7 +186,8 @@ impl GuiApp {
                             ui.separator();
                             ui.horizontal(|ui| {
                                 ui.label("Wave:");
-                                let mut w_choice = seq.wave_type;
+                                let seq_mut = &mut self.sequences[sel];
+                                let mut w_choice = seq_mut.wave_type;
 
                                 egui::ComboBox::from_id_salt("wave_type_combo")
                                     .selected_text((&w_choice).to_string())
@@ -199,13 +200,12 @@ impl GuiApp {
                                             );
                                         }
                                     });
-                                if w_choice != seq.wave_type {
-                                    let e = edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone());
-                                    e.wave_type = w_choice;
-                                    if DRUM_WAVES.contains(&w_choice) {
-                                        e.attack_decay = default_drum_attack_decay();
-                                        e.normalization = default_drum_normalization();
+                                if w_choice != seq_mut.wave_type {
+                                    seq_mut.wave_type = w_choice;
+                                    if let Some(ng) =
+                                        self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                    {
+                                        ng.wave_type = seq_mut.wave_type;
                                     }
                                 }
                             });

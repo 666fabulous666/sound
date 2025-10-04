@@ -72,7 +72,7 @@ pub fn generate_wave(
                 1.0
             } else {
                 // -0.25
-                1.0
+                -1.0
             }
         }
         WaveType::Triangle => {
