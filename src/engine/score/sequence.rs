@@ -67,6 +67,7 @@ pub struct Sequence {
     pub shuffle: bool,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
+    pub name: String,
 }
 
 impl Sequence {
@@ -96,6 +97,7 @@ impl Sequence {
             accents: default_accents(),
             normalization: default_normalization(),
             shuffle: default_shuffle(),
+            name: format!("seq {}", token.to_string()),
         }
     }
     pub fn draw(

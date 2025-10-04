@@ -29,7 +29,6 @@ impl Note {
                         },
                     )
                     .flatten()
-                    // Proper interval overlap test:
                     .filter_map(|n| {
                         if let Interval::Tempered(d, _) = n.interval {
                             Some(d)

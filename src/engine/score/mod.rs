@@ -1,6 +1,7 @@
 pub mod default_params;
 pub mod note;
 pub mod sequence;
+pub mod track_node;
 
 use crate::time_freq::Freq;
 use default_params::*;

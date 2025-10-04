@@ -318,14 +318,6 @@ impl App for GuiApp {
     }
 }
 
-// simple deterministic hash for colour
-fn hash32(s: &str) -> u32 {
-    use std::hash::{Hash, Hasher};
-    let mut h = std::collections::hash_map::DefaultHasher::new();
-    s.hash(&mut h);
-    h.finish() as u32
-}
-
 impl GuiApp {
     fn default_picker_window(&mut self, ctx: &egui::Context) {
         use egui::{Align, Layout, RichText};
@@ -502,4 +494,12 @@ pub fn hsl_to_color32(h: f32, s: f32, l: f32) -> Color32 {
         (g * 255.0).round() as u8,
         (b * 255.0).round() as u8,
     )
+}
+
+/// simple deterministic hash for colour
+fn hash32(s: &str) -> u32 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    s.hash(&mut h);
+    h.finish() as u32
 }
