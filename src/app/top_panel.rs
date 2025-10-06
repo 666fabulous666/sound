@@ -144,7 +144,7 @@ impl GuiApp {
             F0,
             &self.device,
             clock,
-            self.shared_notes.clone(),
+            self.score.shared_notes.clone(),
             (
                 Reverb::new(0.5, 0.5, sample_rate),
                 Reverb::new(0.5, 0.5, sample_rate),

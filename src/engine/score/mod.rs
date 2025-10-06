@@ -99,4 +99,5 @@ pub struct Score {
     pub sequences: Vec<Sequence>,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
+    pub shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
 }

@@ -56,7 +56,7 @@ pub struct GuiApp {
     tempo: f64,
     score: Score,
     // notes: Vec<NotesGroup>,
-    shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
+    // shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
     // sequences: Vec<Sequence>,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
@@ -121,8 +121,8 @@ impl GuiApp {
                 sequences: Vec::new(),
                 last_token: TokenGen(0),
                 delays: default_delays(),
+                shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
             },
-            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
         };
         app
     }
@@ -307,7 +307,9 @@ impl App for GuiApp {
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
-        self.shared_notes.store(Arc::new(self.score.notes.clone()));
+        self.score
+            .shared_notes
+            .store(Arc::new(self.score.notes.clone()));
         self.shared_delays
             .store(Arc::new(self.score.delays.clone()));
     }
