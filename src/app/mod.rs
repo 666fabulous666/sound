@@ -58,17 +58,12 @@ const DRUM_WAVES: [WaveType; 5] = [
 pub struct GuiApp {
     tempo: f64,
     score: Score,
-    // notes: Vec<NotesGroup>,
-    // shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
-    // sequences: Vec<Sequence>,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
     selected: Option<usize>,
-    // last_token: TokenGen,
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
-    // delays: (Vec<f64>, Vec<f64>),
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,

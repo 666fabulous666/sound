@@ -19,8 +19,8 @@ pub const MAX_FPS: f64 = 60.0;
 #[cfg(not(target_arch = "wasm32"))]
 pub const MAX_FPS: f64 = 120.0;
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
-    ("Blue Jinn", include_str!("../assets/Blue Jinn.json")),
     ("Quantum Kuti", include_str!("../assets/QuantumKuti.json")),
+    ("Blue Jinn", include_str!("../assets/Blue Jinn.json")),
     (
         "Video Game Groove",
         include_str!("../assets/GameGroove.json"),
