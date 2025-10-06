@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use super::Interval;
 
-use crate::{app::NotesGroup, time_freq::Time};
+use crate::{engine::score::NotesGroup, time_freq::Time};
 
 #[derive(Deserialize, Clone)]
 pub struct Note {

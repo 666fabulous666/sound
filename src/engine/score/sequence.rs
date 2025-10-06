@@ -6,9 +6,9 @@ use rand::seq::SliceRandom;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::app::NotesGroup;
 use crate::engine::score::default_params;
 use crate::engine::score::note::Note;
+use crate::engine::score::NotesGroup;
 use crate::engine::score::RdRythm;
 use crate::time_freq::Freq;
 

@@ -7,12 +7,12 @@ mod top_panel;
 
 use crate::{
     engine::{
-        score::{note::Note, sequence::Sequence, ChorusParams},
+        score::{sequence::Sequence, NotesGroup},
         waves::WaveType,
     },
     shortcuts::*,
     texts::README_MD,
-    time_freq::{Freq, Time},
+    time_freq::Time,
     Token, TokenGen, GENERATE_EARLY, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
@@ -51,21 +51,6 @@ const DRUM_WAVES: [WaveType; 5] = [
     WaveType::Ride,
     WaveType::Darbuka,
 ];
-
-#[derive(Clone)]
-pub struct NotesGroup {
-    pub token: Token,
-    pub bend: (f64, f64),
-    pub vibrato: (f64, Freq),
-    pub notes: Vec<Note>,
-    pub wave_type: WaveType,
-    pub chorus: ChorusParams,
-    pub attack_decay: (f64, f64),
-    pub pow_fact: (f64, Freq),
-    pub volume: f64,
-    pub spacial: f64,
-    pub tolerance: (Time, Time),
-}
 
 pub struct GuiApp {
     tempo: f64,

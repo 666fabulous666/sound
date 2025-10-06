@@ -3,7 +3,11 @@ pub mod note;
 pub mod sequence;
 pub mod track_node;
 
-use crate::time_freq::Freq;
+use crate::{
+    engine::{score::note::Note, waves::WaveType},
+    time_freq::{Freq, Time},
+    Token,
+};
 use default_params::*;
 use serde::{Deserialize, Serialize};
 
@@ -67,4 +71,19 @@ impl Interval {
             _ => panic!(),
         }
     }
+}
+
+#[derive(Clone)]
+pub struct NotesGroup {
+    pub attack_decay: (f64, f64),
+    pub bend: (f64, f64),
+    pub chorus: ChorusParams,
+    pub notes: Vec<Note>,
+    pub pow_fact: (f64, Freq),
+    pub spacial: f64,
+    pub token: Token,
+    pub tolerance: (Time, Time),
+    pub vibrato: (f64, Freq),
+    pub volume: f64,
+    pub wave_type: WaveType,
 }

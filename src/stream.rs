@@ -4,8 +4,7 @@ use cpal::traits::{DeviceTrait, StreamTrait};
 use std::sync::{atomic::AtomicU64, Arc};
 
 use crate::{
-    app::NotesGroup,
-    engine::{reverb::Reverb, waves::generate_wave},
+    engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
     time_freq::{DivByFreq, Freq},
     REVERB_BUFFER_LEN,
 };
@@ -29,7 +28,7 @@ pub fn stream(
     let channels = config.channels;
     let stream = {
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-            let notes = note_queue.load();
+            let note_groups = note_queue.load();
             let delays = delays.load();
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
@@ -52,7 +51,7 @@ pub fn stream(
                     spacial,
                     volume,
                     ..
-                } in notes.iter()
+                } in note_groups.iter()
                 {
                     for note in notes_from_seq {
                         if note.time < now && now <= note.time + note.duration {
