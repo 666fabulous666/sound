@@ -7,7 +7,7 @@ mod top_panel;
 
 use crate::{
     engine::{
-        score::{sequence::Sequence, NotesGroup},
+        score::{default_params::default_delays, sequence::Sequence, NotesGroup, Score},
         waves::WaveType,
     },
     shortcuts::*,
@@ -54,17 +54,18 @@ const DRUM_WAVES: [WaveType; 5] = [
 
 pub struct GuiApp {
     tempo: f64,
-    notes: Vec<NotesGroup>,
+    score: Score,
+    // notes: Vec<NotesGroup>,
     shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
-    sequences: Vec<Sequence>,
+    // sequences: Vec<Sequence>,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
     selected: Option<usize>,
-    last_token: TokenGen,
+    // last_token: TokenGen,
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
-    delays: (Vec<f64>, Vec<f64>),
+    // delays: (Vec<f64>, Vec<f64>),
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
@@ -82,10 +83,6 @@ pub struct GuiApp {
     property_panel_width: f32,
 }
 
-fn default_delays() -> (Vec<f64>, Vec<f64>) {
-    (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0])
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuiState {
     seqs: Vec<Sequence>,
@@ -99,13 +96,8 @@ impl GuiApp {
         let app = Self {
             tempo: default_tempo(),
             selected: None,
-            last_token: TokenGen(0),
             stream: None,
-            notes: Vec::new(),
-            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
-            delays: default_delays(),
             shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
-            sequences: Vec::new(),
             clock: Arc::new(AtomicU64::new(0)),
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
@@ -124,8 +116,21 @@ impl GuiApp {
             default_pick_idx: 0,
             logo: None,
             property_panel_width: 270.0,
+            score: Score {
+                notes: Vec::new(),
+                sequences: Vec::new(),
+                last_token: TokenGen(0),
+                delays: default_delays(),
+            },
+            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
         };
         app
+    }
+    pub fn score(&self) -> &Score {
+        &self.score
+    }
+    pub fn score_mut(&mut self) -> &mut Score {
+        &mut self.score
     }
     pub fn load_logo(&mut self, ctx: &egui::Context) {
         if self.logo.is_none() {
@@ -226,9 +231,13 @@ impl GuiApp {
     }
 
     fn retain_notes(&mut self, now: Time) {
-        let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
-            notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
-        });
+        let _ = self
+            .score
+            .notes
+            .iter_mut()
+            .for_each(|NotesGroup { notes, .. }| {
+                notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
+            });
     }
 }
 
@@ -248,8 +257,8 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
-        if !self.sequences.is_empty() {
-            let len = self.sequences.len();
+        if !self.score.sequences.is_empty() {
+            let len = self.score.sequences.len();
 
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
                 self.selected = Some(match self.selected {
@@ -286,7 +295,7 @@ impl App for GuiApp {
                 return;
             };
         }
-        if self.show_start || self.sequences.is_empty() {
+        if self.show_start || self.score.sequences.is_empty() {
             self.start_page(ctx);
             if self.show_start {
                 return;
@@ -298,8 +307,9 @@ impl App for GuiApp {
         self.generate_notes();
         let now = self.now();
         self.retain_notes(now);
-        self.shared_notes.store(Arc::new(self.notes.clone()));
-        self.shared_delays.store(Arc::new(self.delays.clone()));
+        self.shared_notes.store(Arc::new(self.score.notes.clone()));
+        self.shared_delays
+            .store(Arc::new(self.score.delays.clone()));
     }
 }
 
@@ -362,6 +372,7 @@ impl GuiApp {
     fn generate_notes(&mut self) {
         let now = self.now();
         let ids: Vec<_> = self
+            .score
             .sequences
             .iter()
             .enumerate()
@@ -378,42 +389,42 @@ impl GuiApp {
         }
     }
     fn new_score(&mut self) {
-        self.sequences.clear();
-        self.notes.clear();
+        self.score_mut().sequences.clear();
+        self.score.notes.clear();
     }
     fn new_seq(&mut self, mut sequence: Sequence) {
         self.draw_seq(&mut sequence);
-        self.sequences.push(sequence);
+        self.score.sequences.push(sequence);
     }
     fn edit_seq_at(&mut self, mut sequence: Sequence, i: usize) {
         self.regen_seq(&mut sequence);
-        self.sequences[i] = sequence;
-        let len = self.sequences.len();
+        self.score.sequences[i] = sequence;
+        let len = self.score.sequences.len();
         (i + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn del_seq(&mut self, a: usize) {
-        let tk = self.sequences[a].token;
+        let tk = self.score.sequences[a].token;
         self.drain_notes_from_seq(tk);
-        self.sequences.remove(a);
+        self.score.sequences.remove(a);
     }
     fn clone_seq(&mut self, i: usize) {
-        let mut sequence = self.sequences[i].clone();
-        sequence.token = self.last_token.next();
+        let mut sequence = self.score.sequences[i].clone();
+        sequence.token = self.score.last_token.next();
         self.draw_seq(&mut sequence);
-        self.sequences.push(sequence);
+        self.score.sequences.push(sequence);
     }
     fn swap_seqs_at(&mut self, i: usize, j: usize) {
-        self.sequences.swap(i, j);
+        self.score.sequences.swap(i, j);
         self.regen_seq_at(i);
         self.regen_seq_at(j);
-        let len = self.sequences.len();
+        let len = self.score.sequences.len();
         (i.max(j) + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn draw_seq(&mut self, seq: &mut Sequence) {
         let now = self.now();
         let seq_start = seq.loop_len * (now / seq.loop_len).floor();
         // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
-        seq.draw(&mut self.notes, &mut self.rng, seq_start);
+        seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
@@ -421,22 +432,24 @@ impl GuiApp {
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
     fn draw_seq_at(&mut self, a: usize) {
         let now = self.now();
-        let seq = &mut self.sequences[a];
+        let seq = &mut self.score.sequences[a];
         let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
         // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
-        seq.draw(&mut self.notes, &mut self.rng, seq_start);
+        seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
     fn drain_notes_from_seq(&mut self, tk: Token) {
-        self.notes.retain(|NotesGroup { token, .. }| *token != tk);
+        self.score
+            .notes
+            .retain(|NotesGroup { token, .. }| *token != tk);
     }
     fn regen_seq(&mut self, seq: &mut Sequence) {
         self.drain_notes_from_seq(seq.token);
         self.draw_seq(seq);
     }
     fn regen_seq_at(&mut self, i: usize) {
-        self.drain_notes_from_seq(self.sequences[i].token);
+        self.drain_notes_from_seq(self.score.sequences[i].token);
         self.draw_seq_at(i);
     }
     #[cfg(target_arch = "wasm32")]

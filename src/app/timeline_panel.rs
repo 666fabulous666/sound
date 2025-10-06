@@ -9,7 +9,7 @@ use crate::{
 
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
-        let len = self.sequences.len();
+        let len = self.score.sequences.len();
         let current_time = self.now();
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
@@ -22,14 +22,18 @@ impl GuiApp {
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
-            let max_loop_len = (&self.sequences)
+            let max_loop_len = (&self.score.sequences)
                 .iter()
                 .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
             let playhead = NOTE_LINGER_TIME.min(max_loop_len);
 
             let track_display_length = max_loop_len + playhead;
             // grid
-            let sub_grids = self.sequences.iter().map(|s| s.time_quantum.1 as isize);
+            let sub_grids = self
+                .score
+                .sequences
+                .iter()
+                .map(|s| s.time_quantum.1 as isize);
             for sub_grid in sub_grids {
                 let n = track_display_length.as_secs() as isize * sub_grid;
                 for s in -n..=2 * n {
@@ -62,7 +66,7 @@ impl GuiApp {
             }
 
             // sequences
-            for (idx, seq) in (&self.sequences).iter().enumerate() {
+            for (idx, seq) in (&self.score.sequences).iter().enumerate() {
                 let top = rect.top() + idx as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
@@ -135,7 +139,8 @@ impl GuiApp {
                     }
                 }
 
-                self.notes
+                self.score
+                    .notes
                     .iter()
                     .filter(|NotesGroup { token, .. }| *token == seq.token)
                     .flat_map(|NotesGroup { notes, .. }| notes.iter())

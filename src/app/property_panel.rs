@@ -26,7 +26,7 @@ use crate::{
 
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
-        let len = self.sequences.len();
+        let len = self.score.sequences.len();
         egui::SidePanel::left("props")
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
@@ -44,7 +44,7 @@ impl GuiApp {
 
                     if let Some(sel) = self.selected {
                         if sel < len {
-                            let seq = (&mut self.sequences)[sel].clone();
+                            let seq = (&mut self.score.sequences)[sel].clone();
 
                             ui.heading(format!("Track {}", sel + 1));
                             ui.horizontal(|ui| {
@@ -99,14 +99,14 @@ impl GuiApp {
                                     || ui.input(|i| i.key_pressed(MUTE))
                                 {
                                     edited_seq
-                                        .get_or_insert((&mut self.sequences)[sel].clone())
+                                        .get_or_insert((&mut self.score.sequences)[sel].clone())
                                         .mute ^= true;
                                 }
                             });
 
                             {
                                 ui.horizontal(|ui| {
-                                    let seq_mut = &mut self.sequences[sel];
+                                    let seq_mut = &mut self.score.sequences[sel];
                                     let mut vol = seq_mut.volume;
 
                                     let vol_resp = slider_with_reset(
@@ -144,8 +144,11 @@ impl GuiApp {
                                         || kb_changed
                                     {
                                         seq_mut.volume = vol_after_kb;
-                                        if let Some(ng) =
-                                            self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        if let Some(ng) = self
+                                            .score
+                                            .notes
+                                            .iter_mut()
+                                            .find(|ng| ng.token == seq.token)
                                         {
                                             ng.volume = seq_mut.volume;
                                         }
@@ -153,7 +156,7 @@ impl GuiApp {
                                 });
 
                                 ui.horizontal(|ui| {
-                                    let seq_mut = &mut self.sequences[sel];
+                                    let seq_mut = &mut self.score.sequences[sel];
                                     let mut pan = seq_mut.spacial;
 
                                     let pan_resp = slider_with_reset(
@@ -174,8 +177,11 @@ impl GuiApp {
 
                                     if pan_resp.changed() || pan_resp.secondary_clicked() {
                                         seq_mut.spacial = pan.clamp(0.0, 1.0);
-                                        if let Some(ng) =
-                                            self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        if let Some(ng) = self
+                                            .score
+                                            .notes
+                                            .iter_mut()
+                                            .find(|ng| ng.token == seq.token)
                                         {
                                             ng.spacial = seq_mut.spacial;
                                         }
@@ -186,7 +192,7 @@ impl GuiApp {
                             ui.separator();
                             ui.horizontal(|ui| {
                                 ui.label("Wave:");
-                                let seq_mut = &mut self.sequences[sel];
+                                let seq_mut = &mut self.score.sequences[sel];
                                 let mut w_choice = seq_mut.wave_type;
 
                                 egui::ComboBox::from_id_salt("wave_type_combo")
@@ -203,7 +209,7 @@ impl GuiApp {
                                 if w_choice != seq_mut.wave_type {
                                     seq_mut.wave_type = w_choice;
                                     if let Some(ng) =
-                                        self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        self.score.notes.iter_mut().find(|ng| ng.token == seq.token)
                                     {
                                         ng.wave_type = seq_mut.wave_type;
                                     }
@@ -211,8 +217,8 @@ impl GuiApp {
                             });
 
                             ui.collapsing("Envelope", |ui| {
-                                let mut attack = self.sequences[sel].attack_decay.0;
-                                let mut decay = self.sequences[sel].attack_decay.1;
+                                let mut attack = self.score.sequences[sel].attack_decay.0;
+                                let mut decay = self.score.sequences[sel].attack_decay.1;
 
                                 let def = if DRUM_WAVES.contains(&seq.wave_type) {
                                     default_drum_attack_decay()
@@ -245,12 +251,12 @@ impl GuiApp {
                                     || decay_resp.secondary_clicked();
 
                                 if changed {
-                                    let seq_mut = &mut self.sequences[sel];
+                                    let seq_mut = &mut self.score.sequences[sel];
                                     seq_mut.attack_decay = (attack, decay);
                                     rescale_envelope(seq_mut);
 
                                     if let Some(ng) =
-                                        self.notes.iter_mut().find(|ng| ng.token == seq.token)
+                                        self.score.notes.iter_mut().find(|ng| ng.token == seq.token)
                                     {
                                         ng.attack_decay = seq_mut.attack_decay;
                                     }
@@ -258,8 +264,9 @@ impl GuiApp {
                             });
 
                             ui.collapsing("Bend", |ui| {
-                                let seq_bend = &mut self.sequences[sel].bend; // (f64, f64)
+                                let seq_bend = &mut self.score.sequences[sel].bend; // (f64, f64)
                                 let mut ng_bend_opt = self
+                                    .score
                                     .notes
                                     .iter_mut()
                                     .find(|ng| ng.token == seq.token)
@@ -298,9 +305,10 @@ impl GuiApp {
                                 }
                             });
                             ui.collapsing("Vibrato", |ui| {
-                                let token = self.sequences[sel].token;
-                                let seq_vibr = &mut self.sequences[sel].vibrato;
+                                let token = self.score.sequences[sel].token;
+                                let seq_vibr = &mut self.score.sequences[sel].vibrato;
                                 let mut ng_vibr_opt = self
+                                    .score
                                     .notes
                                     .iter_mut()
                                     .find(|ng| ng.token == token)
@@ -345,9 +353,10 @@ impl GuiApp {
                             });
                             if !DRUM_WAVES.contains(&seq.wave_type) {
                                 let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
-                                    let token = self.sequences[sel].token;
-                                    let seq_chorus = &mut self.sequences[sel].chorus;
+                                    let token = self.score.sequences[sel].token;
+                                    let seq_chorus = &mut self.score.sequences[sel].chorus;
                                     let mut ng_chorus_opt = self
+                                        .score
                                         .notes
                                         .iter_mut()
                                         .find(|ng| ng.token == token)
@@ -464,9 +473,10 @@ impl GuiApp {
                             };
 
                             let header = ui.collapsing("Power factor", |ui| {
-                                let token = self.sequences[sel].token;
-                                let seq_pow = &mut self.sequences[sel].pow_fact;
+                                let token = self.score.sequences[sel].token;
+                                let seq_pow = &mut self.score.sequences[sel].pow_fact;
                                 let mut ng_pow_opt = self
+                                    .score
                                     .notes
                                     .iter_mut()
                                     .find(|ng| ng.token == token)
@@ -539,7 +549,9 @@ impl GuiApp {
                                             .changed()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .time_quantum
                                                 .0 = tmp_quantum.0;
                                         };
@@ -552,7 +564,9 @@ impl GuiApp {
                                             .changed()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .time_quantum
                                                 .1 = tmp_quantum.1;
                                         };
@@ -585,14 +599,18 @@ impl GuiApp {
 
                                             if (t_min - seq.t_min.as_secs()).abs() > f64::EPSILON {
                                                 edited_seq
-                                                    .get_or_insert(self.sequences[sel].clone())
+                                                    .get_or_insert(
+                                                        self.score.sequences[sel].clone(),
+                                                    )
                                                     .t_min = step * (Time(t_min) / step).round();
                                             }
                                             if (Time(t_max) - seq.t_max).as_secs().abs()
                                                 > f64::EPSILON
                                             {
                                                 edited_seq
-                                                    .get_or_insert(self.sequences[sel].clone())
+                                                    .get_or_insert(
+                                                        self.score.sequences[sel].clone(),
+                                                    )
                                                     .t_max = step * (Time(t_max) / step).round();
                                             }
                                         },
@@ -642,7 +660,7 @@ impl GuiApp {
                                             }
 
                                             let e = edited_seq
-                                                .get_or_insert(self.sequences[sel].clone());
+                                                .get_or_insert(self.score.sequences[sel].clone());
                                             e.t_min = Time(new_min);
                                             e.t_max = Time(new_max);
                                         }
@@ -658,13 +676,17 @@ impl GuiApp {
                                             .clicked()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .inclusions = Rythm::Det(DetRythm::default());
                                         }
                                     } else {
                                         if ui.button("Use random inclusion generators").clicked() {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .inclusions = Rythm::Rd(RdRythm::default());
                                         }
                                     }
@@ -687,7 +709,8 @@ impl GuiApp {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                             edited_seq
                                                                 .get_or_insert(
-                                                                    (&mut self.sequences)[sel]
+                                                                    (&mut self.score.sequences)
+                                                                        [sel]
                                                                         .clone(),
                                                                 )
                                                                 .inclusions
@@ -710,7 +733,8 @@ impl GuiApp {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                             edited_seq
                                                                 .get_or_insert(
-                                                                    (&mut self.sequences)[sel]
+                                                                    (&mut self.score.sequences)
+                                                                        [sel]
                                                                         .clone(),
                                                                 )
                                                                 .inclusions
@@ -735,7 +759,8 @@ impl GuiApp {
                                                     if let Rythm::Det(ref mut edited_det_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.sequences)[sel].clone(),
+                                                                (&mut self.score.sequences)[sel]
+                                                                    .clone(),
                                                             )
                                                             .inclusions
                                                     {
@@ -759,13 +784,17 @@ impl GuiApp {
                                             .clicked()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .exclusions = Rythm::Det(DetRythm::default());
                                         }
                                     } else {
                                         if ui.button("Use random exclusion generators").clicked() {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .exclusions = Rythm::Rd(RdRythm::default());
                                         }
                                     }
@@ -788,7 +817,8 @@ impl GuiApp {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                             edited_seq
                                                                 .get_or_insert(
-                                                                    (&mut self.sequences)[sel]
+                                                                    (&mut self.score.sequences)
+                                                                        [sel]
                                                                         .clone(),
                                                                 )
                                                                 .exclusions
@@ -811,7 +841,8 @@ impl GuiApp {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
                                                             edited_seq
                                                                 .get_or_insert(
-                                                                    (&mut self.sequences)[sel]
+                                                                    (&mut self.score.sequences)
+                                                                        [sel]
                                                                         .clone(),
                                                                 )
                                                                 .exclusions
@@ -836,7 +867,8 @@ impl GuiApp {
                                                     if let Rythm::Det(ref mut edited_det_rythm) =
                                                         edited_seq
                                                             .get_or_insert(
-                                                                (&mut self.sequences)[sel].clone(),
+                                                                (&mut self.score.sequences)[sel]
+                                                                    .clone(),
                                                             )
                                                             .exclusions
                                                     {
@@ -862,7 +894,9 @@ impl GuiApp {
                                             .changed()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .beat_offset = tmp_beat_offset;
                                         };
                                     });
@@ -874,8 +908,9 @@ impl GuiApp {
                                         );
                                         if slider.changed() {
                                             loop_len = loop_len.max(Time(0.0));
-                                            let tmp_edited_seq = edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone());
+                                            let tmp_edited_seq = edited_seq.get_or_insert(
+                                                (&mut self.score.sequences)[sel].clone(),
+                                            );
                                             tmp_edited_seq.loop_len = loop_len.max(Time(0.0));
                                             tmp_edited_seq.t_max =
                                                 tmp_edited_seq.t_max.min(loop_len);
@@ -885,8 +920,9 @@ impl GuiApp {
                                         let slider =
                                             ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
                                         if slider.changed() {
-                                            let tmp_edited_seq = edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone());
+                                            let tmp_edited_seq = edited_seq.get_or_insert(
+                                                (&mut self.score.sequences)[sel].clone(),
+                                            );
                                             tmp_edited_seq.repeat = repeat;
                                         };
                                     });
@@ -906,7 +942,9 @@ impl GuiApp {
                                             .changed()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .tolerance
                                                 .0 = tmp_tolerance.0;
                                         };
@@ -919,7 +957,9 @@ impl GuiApp {
                                             .changed()
                                         {
                                             edited_seq
-                                                .get_or_insert((&mut self.sequences)[sel].clone())
+                                                .get_or_insert(
+                                                    (&mut self.score.sequences)[sel].clone(),
+                                                )
                                                 .tolerance
                                                 .1 = tmp_tolerance.1;
                                         };
@@ -988,15 +1028,16 @@ impl GuiApp {
                                             .changed()
                                     }
                                     if changed {
-                                        let e = edited_seq
-                                            .get_or_insert((&mut self.sequences)[sel].clone());
+                                        let e = edited_seq.get_or_insert(
+                                            (&mut self.score.sequences)[sel].clone(),
+                                        );
                                         e.interval = interval;
                                         e.shuffle = shuffle;
                                     }
                                 }
                             });
                             ui.collapsing("Accents", |ui| {
-                                let seq_mut = &mut self.sequences[sel];
+                                let seq_mut = &mut self.score.sequences[sel];
 
                                 let def = default_accents();
                                 let mut mag_disp = 1.0 / seq_mut.accents.0.max(f64::MIN_POSITIVE);
@@ -1044,7 +1085,7 @@ impl GuiApp {
                                 self.del_seq(sel);
                                 self.selected = if sel > 0 {
                                     Some(sel - 1)
-                                } else if self.sequences.len() > 1 {
+                                } else if self.score.sequences.len() > 1 {
                                     Some(sel)
                                 } else {
                                     None
@@ -1054,7 +1095,7 @@ impl GuiApp {
                         Action::Clone => {
                             if let Some(sel) = self.selected {
                                 self.clone_seq(sel);
-                                let last = self.sequences.len() - 1;
+                                let last = self.score.sequences.len() - 1;
                                 for k in (sel + 1..last).rev() {
                                     self.swap_seqs_at(k + 1, k);
                                 }

@@ -41,9 +41,9 @@ impl GuiApp {
                         }
                         if !self.show_start {
                             if ui.button("Add track").clicked() {
-                                let seq = Sequence::new(self.last_token.next());
+                                let seq = Sequence::new(self.score.last_token.next());
                                 self.new_seq(seq);
-                                self.selected = Some(self.sequences.len() - 1);
+                                self.selected = Some(self.score.sequences.len() - 1);
                             }
                         }
 
@@ -103,7 +103,7 @@ impl GuiApp {
                                 ui_left.label("Left Delays (ms)");
                                 Self::edit_vec(
                                     &mut ui_left,
-                                    &mut self.delays.0,
+                                    &mut self.score.delays.0,
                                     0.0,
                                     layout_left(),
                                 );
@@ -121,7 +121,7 @@ impl GuiApp {
                                 });
                                 Self::edit_vec(
                                     &mut ui_right,
-                                    &mut self.delays.1,
+                                    &mut self.score.delays.1,
                                     0.0,
                                     Layout::right_to_left(egui::Align::Max),
                                 );

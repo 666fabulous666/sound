@@ -12,9 +12,9 @@ impl GuiApp {
         {
             use crate::app::GuiState;
             let state = GuiState {
-                seqs: self.sequences.clone(),
+                seqs: self.score.sequences.clone(),
                 selected: self.selected,
-                delays: self.delays.clone(),
+                delays: self.score.delays.clone(),
             };
 
             match serde_json::to_string_pretty(&state) {

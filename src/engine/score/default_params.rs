@@ -34,6 +34,10 @@ pub fn default_shuffle() -> bool {
     false
 }
 
+pub fn default_name() -> String {
+    String::new()
+}
+
 pub fn default_spacial() -> f64 {
     0.5
 }
@@ -93,4 +97,7 @@ impl Default for RdRythm {
             length: 10,
         }
     }
+}
+pub fn default_delays() -> (Vec<f64>, Vec<f64>) {
+    (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0])
 }

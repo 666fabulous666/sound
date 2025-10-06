@@ -3,11 +3,17 @@ pub mod note;
 pub mod sequence;
 pub mod track_node;
 
+use std::sync::Arc;
+
 use crate::{
-    engine::{score::note::Note, waves::WaveType},
+    engine::{
+        score::{note::Note, sequence::Sequence},
+        waves::WaveType,
+    },
     time_freq::{Freq, Time},
-    Token,
+    Token, TokenGen,
 };
+use arc_swap::ArcSwap;
 use default_params::*;
 use serde::{Deserialize, Serialize};
 
@@ -68,7 +74,7 @@ impl Interval {
     pub fn compute(&self) -> f64 {
         match self {
             Interval::Tempered(degree, octave) => (*degree as f64 / 12.0 + *octave as f64).exp2(),
-            _ => panic!(),
+            _ => unreachable!(),
         }
     }
 }
@@ -86,4 +92,11 @@ pub struct NotesGroup {
     pub vibrato: (f64, Freq),
     pub volume: f64,
     pub wave_type: WaveType,
+}
+
+pub struct Score {
+    pub notes: Vec<NotesGroup>,
+    pub sequences: Vec<Sequence>,
+    pub last_token: TokenGen,
+    pub delays: (Vec<f64>, Vec<f64>),
 }

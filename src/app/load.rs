@@ -50,8 +50,9 @@ impl GuiApp {
         for seq in &state.seqs {
             self.new_seq(seq.clone());
         }
-        self.last_token = TokenGen(
-            self.sequences
+        self.score_mut().last_token = TokenGen(
+            self.score
+                .sequences
                 .iter()
                 .map(|s| s.token)
                 .max()
@@ -59,6 +60,6 @@ impl GuiApp {
                 .saturating_add(1),
         );
         self.selected = state.selected.filter(|&i| i < state.seqs.len());
-        self.delays = state.delays;
+        self.score.delays = state.delays;
     }
 }

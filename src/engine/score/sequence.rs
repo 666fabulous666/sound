@@ -67,6 +67,7 @@ pub struct Sequence {
     pub shuffle: bool,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
+    #[serde(default = "default_name")]
     pub name: String,
 }
 
