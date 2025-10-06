@@ -16,6 +16,27 @@ pub enum TrackNode {
 }
 
 impl TrackNode {
+    pub fn as_seq(&self) -> Option<&Sequence> {
+        if let TrackNode::Seq(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+    pub fn as_seq_mut(&mut self) -> Option<&mut Sequence> {
+        if let TrackNode::Seq(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn seq_unchecked(&self) -> &Sequence {
+        self.as_seq().expect("TrackNode::Seq expected")
+    }
+    pub fn seq_mut_unchecked(&mut self) -> &mut Sequence {
+        self.as_seq_mut().expect("TrackNode::Seq expected")
+    }
     // ---------- Constructors ----------
     // /// Root group with safe defaults.
     // pub fn new_root(gen: &mut TokenGen) -> Self {

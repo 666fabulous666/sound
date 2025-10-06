@@ -54,7 +54,7 @@ impl GuiApp {
             self.score
                 .sequences
                 .iter()
-                .map(|s| s.token)
+                .map(|s| s.seq_unchecked().token)
                 .max()
                 .unwrap_or(Token(0))
                 .saturating_add(1),

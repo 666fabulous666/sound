@@ -7,7 +7,10 @@ mod top_panel;
 
 use crate::{
     engine::{
-        score::{default_params::default_delays, sequence::Sequence, NotesGroup, Score},
+        score::{
+            default_params::default_delays, sequence::Sequence, track_node::TrackNode, NotesGroup,
+            Score,
+        },
         waves::WaveType,
     },
     shortcuts::*,
@@ -83,12 +86,36 @@ pub struct GuiApp {
     property_panel_width: f32,
 }
 
+use serde::Deserializer;
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum TrackNodeOrSequence {
+    Node(TrackNode), // e.g. { "Seq": { ... } } or future { "Group": {...} }
+    Seq(Sequence),   // legacy: raw Sequence object at array element
+}
+
+fn compat_nodes<'de, D>(d: D) -> Result<Vec<TrackNode>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let items: Vec<TrackNodeOrSequence> = Deserialize::deserialize(d)?;
+    Ok(items
+        .into_iter()
+        .map(|it| match it {
+            TrackNodeOrSequence::Node(n) => n,
+            TrackNodeOrSequence::Seq(s) => TrackNode::Seq(s),
+        })
+        .collect())
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuiState {
-    seqs: Vec<Sequence>,
-    selected: Option<usize>,
+    #[serde(deserialize_with = "compat_nodes")]
+    pub seqs: Vec<TrackNode>, // now works with both old and new files
+    pub selected: Option<usize>,
     #[serde(default = "default_delays")]
-    delays: (Vec<f64>, Vec<f64>),
+    pub delays: (Vec<f64>, Vec<f64>),
 }
 
 impl GuiApp {
@@ -379,7 +406,8 @@ impl GuiApp {
             .iter()
             .enumerate()
             .filter(|(_, seq)| {
-                seq.not_generate_until
+                seq.seq_unchecked()
+                    .not_generate_until
                     .as_ref()
                     .map_or(true, |until| now >= *until)
             })
@@ -394,25 +422,25 @@ impl GuiApp {
         self.score_mut().sequences.clear();
         self.score.notes.clear();
     }
-    fn new_seq(&mut self, mut sequence: Sequence) {
-        self.draw_seq(&mut sequence);
-        self.score.sequences.push(sequence);
+    fn new_seq(&mut self, mut track_node: TrackNode) {
+        self.draw_seq(track_node.seq_mut_unchecked());
+        self.score.sequences.push(track_node);
     }
     fn edit_seq_at(&mut self, mut sequence: Sequence, i: usize) {
         self.regen_seq(&mut sequence);
-        self.score.sequences[i] = sequence;
+        self.score.sequences[i] = TrackNode::Seq(sequence);
         let len = self.score.sequences.len();
         (i + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn del_seq(&mut self, a: usize) {
-        let tk = self.score.sequences[a].token;
+        let tk = self.score.sequences[a].seq_unchecked().token;
         self.drain_notes_from_seq(tk);
         self.score.sequences.remove(a);
     }
     fn clone_seq(&mut self, i: usize) {
         let mut sequence = self.score.sequences[i].clone();
-        sequence.token = self.score.last_token.next();
-        self.draw_seq(&mut sequence);
+        sequence.seq_mut_unchecked().token = self.score.last_token.next();
+        self.draw_seq(sequence.seq_mut_unchecked());
         self.score.sequences.push(sequence);
     }
     fn swap_seqs_at(&mut self, i: usize, j: usize) {
@@ -434,7 +462,7 @@ impl GuiApp {
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
     fn draw_seq_at(&mut self, a: usize) {
         let now = self.now();
-        let seq = &mut self.score.sequences[a];
+        let seq = self.score.sequences[a].seq_mut_unchecked();
         let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
         // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
         seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
@@ -451,7 +479,7 @@ impl GuiApp {
         self.draw_seq(seq);
     }
     fn regen_seq_at(&mut self, i: usize) {
-        self.drain_notes_from_seq(self.score.sequences[i].token);
+        self.drain_notes_from_seq(self.score.sequences[i].seq_unchecked().token);
         self.draw_seq_at(i);
     }
     #[cfg(target_arch = "wasm32")]

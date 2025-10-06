@@ -9,7 +9,10 @@ use egui::{Layout, RichText};
 use crate::MAX_FPS;
 use crate::{
     app::GuiApp,
-    engine::{reverb::Reverb, score::sequence::Sequence},
+    engine::{
+        reverb::Reverb,
+        score::{sequence::Sequence, track_node::TrackNode},
+    },
     layout_left,
     stream::stream,
     F0,
@@ -41,7 +44,9 @@ impl GuiApp {
                         }
                         if !self.show_start {
                             if ui.button("Add track").clicked() {
-                                let seq = Sequence::new(self.score.last_token.next());
+                                let seq = TrackNode::from_sequence(Sequence::new(
+                                    self.score.last_token.next(),
+                                ));
                                 self.new_seq(seq);
                                 self.selected = Some(self.score.sequences.len() - 1);
                             }

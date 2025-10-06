@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     engine::{
-        score::{note::Note, sequence::Sequence},
+        score::{note::Note, sequence::Sequence, track_node::TrackNode},
         waves::WaveType,
     },
     time_freq::{Freq, Time},
@@ -96,7 +96,7 @@ pub struct NotesGroup {
 
 pub struct Score {
     pub notes: Vec<NotesGroup>,
-    pub sequences: Vec<Sequence>,
+    pub sequences: Vec<TrackNode>,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
     pub shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
