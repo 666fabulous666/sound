@@ -4,56 +4,56 @@ use crate::{engine::score::sequence::Sequence, Token, TokenGen};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum TrackNode {
-    Group {
-        id: Token,
-        name: String,
-        muted: bool,
-        volume: f64,  // mix gain multiplier (>= 0.0)
-        spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
-        children: Vec<TrackNode>,
-    },
+    // Group {
+    //     id: Token,
+    //     name: String,
+    //     muted: bool,
+    //     volume: f64,  // mix gain multiplier (>= 0.0)
+    //     spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
+    //     children: Vec<TrackNode>,
+    // },
     Seq(Sequence),
 }
 
 impl TrackNode {
     // ---------- Constructors ----------
-    /// Root group with safe defaults.
-    pub fn new_root(gen: &mut TokenGen) -> Self {
-        Self::new_group(gen, "Root")
-    }
+    // /// Root group with safe defaults.
+    // pub fn new_root(gen: &mut TokenGen) -> Self {
+    //     Self::new_group(gen, "Root")
+    // }
 
-    /// New group with a fresh Token id and safe defaults.
-    pub fn new_group(gen: &mut TokenGen, name: impl Into<String>) -> Self {
-        TrackNode::Group {
-            id: gen.next(),
-            name: name.into(),
-            muted: false,
-            volume: 1.0,
-            spacial: 0.5,
-            children: Vec::new(),
-        }
-    }
+    // /// New group with a fresh Token id and safe defaults.
+    // pub fn new_group(gen: &mut TokenGen, name: impl Into<String>) -> Self {
+    //     TrackNode::Group {
+    //         id: gen.next(),
+    //         name: name.into(),
+    //         muted: false,
+    //         volume: 1.0,
+    //         spacial: 0.5,
+    //         children: Vec::new(),
+    //     }
+    // }
 
     /// Wrap a Sequence node.
     pub fn from_sequence(seq: Sequence) -> Self {
         TrackNode::Seq(seq)
     }
 
-    // ---------- Queries ----------
-    pub fn is_group(&self) -> bool {
-        matches!(self, TrackNode::Group { .. })
-    }
+    // // ---------- Queries ----------
+    // pub fn is_group(&self) -> bool {
+    //     matches!(self, TrackNode::Group { .. })
+    // }
 
     pub fn name(&self) -> &str {
         match self {
-            TrackNode::Group { name, .. } => name,
+            // TrackNode::Group { name, .. } => name,
             TrackNode::Seq(s) => &s.name,
         }
     }
 
     pub fn child_count(&self) -> usize {
         match self {
-            TrackNode::Group { children, .. } => children.len(),
+            // TrackNode::Group { children, .. } => children.len(),
             TrackNode::Seq(_) => 0,
         }
     }
@@ -61,33 +61,39 @@ impl TrackNode {
     // ---------- Safe mutations on groups ----------
     /// Push a child at the end; returns its index.
     pub fn push_child(&mut self, child: TrackNode) -> Option<usize> {
-        if let TrackNode::Group { children, .. } = self {
-            children.push(child);
-            Some(children.len() - 1)
-        } else {
-            None
+        match self {
+            // TrackNode::Group { children, .. } => {
+            //     children.push(child);
+            //     Some(children.len() - 1)
+            // }
+            _ => None,
         }
     }
 
     /// Insert a child at index; returns true on success.
     pub fn insert_child(&mut self, index: usize, child: TrackNode) -> bool {
-        if let TrackNode::Group { children, .. } = self {
-            if index <= children.len() {
-                children.insert(index, child);
-                return true;
-            }
+        match self {
+            // TrackNode::Group { children, .. } => {
+            //     if index <= children.len() {
+            //         children.insert(index, child);
+            //         return true;
+            //     }
+            // }
+            _ => (),
         }
         false
     }
 
     /// Clamp mix params to sane ranges.
     pub fn clamp_mix(&mut self) {
-        if let TrackNode::Group {
-            volume, spacial, ..
-        } = self
-        {
-            *volume = volume.max(0.0);
-            *spacial = spacial.clamp(0.0, 1.0);
+        match self {
+            // TrackNode::Group {
+            //     volume, spacial, ..
+            // } => {
+            //     *volume = volume.max(0.0);
+            //     *spacial = spacial.clamp(0.0, 1.0);
+            // }
+            _ => (),
         }
     }
 
@@ -96,7 +102,7 @@ impl TrackNode {
         let mut cur = self;
         for &ix in path {
             match cur {
-                TrackNode::Group { children, .. } => cur = children.get(ix)?,
+                // TrackNode::Group { children, .. } => cur = children.get(ix)?,
                 TrackNode::Seq(_) => return None,
             }
         }
@@ -107,7 +113,7 @@ impl TrackNode {
         let mut cur = self;
         for &ix in path {
             match cur {
-                TrackNode::Group { children, .. } => cur = children.get_mut(ix)?,
+                // TrackNode::Group { children, .. } => cur = children.get_mut(ix)?,
                 TrackNode::Seq(_) => return None,
             }
         }
@@ -116,16 +122,16 @@ impl TrackNode {
 
     pub fn remove_at(&mut self, path: &[usize]) -> Option<TrackNode> {
         match (path.split_first(), self) {
-            (Some((&ix, rest)), TrackNode::Group { children, .. }) if rest.is_empty() => {
-                if ix < children.len() {
-                    Some(children.remove(ix))
-                } else {
-                    None
-                }
-            }
-            (Some((&ix, rest)), TrackNode::Group { children, .. }) => {
-                children.get_mut(ix)?.remove_at(rest)
-            }
+            // (Some((&ix, rest)), TrackNode::Group { children, .. }) if rest.is_empty() => {
+            //     if ix < children.len() {
+            //         Some(children.remove(ix))
+            //     } else {
+            //         None
+            //     }
+            // }
+            // (Some((&ix, rest)), TrackNode::Group { children, .. }) => {
+            //     children.get_mut(ix)?.remove_at(rest)
+            // }
             _ => None,
         }
     }
@@ -142,11 +148,14 @@ impl TrackNode {
                 None => return false,
             }
         };
-        if let TrackNode::Group { children, .. } = parent {
-            if ix <= children.len() {
-                children.insert(ix, node);
-                return true;
-            }
+        match parent {
+            // TrackNode::Group { children, .. } => {
+            //     if ix <= children.len() {
+            //                 children.insert(ix, node);
+            //                 return true;
+            //             }
+            // }
+            _ => (),
         }
         false
     }
@@ -161,21 +170,21 @@ pub fn collect_sequences<'a>(
 ) {
     match node {
         TrackNode::Seq(s) => acc.push((s, parent_vol, parent_spacial)),
-        TrackNode::Group {
-            muted,
-            volume,
-            spacial,
-            children,
-            ..
-        } => {
-            if *muted {
-                return;
-            }
-            let vol = parent_vol * *volume;
-            let pan = parent_spacial + parent_spacial.min(1.0 - parent_spacial) * spacial; //NOTE: might not be the good approach
-            for ch in children {
-                collect_sequences(ch, acc, vol, pan);
-            }
-        }
+        // TrackNode::Group {
+        //     muted,
+        //     volume,
+        //     spacial,
+        //     children,
+        //     ..
+        // } => {
+        //     if *muted {
+        //         return;
+        //     }
+        //     let vol = parent_vol * *volume;
+        //     let pan = parent_spacial + parent_spacial.min(1.0 - parent_spacial) * spacial; //NOTE: might not be the good approach
+        //     for ch in children {
+        //         collect_sequences(ch, acc, vol, pan);
+        //     }
+        // }
     }
 }
