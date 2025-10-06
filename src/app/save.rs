@@ -34,9 +34,9 @@ impl GuiApp {
 
         // Build the state the same way as native
         let state = crate::app::GuiState {
-            seqs: self.sequences.clone(),
+            seqs: self.score.sequences.clone(),
             selected: self.selected,
-            delays: self.delays.clone(),
+            delays: self.score.delays.clone(),
         };
 
         let Ok(text) = serde_json::to_string_pretty(&state) else {
