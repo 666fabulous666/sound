@@ -41,11 +41,12 @@ impl GuiApp {
                     }
 
                     let mut action = Action::None;
-                    let mut edited_seq: Option<TrackNode> = None;
+                    // let mut edited_seq: Option<TrackNode> = None;
+                    let mut edited_seq = false;
 
                     if let Some(sel) = self.selected {
                         if sel < len {
-                            let track_node_mut = &mut self.score.sequences[sel].clone();
+                            let track_node_mut = &mut self.score.sequences[sel];
                             let seq_mut = track_node_mut.seq_mut_unchecked();
 
                             ui.heading(format!("Track {}", sel + 1));
@@ -100,10 +101,8 @@ impl GuiApp {
                                     .clicked()
                                     || ui.input(|i| i.key_pressed(MUTE))
                                 {
-                                    edited_seq
-                                        .get_or_insert((&mut self.score.sequences)[sel].clone())
-                                        .seq_mut_unchecked()
-                                        .mute ^= true;
+                                    seq_mut.mute ^= true;
+                                    edited_seq ^= true;
                                 }
                             });
 
@@ -552,13 +551,8 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .time_quantum
-                                                .0 = tmp_quantum.0;
+                                            seq_mut.time_quantum.0 = tmp_quantum.0;
+                                            edited_seq ^= true;
                                         };
                                         ui.label("/");
                                         if ui
@@ -568,13 +562,8 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .time_quantum
-                                                .1 = tmp_quantum.1;
+                                            seq_mut.time_quantum.1 = tmp_quantum.1;
+                                            edited_seq ^= true;
                                         };
                                     });
                                 }
@@ -608,22 +597,14 @@ impl GuiApp {
                                             if (t_min - seq_mut.t_min.as_secs()).abs()
                                                 > f64::EPSILON
                                             {
-                                                edited_seq
-                                                    .get_or_insert(
-                                                        self.score.sequences[sel].clone(),
-                                                    )
-                                                    .seq_mut_unchecked()
-                                                    .t_min = step * (Time(t_min) / step).round();
+                                                seq_mut.t_min = step * (Time(t_min) / step).round();
+                                                edited_seq ^= true;
                                             }
                                             if (Time(t_max) - seq_mut.t_max).as_secs().abs()
                                                 > f64::EPSILON
                                             {
-                                                edited_seq
-                                                    .get_or_insert(
-                                                        self.score.sequences[sel].clone(),
-                                                    )
-                                                    .seq_mut_unchecked()
-                                                    .t_max = step * (Time(t_max) / step).round();
+                                                seq_mut.t_max = step * (Time(t_max) / step).round();
+                                                edited_seq ^= true;
                                             }
                                         },
                                     );
@@ -672,11 +653,9 @@ impl GuiApp {
                                                 }
                                             }
 
-                                            let e = edited_seq
-                                                .get_or_insert(self.score.sequences[sel].clone())
-                                                .seq_mut_unchecked();
-                                            e.t_min = Time(new_min);
-                                            e.t_max = Time(new_max);
+                                            seq_mut.t_min = Time(new_min);
+                                            seq_mut.t_max = Time(new_max);
+                                            edited_seq ^= true;
                                         }
                                     }
                                 }
@@ -689,21 +668,13 @@ impl GuiApp {
                                             .button("Use deterministic inclusion generators")
                                             .clicked()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .inclusions = Rythm::Det(DetRythm::default());
+                                            seq_mut.inclusions = Rythm::Det(DetRythm::default());
+                                            edited_seq ^= true;
                                         }
                                     } else {
                                         if ui.button("Use random inclusion generators").clicked() {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .inclusions = Rythm::Rd(RdRythm::default());
+                                            seq_mut.inclusions = Rythm::Rd(RdRythm::default());
+                                            edited_seq ^= true;
                                         }
                                     }
                                     match tmp_inclusions {
@@ -723,18 +694,12 @@ impl GuiApp {
                                                         .changed()
                                                     {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                            edited_seq
-                                                                .get_or_insert(
-                                                                    (&mut self.score.sequences)
-                                                                        [sel]
-                                                                        .clone(),
-                                                                )
-                                                                .seq_mut_unchecked()
-                                                                .inclusions
+                                                            seq_mut.inclusions
                                                         {
                                                             edited_rd_rythm.amount = rd_rythm
                                                                 .amount
                                                                 .min(rd_rythm.length);
+                                                            edited_seq ^= true;
                                                         }
                                                     };
                                                     ui.label("N:");
@@ -748,18 +713,12 @@ impl GuiApp {
                                                         .changed()
                                                     {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                            edited_seq
-                                                                .get_or_insert(
-                                                                    (&mut self.score.sequences)
-                                                                        [sel]
-                                                                        .clone(),
-                                                                )
-                                                                .seq_mut_unchecked()
-                                                                .inclusions
+                                                            seq_mut.inclusions
                                                         {
                                                             edited_rd_rythm.length = rd_rythm
                                                                 .length
                                                                 .max(rd_rythm.amount);
+                                                            edited_seq ^= true;
                                                         }
                                                     };
                                                 });
@@ -775,18 +734,13 @@ impl GuiApp {
                                                 if gens != old_val {
                                                     // TODO: do better
                                                     if let Rythm::Det(ref mut edited_det_rythm) =
-                                                        edited_seq
-                                                            .get_or_insert(
-                                                                (&mut self.score.sequences)[sel]
-                                                                    .clone(),
-                                                            )
-                                                            .seq_mut_unchecked()
-                                                            .inclusions
+                                                        seq_mut.inclusions
                                                     {
                                                         edited_det_rythm.generators = gens
                                                             .into_iter()
                                                             .filter(|g| *g > 0)
                                                             .collect();
+                                                        edited_seq ^= true;
                                                     }
                                                 }
                                             });
@@ -802,21 +756,13 @@ impl GuiApp {
                                             .button("Use deterministic exclusion generators")
                                             .clicked()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .exclusions = Rythm::Det(DetRythm::default());
+                                            seq_mut.exclusions = Rythm::Det(DetRythm::default());
+                                            edited_seq ^= true;
                                         }
                                     } else {
                                         if ui.button("Use random exclusion generators").clicked() {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .exclusions = Rythm::Rd(RdRythm::default());
+                                            seq_mut.exclusions = Rythm::Rd(RdRythm::default());
+                                            edited_seq ^= true;
                                         }
                                     }
                                     match tmp_exclusions {
@@ -836,18 +782,12 @@ impl GuiApp {
                                                         .changed()
                                                     {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                            edited_seq
-                                                                .get_or_insert(
-                                                                    (&mut self.score.sequences)
-                                                                        [sel]
-                                                                        .clone(),
-                                                                )
-                                                                .seq_mut_unchecked()
-                                                                .exclusions
+                                                            seq_mut.exclusions
                                                         {
                                                             edited_rd_rythm.amount = rd_rythm
                                                                 .amount
                                                                 .min(rd_rythm.length);
+                                                            edited_seq ^= true;
                                                         }
                                                     };
                                                     ui.label("N:");
@@ -861,18 +801,12 @@ impl GuiApp {
                                                         .changed()
                                                     {
                                                         if let Rythm::Rd(ref mut edited_rd_rythm) =
-                                                            edited_seq
-                                                                .get_or_insert(
-                                                                    (&mut self.score.sequences)
-                                                                        [sel]
-                                                                        .clone(),
-                                                                )
-                                                                .seq_mut_unchecked()
-                                                                .exclusions
+                                                            seq_mut.exclusions
                                                         {
                                                             edited_rd_rythm.length = rd_rythm
                                                                 .length
                                                                 .max(rd_rythm.amount);
+                                                            edited_seq ^= true;
                                                         }
                                                     };
                                                 });
@@ -888,18 +822,13 @@ impl GuiApp {
                                                 if gens != old_val {
                                                     // TODO: do better
                                                     if let Rythm::Det(ref mut edited_det_rythm) =
-                                                        edited_seq
-                                                            .get_or_insert(
-                                                                (&mut self.score.sequences)[sel]
-                                                                    .clone(),
-                                                            )
-                                                            .seq_mut_unchecked()
-                                                            .exclusions
+                                                        seq_mut.exclusions
                                                     {
                                                         edited_det_rythm.generators = gens
                                                             .into_iter()
                                                             .filter(|g| *g > 1)
                                                             .collect();
+                                                        edited_seq ^= true;
                                                     }
                                                 }
                                             });
@@ -917,12 +846,8 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .beat_offset = tmp_beat_offset;
+                                            seq_mut.beat_offset = tmp_beat_offset;
+                                            edited_seq ^= true;
                                         };
                                     });
                                     ui.horizontal(|ui| {
@@ -933,28 +858,17 @@ impl GuiApp {
                                         );
                                         if slider.changed() {
                                             loop_len = loop_len.max(Time(0.0));
-                                            let tmp_edited_seq = edited_seq.get_or_insert(
-                                                (&mut self.score.sequences)[sel].clone(),
-                                            );
-                                            tmp_edited_seq.seq_mut_unchecked().loop_len =
-                                                loop_len.max(Time(0.0));
-                                            tmp_edited_seq.seq_mut_unchecked().t_max =
-                                                tmp_edited_seq
-                                                    .seq_mut_unchecked()
-                                                    .t_max
-                                                    .min(loop_len);
+                                            seq_mut.loop_len = loop_len.max(Time(0.0));
+                                            seq_mut.t_max = seq_mut.t_max.min(loop_len);
+                                            edited_seq ^= true;
                                         };
                                         let mut repeat = seq_mut.repeat.clone();
                                         ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
                                         let slider =
                                             ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
                                         if slider.changed() {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .repeat = repeat;
+                                            seq_mut.repeat = repeat;
+                                            edited_seq ^= true;
                                         };
                                     });
                                 }
@@ -972,13 +886,8 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .tolerance
-                                                .0 = tmp_tolerance.0;
+                                            seq_mut.tolerance.0 = tmp_tolerance.0;
+                                            edited_seq ^= true;
                                         };
                                         ui.label(",");
                                         if ui
@@ -988,13 +897,8 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq
-                                                .get_or_insert(
-                                                    (&mut self.score.sequences)[sel].clone(),
-                                                )
-                                                .seq_mut_unchecked()
-                                                .tolerance
-                                                .1 = tmp_tolerance.1;
+                                            seq_mut.tolerance.1 = tmp_tolerance.1;
+                                            edited_seq ^= true;
                                         };
                                         ui.label("->");
                                     });
@@ -1061,11 +965,9 @@ impl GuiApp {
                                             .changed()
                                     }
                                     if changed {
-                                        let e = edited_seq
-                                            .get_or_insert((&mut self.score.sequences)[sel].clone())
-                                            .seq_mut_unchecked();
-                                        e.interval = interval;
-                                        e.shuffle = shuffle;
+                                        seq_mut.interval = interval;
+                                        seq_mut.shuffle = shuffle;
+                                        edited_seq ^= true;
                                     }
                                 }
                             });
@@ -1145,10 +1047,12 @@ impl GuiApp {
                             }
                         }
                     }
-                    if let Some(ref mut edited_seq) = edited_seq {
+                    if edited_seq {
                         if let Some(sel) = self.selected {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                self.edit_seq_at(edited_seq.seq_mut_unchecked().clone(), sel);
+                                let sequence =
+                                    (&mut self.score.sequences[sel]).seq_mut_unchecked().clone();
+                                self.edit_seq_at(sequence, sel);
                             }
                         }
                     }
