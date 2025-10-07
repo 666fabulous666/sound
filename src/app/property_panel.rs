@@ -16,8 +16,7 @@ use crate::{
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
     engine::score::{
-        default_params::*, sequence::Sequence, track_node::TrackNode, ChorusParams, DetRythm,
-        Interval, RdRythm, Rythm,
+        default_params::*, sequence::Sequence, ChorusParams, DetRythm, Interval, RdRythm, Rythm,
     },
     layout_left,
     rescale_factor,
