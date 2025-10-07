@@ -109,11 +109,9 @@ impl GuiApp {
 
                             {
                                 ui.horizontal(|ui| {
-                                    let mut vol = seq_mut.volume;
-
                                     let vol_resp = slider_with_reset(
                                         ui,
-                                        &mut vol,
+                                        &mut seq_mut.volume,
                                         0.0..=32.0,
                                         "Volume",
                                         Some("+ / - (Shift×10)"),
@@ -126,33 +124,34 @@ impl GuiApp {
                                         );
                                     });
 
-                                    let (kb_changed, vol_after_kb) = ui.ctx().input(|i| {
+                                    let kb_changed = ui.ctx().input(|i| {
                                         let step = if i.modifiers.shift { 0.5 } else { 0.05 };
-                                        let mut v = vol;
                                         let mut changed = false;
                                         if i.key_down(egui::Key::Plus) {
-                                            v = (v + step).min(32.0);
+                                            *&mut seq_mut.volume =
+                                                (*&mut seq_mut.volume + step).min(32.0);
                                             changed = true;
                                         }
                                         if i.key_down(egui::Key::Minus) {
-                                            v = (v - step).max(0.0);
+                                            *&mut seq_mut.volume =
+                                                (*&mut seq_mut.volume - step).max(0.0);
                                             changed = true;
                                         }
-                                        (changed, v)
+                                        changed
                                     });
 
                                     if vol_resp.changed()
                                         || vol_resp.secondary_clicked()
                                         || kb_changed
                                     {
-                                        seq_mut.volume = vol_after_kb;
+                                        // *vol = *vol_after_kb;
                                         if let Some(ng) = self
                                             .score
                                             .notes
                                             .iter_mut()
                                             .find(|ng| ng.token == seq_mut.token)
                                         {
-                                            ng.volume = seq_mut.volume;
+                                            ng.volume = *&mut seq_mut.volume;
                                         }
                                     }
                                 });

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     engine::{
-        score::{note::Note, sequence::Sequence, track_node::TrackNode},
+        score::{note::Note, track_node::TrackNode},
         waves::WaveType,
     },
     time_freq::{Freq, Time},

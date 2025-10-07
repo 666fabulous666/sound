@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{engine::score::sequence::Sequence, Token, TokenGen};
+use crate::engine::score::sequence::Sequence;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum TrackNode {
