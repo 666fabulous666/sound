@@ -267,7 +267,7 @@ impl GuiApp {
                             });
 
                             ui.collapsing("Bend", |ui| {
-                                let mut seq_bend = seq_mut.bend; // (f64, f64)
+                                let seq_bend = &mut seq_mut.bend;
                                 let mut ng_bend_opt = self
                                     .score
                                     .notes
@@ -309,7 +309,7 @@ impl GuiApp {
                             });
                             ui.collapsing("Vibrato", |ui| {
                                 let token = seq_mut.token;
-                                let mut seq_vibr = seq_mut.vibrato;
+                                let seq_vibr = &mut seq_mut.vibrato;
                                 let mut ng_vibr_opt = self
                                     .score
                                     .notes
@@ -357,7 +357,7 @@ impl GuiApp {
                             if !DRUM_WAVES.contains(&seq_mut.wave_type) {
                                 let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
                                     let token = seq_mut.token;
-                                    let mut seq_chorus = seq_mut.chorus.clone();
+                                    let seq_chorus = &mut seq_mut.chorus;
                                     let mut ng_chorus_opt = self
                                         .score
                                         .notes
@@ -365,16 +365,16 @@ impl GuiApp {
                                         .find(|ng| ng.token == token)
                                         .map(|ng| &mut ng.chorus);
 
-                                    let mut voices = seq_chorus.voices;
-                                    let mut delta = seq_chorus.delta;
-                                    let mut delta_shift = seq_chorus.delta_shift;
-                                    let mut time_dep = seq_chorus.time_dependency;
-                                    let mut sym = seq_chorus.sym;
-                                    let mut asym = seq_chorus.asym;
+                                    let voices = &mut seq_chorus.voices;
+                                    let delta = &mut seq_chorus.delta;
+                                    let delta_shift = &mut seq_chorus.delta_shift;
+                                    let time_dep = &mut seq_chorus.time_dependency;
+                                    let sym = &mut seq_chorus.sym;
+                                    let asym = &mut seq_chorus.asym;
 
                                     let voices_resp = slider_with_reset(
                                         ui,
-                                        &mut voices,
+                                        voices,
                                         1..=10,
                                         "Voice layers",
                                         None,
@@ -385,7 +385,7 @@ impl GuiApp {
 
                                     let delta_resp = slider_with_reset(
                                         ui,
-                                        &mut delta,
+                                        delta,
                                         0.0..=1.0,
                                         "Detune (Δf)",
                                         None,
@@ -396,7 +396,7 @@ impl GuiApp {
 
                                     let delta_shift_resp = slider_with_reset(
                                         ui,
-                                        &mut delta_shift,
+                                        delta_shift,
                                         -1.0..=1.0,
                                         "Detune shift",
                                         None,
@@ -407,7 +407,7 @@ impl GuiApp {
 
                                     let time_dep_resp = slider_with_reset(
                                         ui,
-                                        &mut time_dep,
+                                        time_dep,
                                         Freq(-5.0)..=Freq(5.0),
                                         "Detune over time",
                                         None,
@@ -421,7 +421,7 @@ impl GuiApp {
 
                                     let sym_resp = slider_with_reset(
                                         ui,
-                                        &mut sym,
+                                        sym,
                                         -2.0..=2.0,
                                         "Even",
                                         None,
@@ -432,7 +432,7 @@ impl GuiApp {
 
                                     let asym_resp = slider_with_reset(
                                         ui,
-                                        &mut asym,
+                                        asym,
                                         -2.0..=2.0,
                                         "Odd",
                                         None,
@@ -455,12 +455,12 @@ impl GuiApp {
                                         || asym_resp.secondary_clicked();
 
                                     if changed {
-                                        seq_chorus.voices = voices;
-                                        seq_chorus.delta = delta;
-                                        seq_chorus.delta_shift = delta_shift;
-                                        seq_chorus.time_dependency = time_dep;
-                                        seq_chorus.sym = sym;
-                                        seq_chorus.asym = asym;
+                                        seq_chorus.voices = *voices;
+                                        seq_chorus.delta = *delta;
+                                        seq_chorus.delta_shift = *delta_shift;
+                                        seq_chorus.time_dependency = *time_dep;
+                                        seq_chorus.sym = *sym;
+                                        seq_chorus.asym = *asym;
 
                                         if let Some(ch) = ng_chorus_opt.as_deref_mut() {
                                             ch.voices = seq_chorus.voices;
@@ -477,7 +477,7 @@ impl GuiApp {
 
                             let header = ui.collapsing("Power factor", |ui| {
                                 let token = seq_mut.token;
-                                let mut seq_pow = seq_mut.pow_fact;
+                                let seq_pow = &mut seq_mut.pow_fact;
                                 let mut ng_pow_opt = self
                                     .score
                                     .notes
