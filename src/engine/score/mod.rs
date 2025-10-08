@@ -241,4 +241,37 @@ impl Score {
             None
         }
     }
+    /// Wrap the node at `path` into a new Group inserted at the same index.
+    /// Returns the path of the newly created group.
+    pub fn wrap_into_group_at(&mut self, path: &[usize], name: String) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            // Don't wrap the root
+            return None;
+        }
+        let parent_path = &path[..path.len() - 1];
+        let idx = *path.last().unwrap();
+
+        // 1) Take the node out
+        let node = self.sequences.remove_at(path)?;
+
+        // 2) Build the group (adapt fields to your TrackNode::Group)
+        let group = TrackNode::Group {
+            id: self.last_token.next(), // or Token(0) if you don't need unique ids
+            name,
+            muted: false,
+            volume: 1.0,
+            spacial: 0.5,
+            children: vec![node],
+        };
+
+        // 3) Insert group back at the same position
+        let mut new_path = parent_path.to_vec();
+        new_path.push(idx);
+        let ok = self.sequences.insert_at(&new_path, group);
+        if ok {
+            Some(new_path)
+        } else {
+            None
+        }
+    }
 }

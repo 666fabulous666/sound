@@ -37,6 +37,7 @@ impl GuiApp {
                         Clone,
                         Up,
                         Down,
+                        Group,
                     }
 
                     let mut action = Action::None;
@@ -79,7 +80,6 @@ impl GuiApp {
                                     })
                                     .clicked()
                                     || ui.input(|i| i.key_pressed(SWAP_UP))
-                                // && sel > 0
                                 {
                                     action = Action::Up;
                                 }
@@ -90,9 +90,18 @@ impl GuiApp {
                                     })
                                     .clicked()
                                     || ui.input(|i| i.key_pressed(SWAP_DOWN))
-                                // && sel + 1 < len
                                 {
                                     action = Action::Down;
+                                }
+                                if ui
+                                    .button("Group")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new(shortcut(GROUP)).weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(GROUP))
+                                {
+                                    action = Action::Group;
                                 }
                                 if ui
                                     .button(if seq_mut.mute { "Unute" } else { "Mute" })
@@ -1056,7 +1065,6 @@ impl GuiApp {
                                     };
                                 }
                             }
-
                             Action::Clone => {
                                 if let Some(mut sel_path) = self.selected.clone() {
                                     // Clone the selected node (implementation assumed: inserts right after original)
@@ -1077,6 +1085,15 @@ impl GuiApp {
                             Action::Down => {
                                 if let Some(new_path) = self.score.swap_with_next(&sel) {
                                     self.selected = Some(new_path);
+                                }
+                            }
+                            Action::Group => {
+                                if let Some(path) = self.selected.clone() {
+                                    if let Some(new_path) =
+                                        self.score.wrap_into_group_at(&path, "Group".into())
+                                    {
+                                        self.selected = Some(new_path);
+                                    }
                                 }
                             }
                         }

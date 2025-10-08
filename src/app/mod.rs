@@ -258,14 +258,59 @@ impl GuiApp {
             });
         });
     }
+    fn default_picker_window(&mut self, ctx: &egui::Context) {
+        use egui::{Align, Layout, RichText};
 
-    fn retain_notes(&mut self, now: Time) {
-        let _ = self
-            .score
-            .notes
-            .iter_mut()
-            .for_each(|NotesGroup { notes, .. }| {
-                notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
+        egui::Window::new("Choose a default groove")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.set_min_width(420.0);
+
+                ui.label("Select a preset to load:");
+                ui.add_space(6.0);
+
+                egui::ScrollArea::vertical()
+                    .max_height(220.0)
+                    .show(ui, |ui| {
+                        for (i, (name, _json)) in GROOVE_DEFAULTS.iter().enumerate() {
+                            let selected = self.default_pick_idx == i;
+                            if ui.selectable_label(selected, *name).clicked() {
+                                self.default_pick_idx = i;
+                            }
+                        }
+                    });
+
+                ui.add_space(8.0);
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    if ui.button("Cancel").clicked() {
+                        self.show_default_picker = false;
+                    }
+
+                    ui.add_space(8.0);
+
+                    // Primary action
+                    if ui
+                        .add(
+                            egui::Button::new(RichText::new("Load preset").strong())
+                                .min_size(egui::vec2(140.0, 28.0)),
+                        )
+                        .clicked()
+                    {
+                        let (_name, json) = GROOVE_DEFAULTS[self.default_pick_idx];
+                        match serde_json::from_str::<GuiState>(json) {
+                            Ok(state) => {
+                                self.apply_loaded_state(state);
+                                self.show_default_picker = false;
+                                self.show_start = false;
+                            }
+                            Err(e) => {
+                                eprintln!("[default_picker] Failed to parse preset: {e}");
+                            }
+                        }
+                    }
+                });
             });
     }
 }
@@ -340,59 +385,13 @@ impl App for GuiApp {
 }
 
 impl GuiApp {
-    fn default_picker_window(&mut self, ctx: &egui::Context) {
-        use egui::{Align, Layout, RichText};
-
-        egui::Window::new("Choose a default groove")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-            .show(ctx, |ui| {
-                ui.set_min_width(420.0);
-
-                ui.label("Select a preset to load:");
-                ui.add_space(6.0);
-
-                egui::ScrollArea::vertical()
-                    .max_height(220.0)
-                    .show(ui, |ui| {
-                        for (i, (name, _json)) in GROOVE_DEFAULTS.iter().enumerate() {
-                            let selected = self.default_pick_idx == i;
-                            if ui.selectable_label(selected, *name).clicked() {
-                                self.default_pick_idx = i;
-                            }
-                        }
-                    });
-
-                ui.add_space(8.0);
-                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.show_default_picker = false;
-                    }
-
-                    ui.add_space(8.0);
-
-                    // Primary action
-                    if ui
-                        .add(
-                            egui::Button::new(RichText::new("Load preset").strong())
-                                .min_size(egui::vec2(140.0, 28.0)),
-                        )
-                        .clicked()
-                    {
-                        let (_name, json) = GROOVE_DEFAULTS[self.default_pick_idx];
-                        match serde_json::from_str::<GuiState>(json) {
-                            Ok(state) => {
-                                self.apply_loaded_state(state);
-                                self.show_default_picker = false;
-                                self.show_start = false;
-                            }
-                            Err(e) => {
-                                eprintln!("[default_picker] Failed to parse preset: {e}");
-                            }
-                        }
-                    }
-                });
+    fn retain_notes(&mut self, now: Time) {
+        let _ = self
+            .score
+            .notes
+            .iter_mut()
+            .for_each(|NotesGroup { notes, .. }| {
+                notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
             });
     }
     fn generate_notes(&mut self) {
@@ -418,61 +417,179 @@ impl GuiApp {
         // self.score_mut().sequences;
         self.score.notes.clear();
     }
-    fn new_seq(&mut self, mut track_node: TrackNode) {
-        self.draw_seq(track_node.seq_mut_unchecked());
-        self.score.sequences.push_child(track_node);
-    }
-    fn edit_seq_at(&mut self, mut sequence: Sequence, path: &[usize]) {
-        self.regen_seq(&mut sequence);
-        *self.score.sequences.get_mut(path).unwrap() = TrackNode::Seq(sequence);
-        // let len = self.score.sequences.len();
-        // (i + 1..len).for_each(|k| self.regen_seq_at(k));
-        // FIXME: regen depending sequences (or not)
-    }
-    // fn del_seq(&mut self, path: &[usize]) {
-    //     // for tk in self
-    //     //     .score
-    //     //     .sequences
-    //     //     .get(path)
-    //     //     .unwrap()
-    //     //     .sequences()
-    //     //     .map(|s| s.token)
-    //     // {
-    //     //     self.drain_notes_from_seq(tk);
-    //     // }
-    //     // FIXME: drain notes from
-    //     self.score.sequences.remove_at(path);
-    // }
-    // fn clone_seq(&mut self, path: &[usize]) {
-    //     let mut sequence = self.score.sequences.get(path).clone();
-    //     todo!();
-    //     // sequence.seq_mut_unchecked().token = self.score.last_token.next();
-    //     // self.draw_seq(sequence.seq_mut_unchecked());
-    //     // self.score.sequences.push(sequence);
-    // }
 
-    fn visit_sequences<F: FnMut(&Sequence)>(node: &TrackNode, f: &mut F) {
+    fn visit_sequences<F>(node: &TrackNode, f: &mut F)
+    where
+        F: FnMut(&Sequence),
+    {
         match node {
             TrackNode::Seq(s) => f(s),
             TrackNode::Group { children, .. } => {
                 for ch in children {
-                    Self::visit_sequences(ch, f); // <-- not `&mut f`
+                    Self::visit_sequences(ch, f); // not `&mut f`
                 }
             }
         }
     }
 
-    fn visit_sequences_mut<F: FnMut(&mut Sequence)>(node: &mut TrackNode, f: &mut F) {
+    fn visit_sequences_mut<F>(node: &mut TrackNode, f: &mut F)
+    where
+        F: FnMut(&mut Sequence),
+    {
         match node {
             TrackNode::Seq(s) => f(s),
             TrackNode::Group { children, .. } => {
                 for ch in children {
-                    Self::visit_sequences_mut(ch, f); // <-- not `&mut f`
+                    Self::visit_sequences_mut(ch, f); // not `&mut f`
+                }
+            }
+        }
+    }
+    // ---- adapted methods ----------------------------------------------------
+
+    // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
+    fn new_seq(&mut self, mut node: TrackNode) {
+        let now = self.now();
+        Self::draw_seq(
+            &mut node,
+            &mut self.score.notes,
+            &mut self.rng,
+            now,
+            /*anticipate=*/ false,
+        );
+        self.score.sequences.push_child(node);
+    }
+
+    // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.
+    fn clone_seq(&mut self, path: &[usize]) {
+        if path.is_empty() {
+            return;
+        }
+
+        // 1) Deep-clone the subtree
+        let mut cloned = match self.score.sequences.get(path).cloned() {
+            Some(n) => n,
+            None => return,
+        };
+
+        // 2) Assign fresh tokens to every Sequence in the clone
+        Self::visit_sequences_mut(&mut cloned, &mut |seq: &mut Sequence| {
+            seq.token = self.score.last_token.next();
+        });
+        // 3) Redraw the whole cloned subtree (no anticipation)
+        let now = self.now();
+        Self::draw_seq(
+            &mut cloned,
+            &mut self.score.notes,
+            &mut self.rng,
+            now,
+            /*anticipate=*/ false,
+        );
+
+        // 4) Insert clone right after the original
+        let insert_idx = path[path.len() - 1] + 1;
+        let mut full_insert_path = path[..path.len() - 1].to_vec();
+        full_insert_path.push(insert_idx);
+        let _ok = self.score.sequences.insert_at(&full_insert_path, cloned);
+    }
+
+    // Regenerate a subtree we already have a &mut TrackNode for.
+    fn regen_seq(&mut self, node: &mut TrackNode) {
+        // Drain notes for all sequences in the subtree (collect tokens first to avoid borrows)
+        let tokens: Vec<Token> = {
+            let mut out = Vec::new();
+            Self::visit_sequences(&*node, &mut |s: &Sequence| {
+                out.push(s.token);
+            });
+            out
+        };
+        for tk in tokens {
+            self.drain_notes_from_seq(tk);
+        }
+
+        // Redraw recursively (no anticipation)
+        let now = self.now();
+        Self::draw_seq(
+            node,
+            &mut self.score.notes,
+            &mut self.rng,
+            now,
+            /*anticipate=*/ false,
+        );
+    }
+
+    // (optional) Handy by-path variant
+    fn regen_seq_at(&mut self, path: &[usize]) {
+        // collect tokens first
+        let tokens: Vec<Token> = {
+            let mut out = Vec::new();
+            if let Some(n) = self.score.sequences.get(path) {
+                Self::visit_sequences(n, &mut |s: &Sequence| {
+                    out.push(s.token);
+                });
+            }
+            out
+        };
+        for tk in tokens {
+            self.drain_notes_from_seq(tk);
+        }
+        let now = self.now();
+        if let Some(n) = self.score.sequences.get_mut(path) {
+            Self::draw_seq(
+                n,
+                &mut self.score.notes,
+                &mut self.rng,
+                now,
+                /*anticipate=*/ false,
+            );
+        }
+    }
+    // Collect paths to *sequences* (preorder)
+    fn collect_seq_paths(node: &TrackNode, cur: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
+        match node {
+            TrackNode::Seq(_) => out.push(cur.clone()),
+            TrackNode::Group { children, .. } => {
+                for (i, ch) in children.iter().enumerate() {
+                    cur.push(i);
+                    Self::collect_seq_paths(ch, cur, out);
+                    cur.pop();
                 }
             }
         }
     }
 
+    /// Replace the sequence at `path`, then regenerate that sequence and all that follow it
+    /// in preorder traversal (mirrors old "regen from i to end" behavior).
+    fn edit_seq_at(&mut self, sequence: Sequence, path: &[usize]) {
+        // 1) Replace node at path (limit &mut borrow scope)
+        {
+            if let Some(slot) = self.score.sequences.get_mut(path) {
+                *slot = TrackNode::Seq(sequence);
+            } else {
+                // Invalid path: nothing to do
+                return;
+            }
+        }
+
+        // 2) Preorder list of all sequence paths
+        let seq_paths: Vec<Vec<usize>> = {
+            let mut out = Vec::new();
+            let mut cur = Vec::new();
+            Self::collect_seq_paths(&self.score.sequences, &mut cur, &mut out);
+            out
+        };
+
+        // 3) Find edited path
+        if let Some(pos) = seq_paths.iter().position(|p| p.as_slice() == path) {
+            // 4) Regenerate from edited onward
+            for p in &seq_paths[pos..] {
+                self.regen_seq_at(p);
+            }
+        } else {
+            // If not found (e.g., path pointed to a group), fallback: regen subtree at `path`
+            self.regen_seq_at(path);
+        }
+    }
     // --- delete --------------------------------------------------------------
     fn del_seq(&mut self, path: &[usize]) {
         let tokens: Vec<Token> = {
@@ -491,69 +608,63 @@ impl GuiApp {
         self.score.sequences.remove_at(path);
     }
 
-    // --- clone (insert right after original) --------------------------------
-    fn clone_seq(&mut self, path: &[usize]) {
-        let mut cloned = match self.score.sequences.get(path).cloned() {
-            Some(n) => n,
-            None => return,
+    /// Core drawing for a single sequence.
+    fn draw_sequence_core(
+        notes: &mut Vec<NotesGroup>,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+        anticipate: bool,
+        seq: &mut Sequence,
+    ) {
+        let base = if anticipate {
+            now + GENERATE_EARLY
+        } else {
+            now
         };
+        let seq_start = seq.loop_len * (base / seq.loop_len).floor();
 
-        // retokenize + redraw
-        let mut retok = |seq: &mut Sequence| {
-            seq.token = self.score.last_token.next();
-            self.draw_seq(seq);
-        };
-        Self::visit_sequences_mut(&mut cloned, &mut retok);
-
-        // insert clone right after original
-        let insert_idx = path[path.len() - 1] + 1;
-        let mut full_insert_path = path[..path.len() - 1].to_vec();
-        full_insert_path.push(insert_idx);
-        let _ok = self.score.sequences.insert_at(&full_insert_path, cloned);
-    }
-    fn draw_seq(&mut self, seq: &mut Sequence) {
-        let now = self.now();
-        let seq_start = seq.loop_len * (now / seq.loop_len).floor();
-        // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
-        seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
+        seq.draw(notes, rng, seq_start);
         seq.not_generate_until =
             Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
     }
 
-    // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
+    /// Recursively draw all sequences under this node.
+    fn draw_seq(
+        node: &mut TrackNode,
+        notes: &mut Vec<NotesGroup>,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+        anticipate: bool,
+    ) {
+        match node {
+            TrackNode::Seq(seq) => {
+                Self::draw_sequence_core(notes, rng, now, anticipate, seq);
+            }
+            TrackNode::Group { children, .. } => {
+                for ch in children {
+                    Self::draw_seq(ch, notes, rng, now, anticipate);
+                }
+            }
+        }
+    }
+
+    /// Draw the node at `path` (recursively if it's a Group).
     fn draw_seq_at(&mut self, path: &[usize]) {
         let now = self.now();
-        let seq = self
-            .score
-            .sequences
-            .get_mut(path)
-            .unwrap()
-            .seq_mut_unchecked();
-        let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
-        // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
-        seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
-        seq.not_generate_until =
-            Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
+        if let Some(node) = self.score.sequences.get_mut(path) {
+            Self::draw_seq(
+                node,
+                &mut self.score.notes,
+                &mut self.rng,
+                now,
+                /*anticipate=*/ true,
+            );
+        }
     }
     fn drain_notes_from_seq(&mut self, tk: Token) {
         self.score
             .notes
             .retain(|NotesGroup { token, .. }| *token != tk);
-    }
-    fn regen_seq(&mut self, seq: &mut Sequence) {
-        self.drain_notes_from_seq(seq.token);
-        self.draw_seq(seq);
-    }
-    fn regen_seq_at(&mut self, path: &[usize]) {
-        self.drain_notes_from_seq(
-            self.score
-                .sequences
-                .get(path)
-                .unwrap()
-                .seq_unchecked()
-                .token,
-        );
-        self.draw_seq_at(path);
     }
     #[cfg(target_arch = "wasm32")]
     fn poll_loaded_state(&mut self) {
