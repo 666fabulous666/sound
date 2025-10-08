@@ -16,7 +16,10 @@ use crate::{
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
     engine::score::{
-        default_params::*, sequence::Sequence, ChorusParams, DetRythm, Interval, RdRythm, Rythm,
+        default_params::*,
+        sequence::Sequence,
+        track_node::{tracknode_to_tree, TreePrintOptions},
+        ChorusParams, DetRythm, Interval, RdRythm, Rythm,
     },
     layout_left,
     rescale_factor,
@@ -48,8 +51,7 @@ impl GuiApp {
                         // if sel < len {
                         if let Some(track_node_mut) = self.score.sequences.get_mut(&sel) {
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
-                                // ui.heading(format!("Track {}", sel + 1));
-                                ui.heading(format!("Track {:?}", sel));
+                                ui.heading(format!("Sequence {:?}", sel));
                                 ui.horizontal(|ui| {
                                     if ui
                                         .button("Delete")
@@ -1047,6 +1049,12 @@ impl GuiApp {
                                         seq_mut.accents.1 = restored;
                                     }
                                 });
+                            } else {
+                                ui.heading(format!("Group {:?}", sel));
+                                ui.label(tracknode_to_tree(
+                                    &track_node_mut,
+                                    TreePrintOptions::default(),
+                                ));
                             }
                         }
                     } else {

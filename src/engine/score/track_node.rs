@@ -351,3 +351,171 @@ impl<'a> Iterator for SequencesWithPathIter<'a> {
         None
     }
 }
+use std::fmt::Write as _;
+
+/// Customize how the tree is printed.
+#[derive(Clone, Copy)]
+pub struct TreePrintOptions {
+    /// Use only ASCII characters (`+--`, `|  `) instead of Unicode (`├──`, `│  `).
+    pub ascii_only: bool,
+    /// Show the index path like `[0,1,2]` for each node.
+    pub show_path: bool,
+    /// Show extra details for sequences/groups.
+    pub show_details: bool,
+}
+
+impl Default for TreePrintOptions {
+    fn default() -> Self {
+        Self {
+            ascii_only: true,
+            show_path: true,
+            show_details: true,
+        }
+    }
+}
+
+/// Return a string that looks like the `tree` command.
+///
+/// Example:
+/// ```text
+/// Root (3)
+/// ├── Group "Drums" (2)
+/// │   ├── Seq token=7 loop=4.00s
+/// │   └── Seq token=8 loop=4.00s
+/// └── Seq token=12 loop=8.00s
+/// ```
+pub fn tracknode_to_tree(root: &TrackNode, opts: TreePrintOptions) -> String {
+    let mut out = String::new();
+
+    // Top line (no connector)
+    write!(out, "{}", node_label(root, &[], opts)).ok();
+    out.push('\n');
+
+    if let Some(children) = children_of(root) {
+        for (i, child) in children.iter().enumerate() {
+            let last = i + 1 == children.len();
+            let mut path = vec![i];
+            fmt_tree_rec(child, &mut out, &mut path, "", last, opts);
+        }
+    }
+
+    out
+}
+
+/// Print directly to stdout (convenience).
+pub fn print_tracknode_tree(root: &TrackNode, opts: TreePrintOptions) {
+    println!("{}", tracknode_to_tree(root, opts));
+}
+
+// -------------------- internals --------------------
+
+fn fmt_tree_rec(
+    node: &TrackNode,
+    out: &mut String,
+    path: &mut Vec<usize>,
+    parent_prefix: &str,
+    is_last: bool,
+    opts: TreePrintOptions,
+) {
+    let (tee, elb, bar, sp) = if opts.ascii_only {
+        ("+-- ", "'-- ", "|   ", "    ")
+    } else {
+        ("├── ", "└── ", "│   ", "    ")
+    };
+
+    // Line prefix + connector
+    out.push_str(parent_prefix);
+    out.push_str(if is_last { elb } else { tee });
+
+    // Label
+    out.push_str(&node_label(node, path, opts));
+    out.push('\n');
+
+    // Recurse
+    if let Some(children) = children_of(node) {
+        let new_prefix = if opts.ascii_only {
+            format!("{}{}", parent_prefix, if is_last { sp } else { bar })
+        } else {
+            format!("{}{}", parent_prefix, if is_last { sp } else { bar })
+        };
+
+        for (i, child) in children.iter().enumerate() {
+            path.push(i);
+            fmt_tree_rec(child, out, path, &new_prefix, i + 1 == children.len(), opts);
+            path.pop();
+        }
+    }
+}
+
+/// Render the line label for a node.
+fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> String {
+    let mut s = String::new();
+
+    if opts.show_path && !path.is_empty() {
+        // Render path like [0,1,2]
+        s.push('[');
+        for (i, idx) in path.iter().enumerate() {
+            if i > 0 {
+                s.push(',');
+            }
+            let _ = write!(s, "{}", idx);
+        }
+        s.push(']');
+        s.push(' ');
+    }
+
+    match node {
+        TrackNode::Seq(seq) => {
+            // Basic label
+            s.push_str("Seq");
+            if opts.show_details {
+                // Adjust fields to your actual `Sequence` struct
+                let loop_len = seq.loop_len.as_secs();
+                let _ = write!(s, " token={} loop={:.2}s", seq.token.0, loop_len);
+                // If you like: wave type / repeat etc.
+                // let _ = write!(s, " repeat={}", seq.repeat);
+                // let _ = write!(s, " wave={}", seq.wave_type.to_string());
+            }
+        }
+        TrackNode::Group {
+            name,
+            children,
+            muted,
+            volume,
+            spacial,
+            ..
+        } => {
+            // Use a box emoji unless ascii_only
+            if !opts.ascii_only {
+                s.push_str("📦 ");
+            }
+            s.push_str("Group");
+            if !name.is_empty() {
+                let _ = write!(s, " \"{}\"", name);
+            }
+            if opts.show_details {
+                let _ = write!(s, " ({})", children.len());
+                // small status hints
+                if *muted {
+                    s.push_str(" [muted]");
+                }
+                if (*volume - 1.0).abs() > f64::EPSILON {
+                    let _ = write!(s, " vol={:.2}", volume);
+                }
+                if (*spacial - 0.5).abs() > f64::EPSILON {
+                    let _ = write!(s, " pan={:.2}", spacial);
+                }
+            }
+        }
+    }
+
+    s
+}
+
+/// Borrow children if this is a group.
+fn children_of(node: &TrackNode) -> Option<&[TrackNode]> {
+    match node {
+        TrackNode::Group { children, .. } => Some(children.as_slice()),
+        _ => None,
+    }
+}
