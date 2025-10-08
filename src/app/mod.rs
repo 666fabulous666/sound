@@ -85,28 +85,41 @@ use serde::Deserializer;
 
 #[derive(Deserialize)]
 #[serde(untagged)]
-enum TrackNodeOrSequence {
-    Node(TrackNode), // e.g. { "Seq": { ... } } or future { "Group": {...} }
-    Seq(Sequence),   // legacy: raw Sequence object at array element
+enum SequencesCompat {
+    Root(TrackNode),       // new format: a single root node
+    Nodes(Vec<TrackNode>), // old format: Vec<TrackNode>
+    Seqs(Vec<Sequence>),   // optional: very old format: Vec<Sequence>
 }
 
-fn compat_nodes<'de, D>(d: D) -> Result<Vec<TrackNode>, D::Error>
+fn deserialize_sequences_compat<'de, D>(de: D) -> Result<TrackNode, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let items: Vec<TrackNodeOrSequence> = Deserialize::deserialize(d)?;
-    Ok(items
-        .into_iter()
-        .map(|it| match it {
-            TrackNodeOrSequence::Node(n) => n,
-            TrackNodeOrSequence::Seq(s) => TrackNode::Seq(s),
-        })
-        .collect())
+    let compat = SequencesCompat::deserialize(de)?;
+    Ok(match compat {
+        SequencesCompat::Root(root) => root,
+        SequencesCompat::Nodes(children) => TrackNode::Group {
+            id: Token(0), // placeholder if Group needs an id
+            name: "Root".into(),
+            muted: false,
+            volume: 1.0,
+            spacial: 0.5,
+            children,
+        },
+        SequencesCompat::Seqs(seqs) => TrackNode::Group {
+            id: Token(0),
+            name: "Root".into(),
+            muted: false,
+            volume: 1.0,
+            spacial: 0.5,
+            children: seqs.into_iter().map(TrackNode::Seq).collect(),
+        },
+    })
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuiState {
-    // #[serde(deserialize_with = "compat_nodes")]
+    #[serde(deserialize_with = "deserialize_sequences_compat")]
     pub seqs: TrackNode,
     // pub selected: Option<Vec<usize>>,
     #[serde(default = "default_delays")]
