@@ -273,24 +273,43 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
-        // TODO: SELECT_UP / SELECT_DOWN
-        // if self.score.sequences.child_count() != 0 {
-        //     let len = self.score.sequences.child_count();
+        if self.score.sequences.child_count() != 0 {
+            // let len = self.score.sequences.child_count();
 
-        //     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
-        //         self.selected = Some(match self.selected {
-        //             Some(n) => (n + len - 1) % len,
-        //             None => len - 1,
-        //         });
-        //     }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
+                self.selected = match self.selected.clone() {
+                    Some(mut path) => {
+                        if let Some(last) = path.pop() {
+                            let len = self.score.sequences.get(&path).unwrap().child_count();
+                            if len > 0 {
+                                path.push((last + len - 1) % len);
+                            }
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+            }
 
-        //     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
-        //         self.selected = Some(match self.selected {
-        //             Some(n) => (n + 1) % len,
-        //             None => 0,
-        //         });
-        //     }
-        // }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
+                self.selected = match self.selected.clone() {
+                    Some(mut path) => {
+                        if let Some(last) = path.pop() {
+                            let len = self.score.sequences.get(&path).unwrap().child_count();
+                            if len > 0 {
+                                path.push((last + 1) % len);
+                            }
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    }
+                    None => None,
+                };
+            }
+        }
         if !self.show_start {
             self.top_panel(ctx, &mut save, &mut load, &mut exit);
         }
