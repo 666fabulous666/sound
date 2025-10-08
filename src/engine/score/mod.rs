@@ -96,8 +96,20 @@ pub struct NotesGroup {
 
 pub struct Score {
     pub notes: Vec<NotesGroup>,
-    pub sequences: Vec<TrackNode>,
+    pub sequences: TrackNode,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
     pub shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
+}
+impl Score {
+    pub fn new() -> Self {
+        let mut last_token = TokenGen(0);
+        Self {
+            notes: Vec::new(),
+            sequences: TrackNode::new_root(&mut last_token),
+            last_token,
+            delays: default_delays(),
+            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
+        }
+    }
 }

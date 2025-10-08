@@ -48,7 +48,8 @@ impl GuiApp {
                                     self.score.last_token.next(),
                                 ));
                                 self.new_seq(seq);
-                                self.selected = Some(self.score.sequences.len() - 1);
+                                // TODO: reactivate
+                                // self.selected = Some(self.score.sequences.len() - 1);
                             }
                         }
 

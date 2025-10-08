@@ -26,7 +26,7 @@ use crate::{
 
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
-        let len = self.score.sequences.len();
+        let len = self.score.sequences.sequences().count();
         egui::SidePanel::left("props")
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
@@ -43,12 +43,14 @@ impl GuiApp {
                     // let mut edited_seq: Option<TrackNode> = None;
                     let mut edited_seq = false;
 
-                    if let Some(sel) = self.selected {
-                        if sel < len {
-                            let track_node_mut = &mut self.score.sequences[sel];
+                    if let Some(sel) = self.selected.clone() {
+                        // if sel < len {
+                        if let Some(track_node_mut) = self.score.sequences.get_mut(&sel) {
+                            // let track_node_mut = &mut self.score.sequences.get(&sel).unwrap();
                             let seq_mut = track_node_mut.seq_mut_unchecked();
 
-                            ui.heading(format!("Track {}", sel + 1));
+                            // ui.heading(format!("Track {}", sel + 1));
+                            ui.heading(format!("Track {:?}", sel));
                             ui.horizontal(|ui| {
                                 if ui
                                     .button("Delete")
@@ -70,28 +72,29 @@ impl GuiApp {
                                 {
                                     action = Action::Clone;
                                 }
-                                if (ui
-                                    .button("Up")
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new(shortcut(SWAP_UP)).weak());
-                                    })
-                                    .clicked()
-                                    || ui.input(|i| i.key_pressed(SWAP_UP)))
-                                    && sel > 0
-                                {
-                                    action = Action::Up;
-                                }
-                                if (ui
-                                    .button("Down")
-                                    .on_hover_ui(|ui| {
-                                        ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
-                                    })
-                                    .clicked()
-                                    || ui.input(|i| i.key_pressed(SWAP_DOWN)))
-                                    && sel + 1 < len
-                                {
-                                    action = Action::Down;
-                                }
+                                // TODO: reactivate up and down
+                                // if (ui
+                                //     .button("Up")
+                                //     .on_hover_ui(|ui| {
+                                //         ui.label(RichText::new(shortcut(SWAP_UP)).weak());
+                                //     })
+                                //     .clicked()
+                                //     || ui.input(|i| i.key_pressed(SWAP_UP)))
+                                //     && sel > 0
+                                // {
+                                //     action = Action::Up;
+                                // }
+                                // if (ui
+                                //     .button("Down")
+                                //     .on_hover_ui(|ui| {
+                                //         ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
+                                //     })
+                                //     .clicked()
+                                //     || ui.input(|i| i.key_pressed(SWAP_DOWN)))
+                                //     && sel + 1 < len
+                                // {
+                                //     action = Action::Down;
+                                // }
                                 if ui
                                     .button(if seq_mut.mute { "Unute" } else { "Mute" })
                                     .on_hover_ui(|ui| {
@@ -1013,45 +1016,54 @@ impl GuiApp {
                     match action {
                         Action::None => {}
                         Action::Delete => {
-                            if let Some(sel) = self.selected {
-                                self.del_seq(sel);
-                                self.selected = if sel > 0 {
-                                    Some(sel - 1)
-                                } else if self.score.sequences.len() > 1 {
-                                    Some(sel)
-                                } else {
-                                    None
-                                };
+                            if let Some(sel) = self.selected.clone() {
+                                self.del_seq(&sel);
+                                self.selected = None; // TODO: reactivate
+                                                      // self.selected = if sel > 0 {
+                                                      //     Some(sel - 1)
+                                                      // } else if self.score.sequences.len() > 1 {
+                                                      //     Some(sel)
+                                                      // } else {
+                                                      //     None
+                                                      // };
                             }
                         }
                         Action::Clone => {
-                            if let Some(sel) = self.selected {
-                                self.clone_seq(sel);
-                                let last = self.score.sequences.len() - 1;
-                                for k in (sel + 1..last).rev() {
-                                    self.swap_seqs_at(k + 1, k);
-                                }
+                            if let Some(sel) = self.selected.clone() {
+                                self.clone_seq(&sel);
+                                // TODO: reactivate
+                                // let last = self.score.sequences.len() - 1;
+                                // for k in (sel + 1..last).rev() {
+                                //     self.swap_seqs_at(k + 1, k);
+                                // }
                             }
                         }
                         Action::Up => {
-                            if let Some(sel) = self.selected {
-                                self.swap_seqs_at(sel, sel - 1);
-                                self.selected = Some(sel - 1);
-                            }
+                            todo!()
+                            // if let Some(sel) = self.selected {
+                            //     self.swap_seqs_at(sel, sel - 1);
+                            //     self.selected = Some(sel - 1);
+                            // }
                         }
                         Action::Down => {
-                            if let Some(sel) = self.selected {
-                                self.swap_seqs_at(sel, sel + 1);
-                                self.selected = Some(sel + 1);
-                            }
+                            todo!()
+                            // if let Some(sel) = self.selected {
+                            //     self.swap_seqs_at(sel, sel + 1);
+                            //     self.selected = Some(sel + 1);
+                            // }
                         }
                     }
                     if edited_seq {
-                        if let Some(sel) = self.selected {
+                        if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                let sequence =
-                                    (&mut self.score.sequences[sel]).seq_mut_unchecked().clone();
-                                self.edit_seq_at(sequence, sel);
+                                let sequence = self
+                                    .score
+                                    .sequences
+                                    .get_mut(&sel)
+                                    .unwrap()
+                                    .seq_mut_unchecked()
+                                    .clone();
+                                self.edit_seq_at(sequence, &sel);
                             }
                         }
                     }

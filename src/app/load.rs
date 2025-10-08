@@ -1,4 +1,7 @@
-use crate::app::{GuiApp, GuiState};
+use crate::{
+    app::{GuiApp, GuiState},
+    engine::score::track_node::TrackNode,
+};
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
@@ -47,19 +50,19 @@ impl GuiApp {
         use crate::{Token, TokenGen};
 
         self.new_score();
-        for seq in &state.seqs {
-            self.new_seq(seq.clone());
+        for seq in state.seqs.sequences() {
+            self.new_seq(TrackNode::Seq(seq.clone()));
         }
         self.score_mut().last_token = TokenGen(
             self.score
                 .sequences
-                .iter()
-                .map(|s| s.seq_unchecked().token)
+                .sequences()
+                .map(|s| s.token)
                 .max()
                 .unwrap_or(Token(0))
                 .saturating_add(1),
         );
-        self.selected = state.selected.filter(|&i| i < state.seqs.len());
+        // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
         self.score.delays = state.delays;
     }
 }

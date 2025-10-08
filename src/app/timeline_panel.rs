@@ -9,7 +9,7 @@ use crate::{
 
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
-        let len = self.score.sequences.len();
+        let len = self.score.sequences.sequences().count();
         let current_time = self.now();
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
@@ -23,8 +23,8 @@ impl GuiApp {
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
             let max_loop_len = (&self.score.sequences)
-                .iter()
-                .fold(Time(0.0), |acc, seq| acc.max(seq.seq_unchecked().loop_len));
+                .sequences()
+                .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
             let playhead = NOTE_LINGER_TIME.min(max_loop_len);
 
             let track_display_length = max_loop_len + playhead;
@@ -32,8 +32,8 @@ impl GuiApp {
             let sub_grids = self
                 .score
                 .sequences
-                .iter()
-                .map(|s| s.seq_unchecked().time_quantum.1 as isize);
+                .sequences()
+                .map(|s| s.time_quantum.1 as isize);
             for sub_grid in sub_grids {
                 let n = track_display_length.as_secs() as isize * sub_grid;
                 for s in -n..=2 * n {
@@ -66,9 +66,8 @@ impl GuiApp {
             }
 
             // sequences
-            for (idx, seq) in (&self.score.sequences).iter().enumerate() {
-                let seq = seq.seq_unchecked();
-                let top = rect.top() + idx as f32 * lane_h + lane_gap;
+            for (i, (path, seq)) in (&self.score.sequences).sequences_with_paths().enumerate() {
+                let top = rect.top() + i as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
                 let track_rect = egui::Rect::from_min_max(
@@ -93,7 +92,7 @@ impl GuiApp {
 
                 // Color (highlight if selected)
                 let mut col = Self::hash_color(&seq.wave_type);
-                if self.selected == Some(idx) {
+                if self.selected == Some(path.clone()) {
                     col = Self::brighten(col);
                     // keep your selected-lane glow if you like:
                     for k in -16..16 {
@@ -211,7 +210,7 @@ impl GuiApp {
                 painter.text(
                     egui::pos2(
                         rect.right() - 4.0,
-                        rect.top() + (idx as f32 + 0.5) * lane_h + 4.0,
+                        rect.top() + (i as f32 + 0.5) * lane_h + 4.0,
                     ),
                     egui::Align2::RIGHT_CENTER,
                     format!(
@@ -323,10 +322,10 @@ impl GuiApp {
                     bar_color,
                 );
                 if ui
-                    .interact(track_rect, egui::Id::new(idx), egui::Sense::click())
+                    .interact(track_rect, egui::Id::new(i), egui::Sense::click())
                     .clicked()
                 {
-                    self.selected = Some(idx);
+                    self.selected = Some(path);
                 }
             }
             // grid

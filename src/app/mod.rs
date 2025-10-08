@@ -60,7 +60,7 @@ pub struct GuiApp {
     score: Score,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
-    selected: Option<usize>,
+    selected: Option<Vec<usize>>,
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
@@ -106,9 +106,9 @@ where
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GuiState {
-    #[serde(deserialize_with = "compat_nodes")]
-    pub seqs: Vec<TrackNode>, // now works with both old and new files
-    pub selected: Option<usize>,
+    // #[serde(deserialize_with = "compat_nodes")]
+    pub seqs: TrackNode,
+    // pub selected: Option<Vec<usize>>,
     #[serde(default = "default_delays")]
     pub delays: (Vec<f64>, Vec<f64>),
 }
@@ -138,13 +138,7 @@ impl GuiApp {
             default_pick_idx: 0,
             logo: None,
             property_panel_width: 270.0,
-            score: Score {
-                notes: Vec::new(),
-                sequences: Vec::new(),
-                last_token: TokenGen(0),
-                delays: default_delays(),
-                shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
-            },
+            score: Score::new(),
         };
         app
     }
@@ -279,23 +273,24 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
-        if !self.score.sequences.is_empty() {
-            let len = self.score.sequences.len();
+        // TODO: SELECT_UP / SELECT_DOWN
+        // if self.score.sequences.child_count() != 0 {
+        //     let len = self.score.sequences.child_count();
 
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
-                self.selected = Some(match self.selected {
-                    Some(n) => (n + len - 1) % len,
-                    None => len - 1,
-                });
-            }
+        //     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
+        //         self.selected = Some(match self.selected {
+        //             Some(n) => (n + len - 1) % len,
+        //             None => len - 1,
+        //         });
+        //     }
 
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
-                self.selected = Some(match self.selected {
-                    Some(n) => (n + 1) % len,
-                    None => 0,
-                });
-            }
-        }
+        //     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
+        //         self.selected = Some(match self.selected {
+        //             Some(n) => (n + 1) % len,
+        //             None => 0,
+        //         });
+        //     }
+        // }
         if !self.show_start {
             self.top_panel(ctx, &mut save, &mut load, &mut exit);
         }
@@ -317,7 +312,7 @@ impl App for GuiApp {
                 return;
             };
         }
-        if self.show_start || self.score.sequences.is_empty() {
+        if self.show_start || self.score.sequences.child_count() == 0 {
             self.start_page(ctx);
             if self.show_start {
                 return;
@@ -395,55 +390,66 @@ impl GuiApp {
     }
     fn generate_notes(&mut self) {
         let now = self.now();
-        let ids: Vec<_> = self
+        let paths: Vec<_> = self
             .score
             .sequences
-            .iter()
-            .enumerate()
+            .sequences_with_paths()
             .filter(|(_, seq)| {
-                seq.seq_unchecked()
-                    .not_generate_until
+                seq.not_generate_until
                     .as_ref()
                     .map_or(true, |until| now >= *until)
             })
-            .map(|(i, _)| i)
+            .map(|(path, _)| path)
             .collect();
 
-        for i in ids {
-            self.draw_seq_at(i);
+        for p in paths {
+            self.draw_seq_at(&p);
         }
     }
     fn new_score(&mut self) {
-        self.score_mut().sequences.clear();
+        self.score = Score::new();
+        // self.score_mut().sequences;
         self.score.notes.clear();
     }
     fn new_seq(&mut self, mut track_node: TrackNode) {
         self.draw_seq(track_node.seq_mut_unchecked());
-        self.score.sequences.push(track_node);
+        self.score.sequences.push_child(track_node);
     }
-    fn edit_seq_at(&mut self, mut sequence: Sequence, i: usize) {
+    fn edit_seq_at(&mut self, mut sequence: Sequence, path: &[usize]) {
         self.regen_seq(&mut sequence);
-        self.score.sequences[i] = TrackNode::Seq(sequence);
-        let len = self.score.sequences.len();
-        (i + 1..len).for_each(|k| self.regen_seq_at(k));
+        *self.score.sequences.get_mut(path).unwrap() = TrackNode::Seq(sequence);
+        // let len = self.score.sequences.len();
+        // (i + 1..len).for_each(|k| self.regen_seq_at(k));
+        // FIXME: regen depending sequences (or not)
     }
-    fn del_seq(&mut self, a: usize) {
-        let tk = self.score.sequences[a].seq_unchecked().token;
-        self.drain_notes_from_seq(tk);
-        self.score.sequences.remove(a);
+    fn del_seq(&mut self, path: &[usize]) {
+        // for tk in self
+        //     .score
+        //     .sequences
+        //     .get(path)
+        //     .unwrap()
+        //     .sequences()
+        //     .map(|s| s.token)
+        // {
+        //     self.drain_notes_from_seq(tk);
+        // }
+        // FIXME: drain notes from
+        self.score.sequences.remove_at(path);
     }
-    fn clone_seq(&mut self, i: usize) {
-        let mut sequence = self.score.sequences[i].clone();
-        sequence.seq_mut_unchecked().token = self.score.last_token.next();
-        self.draw_seq(sequence.seq_mut_unchecked());
-        self.score.sequences.push(sequence);
+    fn clone_seq(&mut self, path: &[usize]) {
+        let mut sequence = self.score.sequences.get(path).clone();
+        todo!();
+        // sequence.seq_mut_unchecked().token = self.score.last_token.next();
+        // self.draw_seq(sequence.seq_mut_unchecked());
+        // self.score.sequences.push(sequence);
     }
-    fn swap_seqs_at(&mut self, i: usize, j: usize) {
-        self.score.sequences.swap(i, j);
-        self.regen_seq_at(i);
-        self.regen_seq_at(j);
-        let len = self.score.sequences.len();
-        (i.max(j) + 1..len).for_each(|k| self.regen_seq_at(k));
+    fn swap_seqs_at(&mut self, path1: &[usize], path2: &[usize]) {
+        todo!()
+        // self.score.sequences.swap(i, j);
+        // self.regen_seq_at(i);
+        // self.regen_seq_at(j);
+        // let len = self.score.sequences.len();
+        // (i.max(j) + 1..len).for_each(|k| self.regen_seq_at(k));
     }
     fn draw_seq(&mut self, seq: &mut Sequence) {
         let now = self.now();
@@ -455,9 +461,14 @@ impl GuiApp {
     }
 
     // fn draw_seq_at(&mut self, a: usize, out: &mut Vec<(usize, Vec<Note>)>) {
-    fn draw_seq_at(&mut self, a: usize) {
+    fn draw_seq_at(&mut self, path: &[usize]) {
         let now = self.now();
-        let seq = self.score.sequences[a].seq_mut_unchecked();
+        let seq = self
+            .score
+            .sequences
+            .get_mut(path)
+            .unwrap()
+            .seq_mut_unchecked();
         let seq_start = seq.loop_len * ((now + GENERATE_EARLY) / seq.loop_len).floor();
         // seq.draw(&mut self.notes, &mut self.rng, seq_start, self.tempo);
         seq.draw(&mut self.score.notes, &mut self.rng, seq_start);
@@ -473,9 +484,16 @@ impl GuiApp {
         self.drain_notes_from_seq(seq.token);
         self.draw_seq(seq);
     }
-    fn regen_seq_at(&mut self, i: usize) {
-        self.drain_notes_from_seq(self.score.sequences[i].seq_unchecked().token);
-        self.draw_seq_at(i);
+    fn regen_seq_at(&mut self, path: &[usize]) {
+        self.drain_notes_from_seq(
+            self.score
+                .sequences
+                .get(path)
+                .unwrap()
+                .seq_unchecked()
+                .token,
+        );
+        self.draw_seq_at(path);
     }
     #[cfg(target_arch = "wasm32")]
     fn poll_loaded_state(&mut self) {
