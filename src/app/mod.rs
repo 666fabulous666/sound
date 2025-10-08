@@ -416,34 +416,87 @@ impl GuiApp {
         // (i + 1..len).for_each(|k| self.regen_seq_at(k));
         // FIXME: regen depending sequences (or not)
     }
+    // fn del_seq(&mut self, path: &[usize]) {
+    //     // for tk in self
+    //     //     .score
+    //     //     .sequences
+    //     //     .get(path)
+    //     //     .unwrap()
+    //     //     .sequences()
+    //     //     .map(|s| s.token)
+    //     // {
+    //     //     self.drain_notes_from_seq(tk);
+    //     // }
+    //     // FIXME: drain notes from
+    //     self.score.sequences.remove_at(path);
+    // }
+    // fn clone_seq(&mut self, path: &[usize]) {
+    //     let mut sequence = self.score.sequences.get(path).clone();
+    //     todo!();
+    //     // sequence.seq_mut_unchecked().token = self.score.last_token.next();
+    //     // self.draw_seq(sequence.seq_mut_unchecked());
+    //     // self.score.sequences.push(sequence);
+    // }
+
+    fn visit_sequences<F: FnMut(&Sequence)>(node: &TrackNode, f: &mut F) {
+        match node {
+            TrackNode::Seq(s) => f(s),
+            TrackNode::Group { children, .. } => {
+                for ch in children {
+                    Self::visit_sequences(ch, f); // <-- not `&mut f`
+                }
+            }
+        }
+    }
+
+    fn visit_sequences_mut<F: FnMut(&mut Sequence)>(node: &mut TrackNode, f: &mut F) {
+        match node {
+            TrackNode::Seq(s) => f(s),
+            TrackNode::Group { children, .. } => {
+                for ch in children {
+                    Self::visit_sequences_mut(ch, f); // <-- not `&mut f`
+                }
+            }
+        }
+    }
+
+    // --- delete --------------------------------------------------------------
     fn del_seq(&mut self, path: &[usize]) {
-        // for tk in self
-        //     .score
-        //     .sequences
-        //     .get(path)
-        //     .unwrap()
-        //     .sequences()
-        //     .map(|s| s.token)
-        // {
-        //     self.drain_notes_from_seq(tk);
-        // }
-        // FIXME: drain notes from
+        let tokens: Vec<Token> = {
+            let mut out = Vec::new();
+            if let Some(node) = self.score.sequences.get(path) {
+                let mut collect = |seq: &Sequence| {
+                    out.push(seq.token);
+                };
+                Self::visit_sequences(node, &mut collect);
+            }
+            out
+        };
+        for tk in tokens {
+            self.drain_notes_from_seq(tk);
+        }
         self.score.sequences.remove_at(path);
     }
+
+    // --- clone (insert right after original) --------------------------------
     fn clone_seq(&mut self, path: &[usize]) {
-        let mut sequence = self.score.sequences.get(path).clone();
-        todo!();
-        // sequence.seq_mut_unchecked().token = self.score.last_token.next();
-        // self.draw_seq(sequence.seq_mut_unchecked());
-        // self.score.sequences.push(sequence);
-    }
-    fn swap_seqs_at(&mut self, path1: &[usize], path2: &[usize]) {
-        todo!()
-        // self.score.sequences.swap(i, j);
-        // self.regen_seq_at(i);
-        // self.regen_seq_at(j);
-        // let len = self.score.sequences.len();
-        // (i.max(j) + 1..len).for_each(|k| self.regen_seq_at(k));
+        let mut cloned = match self.score.sequences.get(path).cloned() {
+            Some(n) => n,
+            None => return,
+        };
+
+        // retokenize + redraw
+        let mut retok = |seq: &mut Sequence| {
+            seq.token = self.score.last_token.next();
+            self.draw_seq(seq);
+        };
+        Self::visit_sequences_mut(&mut cloned, &mut retok);
+
+        // insert clone right after original
+        let insert_idx = path[path.len() - 1] + 1;
+        let mut full_insert_path = path[..path.len() - 1].to_vec();
+        full_insert_path.push(insert_idx);
+        let _ok = self.score.sequences.insert_at(&full_insert_path, cloned);
     }
     fn draw_seq(&mut self, seq: &mut Sequence) {
         let now = self.now();

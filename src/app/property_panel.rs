@@ -72,29 +72,28 @@ impl GuiApp {
                                 {
                                     action = Action::Clone;
                                 }
-                                // TODO: reactivate up and down
-                                // if (ui
-                                //     .button("Up")
-                                //     .on_hover_ui(|ui| {
-                                //         ui.label(RichText::new(shortcut(SWAP_UP)).weak());
-                                //     })
-                                //     .clicked()
-                                //     || ui.input(|i| i.key_pressed(SWAP_UP)))
-                                //     && sel > 0
-                                // {
-                                //     action = Action::Up;
-                                // }
-                                // if (ui
-                                //     .button("Down")
-                                //     .on_hover_ui(|ui| {
-                                //         ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
-                                //     })
-                                //     .clicked()
-                                //     || ui.input(|i| i.key_pressed(SWAP_DOWN)))
-                                //     && sel + 1 < len
-                                // {
-                                //     action = Action::Down;
-                                // }
+                                if ui
+                                    .button("Up")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new(shortcut(SWAP_UP)).weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(SWAP_UP))
+                                // && sel > 0
+                                {
+                                    action = Action::Up;
+                                }
+                                if ui
+                                    .button("Down")
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
+                                    })
+                                    .clicked()
+                                    || ui.input(|i| i.key_pressed(SWAP_DOWN))
+                                // && sel + 1 < len
+                                {
+                                    action = Action::Down;
+                                }
                                 if ui
                                     .button(if seq_mut.mute { "Unute" } else { "Mute" })
                                     .on_hover_ui(|ui| {
@@ -1013,44 +1012,73 @@ impl GuiApp {
                         ui.label("Click a block to edit");
                     }
 
-                    match action {
-                        Action::None => {}
-                        Action::Delete => {
-                            if let Some(sel) = self.selected.clone() {
-                                self.del_seq(&sel);
-                                self.selected = None; // TODO: reactivate
-                                                      // self.selected = if sel > 0 {
-                                                      //     Some(sel - 1)
-                                                      // } else if self.score.sequences.len() > 1 {
-                                                      //     Some(sel)
-                                                      // } else {
-                                                      //     None
-                                                      // };
+                    if let Some(sel) = self.selected.clone() {
+                        match action {
+                            Action::None => {}
+                            Action::Delete => {
+                                if let Some(sel_path) = self.selected.clone() {
+                                    // Compute selection target BEFORE deletion
+                                    let (idx, parent_path, siblings) = {
+                                        let idx = *sel_path.last().unwrap();
+                                        let parent_path =
+                                            &sel_path[..sel_path.len().saturating_sub(1)];
+                                        let siblings = self
+                                            .score
+                                            .sequences
+                                            .get(parent_path)
+                                            .map(|p| p.child_count())
+                                            .unwrap_or(0);
+                                        (idx, parent_path.to_vec(), siblings)
+                                    };
+
+                                    // Perform deletion
+                                    self.del_seq(&sel_path);
+
+                                    // Decide new selection
+                                    self.selected = if siblings > 1 {
+                                        // There will be at least one sibling left after deletion
+                                        let mut p = parent_path.clone();
+                                        // Prefer next sibling at the same index (which now points to what was "next")
+                                        let new_idx = if idx < siblings - 1 {
+                                            idx
+                                        } else {
+                                            idx.saturating_sub(1)
+                                        };
+                                        p.push(new_idx);
+                                        Some(p)
+                                    } else {
+                                        // No siblings left: select the parent (or None if we deleted the only root child)
+                                        if parent_path.is_empty() {
+                                            None
+                                        } else {
+                                            Some(parent_path)
+                                        }
+                                    };
+                                }
                             }
-                        }
-                        Action::Clone => {
-                            if let Some(sel) = self.selected.clone() {
-                                self.clone_seq(&sel);
-                                // TODO: reactivate
-                                // let last = self.score.sequences.len() - 1;
-                                // for k in (sel + 1..last).rev() {
-                                //     self.swap_seqs_at(k + 1, k);
-                                // }
+
+                            Action::Clone => {
+                                if let Some(mut sel_path) = self.selected.clone() {
+                                    // Clone the selected node (implementation assumed: inserts right after original)
+                                    self.clone_seq(&sel_path);
+
+                                    // Move selection to the new clone (original index + 1)
+                                    if let Some(last) = sel_path.last_mut() {
+                                        *last += 1;
+                                    }
+                                    self.selected = Some(sel_path);
+                                }
                             }
-                        }
-                        Action::Up => {
-                            todo!()
-                            // if let Some(sel) = self.selected {
-                            //     self.swap_seqs_at(sel, sel - 1);
-                            //     self.selected = Some(sel - 1);
-                            // }
-                        }
-                        Action::Down => {
-                            todo!()
-                            // if let Some(sel) = self.selected {
-                            //     self.swap_seqs_at(sel, sel + 1);
-                            //     self.selected = Some(sel + 1);
-                            // }
+                            Action::Up => {
+                                if let Some(new_path) = self.score.swap_with_prev(&sel) {
+                                    self.selected = Some(new_path);
+                                }
+                            }
+                            Action::Down => {
+                                if let Some(new_path) = self.score.swap_with_next(&sel) {
+                                    self.selected = Some(new_path);
+                                }
+                            }
                         }
                     }
                     if edited_seq {

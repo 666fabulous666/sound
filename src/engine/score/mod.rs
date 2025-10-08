@@ -200,4 +200,45 @@ impl Score {
         p.push(n - 1);
         Some(p)
     }
+    pub fn swap_with_prev(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None;
+        }
+        let i = *path.last().unwrap();
+        if i == 0 {
+            return None;
+        }
+        let parent_path = &path[..path.len() - 1];
+
+        let parent = self.sequences.get_mut(parent_path)?;
+        if let TrackNode::Group { children, .. } = parent {
+            children.swap(i, i - 1);
+            let mut np = path.to_vec();
+            *np.last_mut().unwrap() = i - 1;
+            Some(np)
+        } else {
+            None
+        }
+    }
+
+    pub fn swap_with_next(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None;
+        }
+        let i = *path.last().unwrap();
+        let parent_path = &path[..path.len() - 1];
+
+        let parent = self.sequences.get_mut(parent_path)?;
+        if let TrackNode::Group { children, .. } = parent {
+            if i + 1 >= children.len() {
+                return None;
+            }
+            children.swap(i, i + 1);
+            let mut np = path.to_vec();
+            *np.last_mut().unwrap() = i + 1;
+            Some(np)
+        } else {
+            None
+        }
+    }
 }
