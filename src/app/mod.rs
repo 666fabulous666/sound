@@ -274,40 +274,15 @@ impl App for GuiApp {
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
         if self.score.sequences.child_count() != 0 {
-            // let len = self.score.sequences.child_count();
-
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
-                self.selected = match self.selected.clone() {
-                    Some(mut path) => {
-                        if let Some(last) = path.pop() {
-                            let len = self.score.sequences.get(&path).unwrap().child_count();
-                            if len > 0 {
-                                path.push((last + len - 1) % len);
-                            }
-                            Some(path)
-                        } else {
-                            None
-                        }
-                    }
-                    None => None,
-                };
+                if let Some(ref path) = self.selected {
+                    self.selected = self.score.prev_sibling(path, /*wrap=*/ true);
+                }
             }
-
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
-                self.selected = match self.selected.clone() {
-                    Some(mut path) => {
-                        if let Some(last) = path.pop() {
-                            let len = self.score.sequences.get(&path).unwrap().child_count();
-                            if len > 0 {
-                                path.push((last + 1) % len);
-                            }
-                            Some(path)
-                        } else {
-                            None
-                        }
-                    }
-                    None => None,
-                };
+                if let Some(ref path) = self.selected {
+                    self.selected = self.score.next_sibling(path, /*wrap=*/ true);
+                }
             }
         }
         if !self.show_start {

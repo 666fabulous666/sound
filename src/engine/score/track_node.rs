@@ -38,6 +38,7 @@ impl TrackNode {
     pub fn seq_mut_unchecked(&mut self) -> &mut Sequence {
         self.as_seq_mut().expect("TrackNode::Seq expected")
     }
+
     // ---------- Constructors ----------
     /// Root group with safe defaults.
     pub fn new_root(gen: &mut TokenGen) -> Self {

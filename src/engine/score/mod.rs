@@ -112,4 +112,92 @@ impl Score {
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
         }
     }
+    /// Return a new path pointing to the next sibling. If `wrap` is false and we’re
+    /// at the last sibling, returns `None`.
+    pub fn next_sibling(&self, path: &[usize], wrap: bool) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None; // root has no siblings
+        }
+        let parent_path = &path[..path.len() - 1];
+        let idx = *path.last().unwrap();
+
+        let parent = self.sequences.get(parent_path)?;
+        let n = parent.child_count();
+        if n == 0 {
+            return None;
+        }
+
+        let next = if idx + 1 < n {
+            idx + 1
+        } else if wrap {
+            0
+        } else {
+            return None;
+        };
+
+        let mut new_path = path.to_vec();
+        *new_path.last_mut().unwrap() = next;
+        Some(new_path)
+    }
+
+    /// Return a new path pointing to the previous sibling. If `wrap` is false and we’re
+    /// at the first sibling, returns `None`.
+    pub fn prev_sibling(&self, path: &[usize], wrap: bool) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None; // root has no siblings
+        }
+        let parent_path = &path[..path.len() - 1];
+        let idx = *path.last().unwrap();
+
+        let parent = self.sequences.get(parent_path)?;
+        let n = parent.child_count();
+        if n == 0 {
+            return None;
+        }
+
+        let prev = if idx > 0 {
+            idx - 1
+        } else if wrap {
+            n.saturating_sub(1)
+        } else {
+            return None;
+        };
+
+        let mut new_path = path.to_vec();
+        *new_path.last_mut().unwrap() = prev;
+        Some(new_path)
+    }
+
+    /// Optional: select parent (None if already at root).
+    pub fn parent_of(&self, path: &[usize]) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None;
+        }
+        let mut p = path.to_vec();
+        p.pop();
+        Some(p)
+    }
+
+    /// Optional: select first child (if any).
+    pub fn first_child_of(&self, path: &[usize]) -> Option<Vec<usize>> {
+        let node = self.sequences.get(path)?;
+        if node.child_count() == 0 {
+            return None;
+        }
+        let mut p = path.to_vec();
+        p.push(0);
+        Some(p)
+    }
+
+    /// Optional: select last child (if any).
+    pub fn last_child_of(&self, path: &[usize]) -> Option<Vec<usize>> {
+        let node = self.sequences.get(path)?;
+        let n = node.child_count();
+        if n == 0 {
+            return None;
+        }
+        let mut p = path.to_vec();
+        p.push(n - 1);
+        Some(p)
+    }
 }

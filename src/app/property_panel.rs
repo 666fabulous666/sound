@@ -26,7 +26,7 @@ use crate::{
 
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
-        let len = self.score.sequences.sequences().count();
+        // let len = self.score.sequences.sequences().count();
         egui::SidePanel::left("props")
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
