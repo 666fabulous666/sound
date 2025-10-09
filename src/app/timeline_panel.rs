@@ -60,6 +60,11 @@ impl GuiApp {
 
         // ----- UI -----
         egui::CentralPanel::default().show(ctx, |ui| {
+            let black_or_white = if ui.visuals().dark_mode {
+                egui::Color32::WHITE
+            } else {
+                egui::Color32::BLACK
+            };
             let (rect, _resp) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), ui.available_height()),
                 egui::Sense::click_and_drag(),
@@ -138,14 +143,7 @@ impl GuiApp {
                                 );
                             }
                         }
-                        let bar_color = col.lerp_to_gamma(
-                            if ui.visuals().dark_mode {
-                                egui::Color32::WHITE
-                            } else {
-                                egui::Color32::BLACK
-                            },
-                            0.6,
-                        );
+                        let bar_color = col.lerp_to_gamma(black_or_white, 0.6);
                         // --- draw encompassing rectangle over all visible children ---
                         let group_prefix = path.clone();
                         let mut first_y = f32::MAX;
@@ -170,44 +168,8 @@ impl GuiApp {
                                 egui::pos2(right, last_y + lane_gap),
                             );
 
-                            painter.rect_stroke(
-                                encompass_rect,
-                                6.0,
-                                egui::Stroke::new(
-                                    1.0,
-                                    if ui.visuals().dark_mode {
-                                        egui::Color32::WHITE
-                                    } else {
-                                        egui::Color32::BLACK
-                                    },
-                                ),
-                                egui::StrokeKind::Inside,
-                            );
-
-                            // Optional subtle background fill:
-                            painter.rect_filled(
-                                encompass_rect,
-                                6.0,
-                                egui::Color32::from_gray(60).gamma_multiply(0.05),
-                            );
-                            let header_rect =
-                                encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
-                            painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
-                            painter.rect_stroke(
-                                header_rect.with_min_y(header_rect.bottom()),
-                                6.0,
-                                egui::Stroke::new(
-                                    1.0,
-                                    if ui.visuals().dark_mode {
-                                        egui::Color32::WHITE
-                                    } else {
-                                        egui::Color32::BLACK
-                                    },
-                                ),
-                                egui::StrokeKind::Middle,
-                            );
                             // painter.rect_stroke(
-                            //     header_rect,
+                            //     encompass_rect,
                             //     6.0,
                             //     egui::Stroke::new(
                             //         1.0,
@@ -217,8 +179,33 @@ impl GuiApp {
                             //             egui::Color32::BLACK
                             //         },
                             //     ),
+                            //     egui::StrokeKind::Inside,
+                            // );
+
+                            // // Optional subtle background fill:
+                            // painter.rect_filled(
+                            //     encompass_rect,
+                            //     6.0,
+                            //     egui::Color32::from_gray(60).gamma_multiply(0.05),
+                            // );
+
+                            // let header_rect =
+                            //     encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
+
+                            let header_rect = track_rect.shrink(5.0);
+                            painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
+                            // painter.rect_stroke(
+                            //     header_rect.with_min_y(header_rect.bottom()),
+                            //     6.0,
+                            //     egui::Stroke::new(1.0, black_or_white),
                             //     egui::StrokeKind::Middle,
                             // );
+                            painter.rect_stroke(
+                                header_rect,
+                                6.0,
+                                egui::Stroke::new(1.0, black_or_white),
+                                egui::StrokeKind::Middle,
+                            );
                         }
 
                         let label = if name.is_empty() {
@@ -359,25 +346,14 @@ impl GuiApp {
                                         painter.rect_filled(
                                             tmp,
                                             0.0,
-                                            if ui.visuals().dark_mode {
-                                                egui::Color32::WHITE
-                                            } else {
-                                                egui::Color32::BLACK
-                                            }
-                                            .gamma_multiply(e / seq.normalization as f32),
+                                            black_or_white
+                                                .gamma_multiply(e / seq.normalization as f32),
                                         );
                                     }
                                 }
                             });
 
-                        let bar_color = col.lerp_to_gamma(
-                            if ui.visuals().dark_mode {
-                                egui::Color32::WHITE
-                            } else {
-                                egui::Color32::BLACK
-                            },
-                            0.5,
-                        );
+                        let bar_color = col.lerp_to_gamma(black_or_white, 0.5);
 
                         let label = format!(
                             "{} oct {}",
@@ -482,37 +458,37 @@ impl GuiApp {
                 ));
             }
 
-            // // tree
-            // // 1) Build a lookup map for parent anchors.
-            // let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
-            //     HashMap::with_capacity(anchor_points_with_path.len());
-            // for (anchor, path) in &anchor_points_with_path {
-            //     anchor_by_path.insert(path.to_vec(), *anchor);
-            // }
+            // tree
+            // 1) Build a lookup map for parent anchors.
+            let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
+                HashMap::with_capacity(anchor_points_with_path.len());
+            for (anchor, path) in &anchor_points_with_path {
+                anchor_by_path.insert(path.to_vec(), *anchor);
+            }
 
-            // // 2) Draw one connector per node that has a visible parent.
-            // for (anchor, path) in &anchor_points_with_path {
-            //     // root has no parent → skip
-            //     if path.is_empty() {
-            //         continue;
-            //     }
+            // 2) Draw one connector per node that has a visible parent.
+            for (anchor, path) in &anchor_points_with_path {
+                // root has no parent → skip
+                if path.is_empty() {
+                    continue;
+                }
 
-            //     // parent path = path without last index
-            //     let parent_path = &path[..path.len() - 1];
+                // parent path = path without last index
+                let parent_path = &path[..path.len() - 1];
 
-            //     if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
-            //         let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
-            //         painter.line_segment(
-            //             [*parent_anchor, angle_anchor],
-            //             egui::Stroke::new(2.0, egui::Color32::GRAY),
-            //         );
-            //         painter.line_segment(
-            //             [angle_anchor, *anchor],
-            //             egui::Stroke::new(2.0, egui::Color32::GRAY),
-            //         );
-            //     }
-            //     // else: parent not visible → no line
-            // }
+                if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
+                    let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
+                    painter.line_segment(
+                        [*parent_anchor, angle_anchor],
+                        egui::Stroke::new(2.0, black_or_white),
+                    );
+                    painter.line_segment(
+                        [angle_anchor, *anchor],
+                        egui::Stroke::new(2.0, black_or_white),
+                    );
+                }
+                // else: parent not visible → no line
+            }
 
             // playhead
             let x = Self::t_to_x(rect, playhead, track_display_length);

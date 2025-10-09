@@ -40,8 +40,8 @@ impl GuiApp {
                         Clone,
                         Up,
                         Down,
-                        Group,
-                        Ungroup,
+                        Wrap,
+                        Unwrap,
                         GroupAbove,
                         GroupBelow,
                     }
@@ -133,23 +133,19 @@ impl GuiApp {
                                         };
                                     }
                                     if ui
-                                        .button("Group")
+                                        .button("Wrap")
                                         .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(GROUP)).weak());
+                                            ui.label(RichText::new(shortcut(WRAP)).weak());
                                         })
                                         .clicked()
-                                        || ui.input(|i| i.key_pressed(GROUP))
+                                        || ui.input(|i| i.key_pressed(WRAP))
                                     {
-                                        action = Action::Group;
+                                        action = Action::Wrap;
                                     }
                                     let (g_pressed, shift) =
-                                        ui.input(|i| (i.key_pressed(GROUP), i.modifiers.shift));
+                                        ui.input(|i| (i.key_pressed(WRAP), i.modifiers.shift));
                                     if g_pressed {
-                                        action = if shift {
-                                            Action::Ungroup
-                                        } else {
-                                            Action::Group
-                                        };
+                                        action = if shift { Action::Unwrap } else { Action::Wrap };
                                     }
                                     if ui
                                         .button(if seq_mut.mute { "Unute" } else { "Mute" })
@@ -1189,14 +1185,14 @@ impl GuiApp {
                                     self.selected = Some(new_path);
                                 }
                             }
-                            Action::Group => {
+                            Action::Wrap => {
                                 if let Some(new_path) =
                                     self.score.wrap_into_group_at(&sel, "Group".into())
                                 {
                                     self.selected = Some(new_path);
                                 }
                             }
-                            Action::Ungroup => {
+                            Action::Unwrap => {
                                 if let Some(sel) = &self.selected {
                                     if let Some(new_path) = self.score.promote_one_rank(sel) {
                                         self.selected = Some(new_path);

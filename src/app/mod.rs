@@ -342,6 +342,22 @@ impl App for GuiApp {
                     self.selected = self.score.next_sibling(path, /*wrap=*/ false);
                 }
             }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, GROUP)) {
+                if let Some(ref path) = self.selected {
+                    let new_selected = self.score.first_child_of(path);
+                    if new_selected.is_some() {
+                        self.selected = new_selected;
+                    }
+                }
+            }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, GROUP)) {
+                if let Some(ref path) = self.selected {
+                    let new_selected = self.score.parent_of(path);
+                    if new_selected.as_ref().is_some_and(|path| path.len() > 0) {
+                        self.selected = new_selected
+                    };
+                }
+            }
         }
         if !self.show_start {
             self.top_panel(ctx, &mut save, &mut load, &mut exit);
