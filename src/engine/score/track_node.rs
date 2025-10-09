@@ -484,3 +484,41 @@ fn children_of(node: &TrackNode) -> Option<&[TrackNode]> {
         _ => None,
     }
 }
+fn collect_nodes_with_paths<'a>(
+    node: &'a TrackNode,
+    cur: &mut Vec<usize>,
+    out: &mut Vec<(Vec<usize>, &'a TrackNode)>,
+) {
+    out.push((cur.clone(), node));
+    if let TrackNode::Group { children, .. } = node {
+        for (i, ch) in children.iter().enumerate() {
+            cur.push(i);
+            collect_nodes_with_paths(ch, cur, out);
+            cur.pop();
+        }
+    }
+}
+
+pub fn nodes_with_paths(root: &TrackNode) -> Vec<(Vec<usize>, &TrackNode)> {
+    let mut out = Vec::new();
+    let mut cur = Vec::new();
+    collect_nodes_with_paths(root, &mut cur, &mut out);
+    out
+}
+fn collect_all_paths(node: &TrackNode, cur: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
+    out.push(cur.clone());
+    if let TrackNode::Group { children, .. } = node {
+        for (i, ch) in children.iter().enumerate() {
+            cur.push(i);
+            collect_all_paths(ch, cur, out);
+            cur.pop();
+        }
+    }
+}
+
+pub fn all_paths(root: &TrackNode) -> Vec<Vec<usize>> {
+    let mut out = Vec::new();
+    let mut cur = Vec::new();
+    collect_all_paths(root, &mut cur, &mut out);
+    out
+}
