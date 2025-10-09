@@ -176,7 +176,7 @@ impl GuiApp {
                     TrackNode::Seq(seq) => {
                         // --- your existing Seq drawing (unchanged) ----------------
                         // Color (highlight if selected)
-                        let mut col = Self::hash_color(&seq.wave_type);
+                        let mut col = Self::hash_color(&seq.wave_type).gamma_multiply(0.5);
                         if is_selected {
                             col = Self::brighten(col);
                             for k in -16..16 {
