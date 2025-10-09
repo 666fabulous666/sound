@@ -276,3 +276,78 @@ impl Score {
         }
     }
 }
+impl Score {
+    /// Core helper: move `path` into an adjacent sibling group.
+    /// `dir = -1` → previous sibling; `dir = +1` → next sibling.
+    /// Returns the new path of the moved node (inside the target group).
+    fn move_into_adjacent_group(&mut self, path: &[usize], dir: isize) -> Option<Vec<usize>> {
+        if path.is_empty() {
+            return None;
+        }
+        let mut parent = path[..path.len() - 1].to_vec();
+        let idx = *path.last().unwrap();
+
+        // Sibling bounds
+        let siblings = self.track_root.get(&parent)?.child_count();
+        if dir == -1 {
+            if idx == 0 {
+                return None;
+            }
+        } else if dir == 1 {
+            if idx + 1 >= siblings {
+                return None;
+            }
+        } else {
+            return None; // only -1 or +1 supported
+        }
+
+        // Path to target sibling BEFORE removal
+        let mut target_before = parent.clone();
+        let target_idx_before = if dir == -1 { idx - 1 } else { idx + 1 };
+        target_before.push(target_idx_before);
+
+        // Must be a group
+        let is_group = matches!(
+            self.track_root.get(&target_before),
+            Some(TrackNode::Group { .. })
+        );
+        if !is_group {
+            return None;
+        }
+
+        // Remove the source node
+        let moved = self.track_root.remove_at(path)?;
+
+        // After removal:
+        //  - moving to previous: target index unchanged (idx-1 stays idx-1)
+        //  - moving to next: the old "next" shifts left by 1 → now at `idx`
+        let mut target_after = parent.clone();
+        let target_idx_after = if dir == -1 { idx - 1 } else { idx };
+        target_after.push(target_idx_after);
+
+        // Push moved into that group
+        if let Some(TrackNode::Group { children, .. }) = self.track_root.get_mut(&target_after) {
+            children.push(moved);
+            let new_leaf = children.len() - 1;
+            let mut new_path = target_after;
+            new_path.push(new_leaf);
+            Some(new_path)
+        } else {
+            // Shouldn't happen; best-effort restore
+            let mut restore = parent;
+            restore.push(idx.min(self.track_root.get(&restore)?.child_count()));
+            let _ = self.track_root.insert_at(&restore, moved);
+            None
+        }
+    }
+
+    /// Move the node at `path` into the previous sibling group.
+    pub fn move_into_prev_group(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        self.move_into_adjacent_group(path, -1)
+    }
+
+    /// Move the node at `path` into the next sibling group.
+    pub fn move_into_next_group(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        self.move_into_adjacent_group(path, 1)
+    }
+}

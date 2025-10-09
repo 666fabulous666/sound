@@ -41,6 +41,8 @@ impl GuiApp {
                         Up,
                         Down,
                         Group,
+                        GroupAbove,
+                        GroupBelow,
                     }
 
                     let mut action = Action::None;
@@ -70,25 +72,64 @@ impl GuiApp {
                                     {
                                         action = Action::Clone;
                                     }
+                                    // Show buttons (same as before)
                                     if ui
                                         .button("Up")
                                         .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(SWAP_UP)).weak());
+                                            ui.label(
+                                                RichText::new(format!(
+                                                    "{}  |  Shift+U → Group into previous",
+                                                    shortcut(SWAP_UP)
+                                                ))
+                                                .weak(),
+                                            );
                                         })
                                         .clicked()
-                                        || ui.input(|i| i.key_pressed(SWAP_UP))
                                     {
                                         action = Action::Up;
                                     }
+
                                     if ui
                                         .button("Down")
                                         .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(SWAP_DOWN)).weak());
+                                            ui.label(
+                                                RichText::new(format!(
+                                                    "{}  |  Shift+D → Group into next",
+                                                    shortcut(SWAP_DOWN)
+                                                ))
+                                                .weak(),
+                                            );
                                         })
                                         .clicked()
-                                        || ui.input(|i| i.key_pressed(SWAP_DOWN))
                                     {
                                         action = Action::Down;
+                                    }
+
+                                    // Keyboard: U / D (with optional Shift)
+                                    let (shift_held, u_pressed, d_pressed) = ui.input(|i| {
+                                        (
+                                            i.modifiers.shift,
+                                            i.key_pressed(SWAP_UP),
+                                            i.key_pressed(SWAP_DOWN),
+                                        )
+                                    });
+
+                                    // If U was pressed this frame:
+                                    if u_pressed {
+                                        action = if shift_held {
+                                            Action::GroupAbove // Shift+U
+                                        } else {
+                                            Action::Up // plain U
+                                        };
+                                    }
+
+                                    // If D was pressed this frame:
+                                    if d_pressed {
+                                        action = if shift_held {
+                                            Action::GroupBelow // Shift+D
+                                        } else {
+                                            Action::Down // plain D
+                                        };
                                     }
                                     if ui
                                         .button("Group")
@@ -1142,6 +1183,16 @@ impl GuiApp {
                                 if let Some(new_path) =
                                     self.score.wrap_into_group_at(&sel, "Group".into())
                                 {
+                                    self.selected = Some(new_path);
+                                }
+                            }
+                            Action::GroupAbove => {
+                                if let Some(new_path) = self.score.move_into_prev_group(&sel) {
+                                    self.selected = Some(new_path);
+                                }
+                            }
+                            Action::GroupBelow => {
+                                if let Some(new_path) = self.score.move_into_next_group(&sel) {
                                     self.selected = Some(new_path);
                                 }
                             }
