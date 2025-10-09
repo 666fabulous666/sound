@@ -50,6 +50,22 @@ impl GuiApp {
                     let mut edited_seq = false;
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
+                            if ui
+                                .button(if track_node_mut.is_mute() {
+                                    "Unute"
+                                } else {
+                                    "Mute"
+                                })
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new(shortcut(MUTE)).weak());
+                                })
+                                .clicked()
+                                || ui.input(|i| i.key_pressed(MUTE))
+                            {
+                                // seq_mut.mute ^= true;
+                                track_node_mut.toggle_mute();
+                                edited_seq ^= true;
+                            }
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
                                 ui.horizontal(|ui| {
@@ -146,17 +162,6 @@ impl GuiApp {
                                         ui.input(|i| (i.key_pressed(WRAP), i.modifiers.shift));
                                     if g_pressed {
                                         action = if shift { Action::Unwrap } else { Action::Wrap };
-                                    }
-                                    if ui
-                                        .button(if seq_mut.mute { "Unute" } else { "Mute" })
-                                        .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(MUTE)).weak());
-                                        })
-                                        .clicked()
-                                        || ui.input(|i| i.key_pressed(MUTE))
-                                    {
-                                        seq_mut.mute ^= true;
-                                        edited_seq ^= true;
                                     }
                                 });
 

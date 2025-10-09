@@ -465,7 +465,7 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        Self::draw_seq(
+        Self::draw_node(
             &mut node,
             &mut self.score.notes,
             &mut self.rng,
@@ -493,7 +493,7 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree (no anticipation)
         let now = self.now();
-        Self::draw_seq(
+        Self::draw_node(
             &mut cloned,
             &mut self.score.notes,
             &mut self.rng,
@@ -525,7 +525,7 @@ impl GuiApp {
         }
         let now = self.now();
         if let Some(n) = self.score.track_root.get_mut(path) {
-            Self::draw_seq(
+            Self::draw_node(
                 n,
                 &mut self.score.notes,
                 &mut self.rng,
@@ -614,28 +614,8 @@ impl GuiApp {
         self.score.track_root.remove_at(path);
     }
 
-    /// Core drawing for a single sequence.
-    fn draw_sequence_core(
-        notes: &mut Vec<NotesGroup>,
-        rng: &mut rand::rngs::ThreadRng,
-        now: Time,
-        anticipate: bool,
-        seq: &mut Sequence,
-    ) {
-        let base = if anticipate {
-            now + GENERATE_EARLY
-        } else {
-            now
-        };
-        let seq_start = seq.loop_len * (base / seq.loop_len).floor();
-
-        seq.draw(notes, rng, seq_start);
-        seq.not_generate_until =
-            Some(seq_start + seq.t_min + seq.loop_len * seq.repeat as f64 - GENERATE_EARLY);
-    }
-
     /// Recursively draw all sequences under this node.
-    fn draw_seq(
+    fn draw_node(
         node: &mut TrackNode,
         notes: &mut Vec<NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
@@ -644,11 +624,13 @@ impl GuiApp {
     ) {
         match node {
             TrackNode::Seq(seq) => {
-                Self::draw_sequence_core(notes, rng, now, anticipate, seq);
+                seq.draw_sequence_core(notes, rng, now, anticipate);
             }
-            TrackNode::Group { children, .. } => {
+            TrackNode::Group {
+                children, muted, ..
+            } => {
                 for ch in children {
-                    Self::draw_seq(ch, notes, rng, now, anticipate);
+                    Self::draw_node(ch, notes, rng, now, anticipate);
                 }
             }
         }
@@ -658,7 +640,7 @@ impl GuiApp {
     fn draw_node_at(&mut self, path: &[usize]) {
         let now = self.now();
         if let Some(node) = self.score.track_root.get_mut(path) {
-            Self::draw_seq(
+            Self::draw_node(
                 node,
                 &mut self.score.notes,
                 &mut self.rng,

@@ -15,6 +15,7 @@ use crate::time_freq::Freq;
 use crate::engine::waves::WaveType;
 use crate::Token;
 use crate::DEFAULT_LOOP_LEN;
+use crate::GENERATE_EARLY;
 use crate::GLOBAL_VOLUME;
 
 use super::Interval;
@@ -205,5 +206,26 @@ impl Sequence {
                     }
                 }
             });
+    }
+
+    /// Core drawing for a single sequence.
+    pub fn draw_sequence_core(
+        &mut self,
+        notes: &mut Vec<NotesGroup>,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+        anticipate: bool,
+        // seq: &mut Sequence,
+    ) {
+        let base = if anticipate {
+            now + GENERATE_EARLY
+        } else {
+            now
+        };
+        let start = self.loop_len * (base / self.loop_len).floor();
+
+        self.draw(notes, rng, start);
+        self.not_generate_until =
+            Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);
     }
 }

@@ -177,6 +177,20 @@ impl TrackNode {
         }
         false
     }
+
+    pub fn toggle_mute(&mut self) {
+        match self {
+            TrackNode::Group { ref mut muted, .. } => *muted ^= true,
+            TrackNode::Seq(sequence) => sequence.mute ^= true,
+        }
+    }
+
+    pub fn is_mute(&self) -> bool {
+        match self {
+            TrackNode::Group { muted, .. } => *muted,
+            TrackNode::Seq(sequence) => sequence.mute,
+        }
+    }
 }
 
 // =====================
