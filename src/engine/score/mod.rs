@@ -350,4 +350,34 @@ impl Score {
     pub fn move_into_next_group(&mut self, path: &[usize]) -> Option<Vec<usize>> {
         self.move_into_adjacent_group(path, 1)
     }
+
+    /// Move the node at `path` up one rank in the tree:
+    /// - Remove it from its parent
+    /// - Insert it into the grandparent, right *after* the parent
+    /// Returns the new path of the moved node.
+    pub fn promote_one_rank(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        // Need at least grandparent/parent/current: [.., parent_idx, child_idx]
+        if path.len() < 2 {
+            return None; // already at root -> no-op
+        }
+
+        let parent_path = &path[..path.len() - 1];
+        let child_idx = *path.last().unwrap();
+
+        let grand_path = &path[..path.len() - 2];
+        let parent_idx = *parent_path.last().unwrap();
+
+        // Remove the node from its parent
+        let node = self.track_root.remove_at(path)?;
+
+        // Insert into grandparent right after the parent
+        let insert_idx_in_grand = parent_idx + 1;
+        let mut new_path = grand_path.to_vec();
+        new_path.push(insert_idx_in_grand);
+
+        // Insert the moved node
+        let _ok = self.track_root.insert_at(&new_path, node);
+
+        Some(new_path)
+    }
 }

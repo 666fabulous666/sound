@@ -41,6 +41,7 @@ impl GuiApp {
                         Up,
                         Down,
                         Group,
+                        Ungroup,
                         GroupAbove,
                         GroupBelow,
                     }
@@ -140,6 +141,15 @@ impl GuiApp {
                                         || ui.input(|i| i.key_pressed(GROUP))
                                     {
                                         action = Action::Group;
+                                    }
+                                    let (g_pressed, shift) =
+                                        ui.input(|i| (i.key_pressed(GROUP), i.modifiers.shift));
+                                    if g_pressed {
+                                        action = if shift {
+                                            Action::Ungroup
+                                        } else {
+                                            Action::Group
+                                        };
                                     }
                                     if ui
                                         .button(if seq_mut.mute { "Unute" } else { "Mute" })
@@ -1185,6 +1195,18 @@ impl GuiApp {
                                 {
                                     self.selected = Some(new_path);
                                 }
+                            }
+                            Action::Ungroup => {
+                                if let Some(sel) = &self.selected {
+                                    if let Some(new_path) = self.score.promote_one_rank(sel) {
+                                        self.selected = Some(new_path);
+                                    }
+                                }
+                                // if let Some(sel) = &self.selected {
+                                //     if let Some(new_path) = self.score.ungroup_at(sel) {
+                                //         self.selected = Some(new_path);
+                                //     }
+                                // }
                             }
                             Action::GroupAbove => {
                                 if let Some(new_path) = self.score.move_into_prev_group(&sel) {
