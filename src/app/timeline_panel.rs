@@ -192,7 +192,7 @@ impl GuiApp {
                             // let header_rect =
                             //     encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
 
-                            let header_rect = track_rect.shrink(5.0);
+                            let header_rect = track_rect;
                             painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
                             // painter.rect_stroke(
                             //     header_rect.with_min_y(header_rect.bottom()),
@@ -203,7 +203,7 @@ impl GuiApp {
                             painter.rect_stroke(
                                 header_rect,
                                 6.0,
-                                egui::Stroke::new(1.0, black_or_white),
+                                egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
                                 egui::StrokeKind::Middle,
                             );
                         }
@@ -480,11 +480,11 @@ impl GuiApp {
                     let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
                     painter.line_segment(
                         [*parent_anchor, angle_anchor],
-                        egui::Stroke::new(2.0, black_or_white),
+                        egui::Stroke::new(1.0, black_or_white),
                     );
                     painter.line_segment(
                         [angle_anchor, *anchor],
-                        egui::Stroke::new(2.0, black_or_white),
+                        egui::Stroke::new(1.0, black_or_white),
                     );
                 }
                 // else: parent not visible → no line
