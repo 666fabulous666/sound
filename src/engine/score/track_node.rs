@@ -177,34 +177,6 @@ impl TrackNode {
     }
 }
 
-// Flatten for engine playback/mix
-pub fn collect_sequences<'a>(
-    node: &'a TrackNode,
-    acc: &mut Vec<(&'a Sequence, f64, f64)>, // (seq, vol, spacial)
-    parent_vol: f64,
-    parent_spacial: f64,
-) {
-    match node {
-        TrackNode::Seq(s) => acc.push((s, parent_vol, parent_spacial)),
-        TrackNode::Group {
-            muted,
-            volume,
-            spacial,
-            children,
-            ..
-        } => {
-            if *muted {
-                return;
-            }
-            let vol = parent_vol * *volume;
-            let pan = parent_spacial + parent_spacial.min(1.0 - parent_spacial) * spacial; //NOTE: might not be the good approach
-            for ch in children {
-                collect_sequences(ch, acc, vol, pan);
-            }
-        }
-    }
-}
-
 // =====================
 // Read-only iterator
 // =====================

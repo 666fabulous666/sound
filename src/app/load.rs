@@ -51,11 +51,11 @@ impl GuiApp {
 
         self.new_score();
         for seq in state.seqs.sequences() {
-            self.new_seq(TrackNode::Seq(seq.clone()));
+            self.new_node(TrackNode::Seq(seq.clone()));
         }
         self.score_mut().last_token = TokenGen(
             self.score
-                .sequences
+                .track_root
                 .sequences()
                 .map(|s| s.token)
                 .max()

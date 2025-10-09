@@ -8,8 +8,10 @@ mod top_panel;
 use crate::{
     engine::{
         score::{
-            default_params::default_delays, sequence::Sequence, track_node::TrackNode, NotesGroup,
-            Score,
+            default_params::{default_delays, default_tempo},
+            sequence::Sequence,
+            track_node::TrackNode,
+            NotesGroup, Score,
         },
         waves::WaveType,
     },
@@ -315,10 +317,6 @@ impl GuiApp {
     }
 }
 
-fn default_tempo() -> f64 {
-    60.0
-}
-
 impl App for GuiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.load_logo(ctx);
@@ -331,7 +329,7 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
-        if self.score.sequences.child_count() != 0 {
+        if self.score.track_root.child_count() != 0 {
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
                 if let Some(ref path) = self.selected {
                     self.selected = self.score.prev_sibling(path, /*wrap=*/ true);
@@ -364,7 +362,7 @@ impl App for GuiApp {
                 return;
             };
         }
-        if self.show_start || self.score.sequences.child_count() == 0 {
+        if self.show_start || self.score.track_root.child_count() == 0 {
             self.start_page(ctx);
             if self.show_start {
                 return;
@@ -398,7 +396,7 @@ impl GuiApp {
         let now = self.now();
         let paths: Vec<_> = self
             .score
-            .sequences
+            .track_root
             .sequences_with_paths()
             .filter(|(_, seq)| {
                 seq.not_generate_until
@@ -409,7 +407,7 @@ impl GuiApp {
             .collect();
 
         for p in paths {
-            self.draw_seq_at(&p);
+            self.draw_node_at(&p);
         }
     }
     fn new_score(&mut self) {
@@ -445,10 +443,9 @@ impl GuiApp {
             }
         }
     }
-    // ---- adapted methods ----------------------------------------------------
 
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
-    fn new_seq(&mut self, mut node: TrackNode) {
+    fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
         Self::draw_seq(
             &mut node,
@@ -457,17 +454,17 @@ impl GuiApp {
             now,
             /*anticipate=*/ false,
         );
-        self.score.sequences.push_child(node);
+        self.score.track_root.push_child(node);
     }
 
     // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.
-    fn clone_seq(&mut self, path: &[usize]) {
+    fn clone_note(&mut self, path: &[usize]) {
         if path.is_empty() {
             return;
         }
 
         // 1) Deep-clone the subtree
-        let mut cloned = match self.score.sequences.get(path).cloned() {
+        let mut cloned = match self.score.track_root.get(path).cloned() {
             Some(n) => n,
             None => return,
         };
@@ -490,40 +487,15 @@ impl GuiApp {
         let insert_idx = path[path.len() - 1] + 1;
         let mut full_insert_path = path[..path.len() - 1].to_vec();
         full_insert_path.push(insert_idx);
-        let _ok = self.score.sequences.insert_at(&full_insert_path, cloned);
-    }
-
-    // Regenerate a subtree we already have a &mut TrackNode for.
-    fn regen_seq(&mut self, node: &mut TrackNode) {
-        // Drain notes for all sequences in the subtree (collect tokens first to avoid borrows)
-        let tokens: Vec<Token> = {
-            let mut out = Vec::new();
-            Self::visit_sequences(&*node, &mut |s: &Sequence| {
-                out.push(s.token);
-            });
-            out
-        };
-        for tk in tokens {
-            self.drain_notes_from_seq(tk);
-        }
-
-        // Redraw recursively (no anticipation)
-        let now = self.now();
-        Self::draw_seq(
-            node,
-            &mut self.score.notes,
-            &mut self.rng,
-            now,
-            /*anticipate=*/ false,
-        );
+        let _ok = self.score.track_root.insert_at(&full_insert_path, cloned);
     }
 
     // (optional) Handy by-path variant
-    fn regen_seq_at(&mut self, path: &[usize]) {
+    fn regen_node_at(&mut self, path: &[usize]) {
         // collect tokens first
         let tokens: Vec<Token> = {
             let mut out = Vec::new();
-            if let Some(n) = self.score.sequences.get(path) {
+            if let Some(n) = self.score.track_root.get(path) {
                 Self::visit_sequences(n, &mut |s: &Sequence| {
                     out.push(s.token);
                 });
@@ -534,7 +506,7 @@ impl GuiApp {
             self.drain_notes_from_seq(tk);
         }
         let now = self.now();
-        if let Some(n) = self.score.sequences.get_mut(path) {
+        if let Some(n) = self.score.track_root.get_mut(path) {
             Self::draw_seq(
                 n,
                 &mut self.score.notes,
@@ -565,7 +537,7 @@ impl GuiApp {
     fn edit_node_at(&mut self, node: TrackNode, path: &[usize]) {
         // 1) Replace node at path
         {
-            if let Some(slot) = self.score.sequences.get_mut(path) {
+            if let Some(slot) = self.score.track_root.get_mut(path) {
                 *slot = node;
             } else {
                 return; // invalid path
@@ -576,7 +548,7 @@ impl GuiApp {
         let seq_paths: Vec<Vec<usize>> = {
             let mut out = Vec::new();
             let mut cur = Vec::new();
-            Self::collect_seq_paths(&self.score.sequences, &mut cur, &mut out);
+            Self::collect_seq_paths(&self.score.track_root, &mut cur, &mut out);
             out
         };
 
@@ -600,17 +572,17 @@ impl GuiApp {
         // 4) Regenerate from that point onward
         if let Some(pos) = start_idx {
             for p in &seq_paths[pos..] {
-                self.regen_seq_at(p);
+                self.regen_node_at(p);
             }
         }
         // else: nothing to regenerate (e.g., no sequences at/after this path)
     }
 
     // --- delete --------------------------------------------------------------
-    fn del_seq(&mut self, path: &[usize]) {
+    fn del_node(&mut self, path: &[usize]) {
         let tokens: Vec<Token> = {
             let mut out = Vec::new();
-            if let Some(node) = self.score.sequences.get(path) {
+            if let Some(node) = self.score.track_root.get(path) {
                 let mut collect = |seq: &Sequence| {
                     out.push(seq.token);
                 };
@@ -621,7 +593,7 @@ impl GuiApp {
         for tk in tokens {
             self.drain_notes_from_seq(tk);
         }
-        self.score.sequences.remove_at(path);
+        self.score.track_root.remove_at(path);
     }
 
     /// Core drawing for a single sequence.
@@ -665,9 +637,9 @@ impl GuiApp {
     }
 
     /// Draw the node at `path` (recursively if it's a Group).
-    fn draw_seq_at(&mut self, path: &[usize]) {
+    fn draw_node_at(&mut self, path: &[usize]) {
         let now = self.now();
-        if let Some(node) = self.score.sequences.get_mut(path) {
+        if let Some(node) = self.score.track_root.get_mut(path) {
             Self::draw_seq(
                 node,
                 &mut self.score.notes,

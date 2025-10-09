@@ -9,7 +9,7 @@ use crate::{
 
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
-        let len = self.score.sequences.sequences().count();
+        let len = self.score.track_root.sequences().count();
         let current_time = self.now();
         egui::CentralPanel::default().show(ctx, |ui| {
             let (rect, _resp) = ui.allocate_exact_size(
@@ -22,7 +22,7 @@ impl GuiApp {
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
-            let max_loop_len = (&self.score.sequences)
+            let max_loop_len = (&self.score.track_root)
                 .sequences()
                 .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
             let playhead = NOTE_LINGER_TIME.min(max_loop_len);
@@ -31,7 +31,7 @@ impl GuiApp {
             // grid
             let sub_grids = self
                 .score
-                .sequences
+                .track_root
                 .sequences()
                 .map(|s| s.time_quantum.1 as isize);
             for sub_grid in sub_grids {
@@ -66,7 +66,7 @@ impl GuiApp {
             }
 
             // sequences
-            for (i, (path, seq)) in (&self.score.sequences).sequences_with_paths().enumerate() {
+            for (i, (path, seq)) in (&self.score.track_root).sequences_with_paths().enumerate() {
                 let top = rect.top() + i as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;

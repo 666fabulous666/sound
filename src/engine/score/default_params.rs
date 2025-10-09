@@ -73,6 +73,9 @@ pub fn default_loop_len() -> Time {
 pub fn default_time_quantum() -> (usize, usize) {
     (1, 8)
 }
+pub fn default_tempo() -> f64 {
+    60.0
+}
 impl Default for ChorusParams {
     fn default() -> Self {
         Self {

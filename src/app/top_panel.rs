@@ -47,7 +47,7 @@ impl GuiApp {
                                 let seq = TrackNode::from_sequence(Sequence::new(
                                     self.score.last_token.next(),
                                 ));
-                                self.new_seq(seq);
+                                self.new_node(seq);
                                 // TODO: reactivate
                                 // self.selected = Some(self.score.sequences.len() - 1);
                             }

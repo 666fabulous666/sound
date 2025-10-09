@@ -46,7 +46,7 @@ impl GuiApp {
                     let mut action = Action::None;
                     let mut edited_seq = false;
                     if let Some(sel) = self.selected.clone() {
-                        if let Some(track_node_mut) = self.score.sequences.get_mut(&sel) {
+                        if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
                                 ui.horizontal(|ui| {
@@ -1070,7 +1070,7 @@ impl GuiApp {
                                             &sel_path[..sel_path.len().saturating_sub(1)];
                                         let siblings = self
                                             .score
-                                            .sequences
+                                            .track_root
                                             .get(parent_path)
                                             .map(|p| p.child_count())
                                             .unwrap_or(0);
@@ -1078,7 +1078,7 @@ impl GuiApp {
                                     };
 
                                     // Perform deletion
-                                    self.del_seq(&sel_path);
+                                    self.del_node(&sel_path);
 
                                     // Decide new selection
                                     self.selected = if siblings > 1 {
@@ -1105,7 +1105,7 @@ impl GuiApp {
                             Action::Clone => {
                                 if let Some(mut sel_path) = self.selected.clone() {
                                     // Clone the selected node (implementation assumed: inserts right after original)
-                                    self.clone_seq(&sel_path);
+                                    self.clone_note(&sel_path);
 
                                     // Move selection to the new clone (original index + 1)
                                     if let Some(last) = sel_path.last_mut() {
@@ -1138,7 +1138,7 @@ impl GuiApp {
                     if edited_seq {
                         if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                let sequence = self.score.sequences.get_mut(&sel).unwrap().clone();
+                                let sequence = self.score.track_root.get_mut(&sel).unwrap().clone();
                                 self.edit_node_at(sequence, &sel);
                             }
                         }

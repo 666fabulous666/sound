@@ -96,7 +96,7 @@ pub struct NotesGroup {
 
 pub struct Score {
     pub notes: Vec<NotesGroup>,
-    pub sequences: TrackNode,
+    pub track_root: TrackNode,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
     pub shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
@@ -106,7 +106,7 @@ impl Score {
         let mut last_token = TokenGen(0);
         Self {
             notes: Vec::new(),
-            sequences: TrackNode::new_root(&mut last_token),
+            track_root: TrackNode::new_root(&mut last_token),
             last_token,
             delays: default_delays(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
@@ -121,7 +121,7 @@ impl Score {
         let parent_path = &path[..path.len() - 1];
         let idx = *path.last().unwrap();
 
-        let parent = self.sequences.get(parent_path)?;
+        let parent = self.track_root.get(parent_path)?;
         let n = parent.child_count();
         if n == 0 {
             return None;
@@ -149,7 +149,7 @@ impl Score {
         let parent_path = &path[..path.len() - 1];
         let idx = *path.last().unwrap();
 
-        let parent = self.sequences.get(parent_path)?;
+        let parent = self.track_root.get(parent_path)?;
         let n = parent.child_count();
         if n == 0 {
             return None;
@@ -180,7 +180,7 @@ impl Score {
 
     /// Optional: select first child (if any).
     pub fn first_child_of(&self, path: &[usize]) -> Option<Vec<usize>> {
-        let node = self.sequences.get(path)?;
+        let node = self.track_root.get(path)?;
         if node.child_count() == 0 {
             return None;
         }
@@ -191,7 +191,7 @@ impl Score {
 
     /// Optional: select last child (if any).
     pub fn last_child_of(&self, path: &[usize]) -> Option<Vec<usize>> {
-        let node = self.sequences.get(path)?;
+        let node = self.track_root.get(path)?;
         let n = node.child_count();
         if n == 0 {
             return None;
@@ -210,7 +210,7 @@ impl Score {
         }
         let parent_path = &path[..path.len() - 1];
 
-        let parent = self.sequences.get_mut(parent_path)?;
+        let parent = self.track_root.get_mut(parent_path)?;
         if let TrackNode::Group { children, .. } = parent {
             children.swap(i, i - 1);
             let mut np = path.to_vec();
@@ -228,7 +228,7 @@ impl Score {
         let i = *path.last().unwrap();
         let parent_path = &path[..path.len() - 1];
 
-        let parent = self.sequences.get_mut(parent_path)?;
+        let parent = self.track_root.get_mut(parent_path)?;
         if let TrackNode::Group { children, .. } = parent {
             if i + 1 >= children.len() {
                 return None;
@@ -252,7 +252,7 @@ impl Score {
         let idx = *path.last().unwrap();
 
         // 1) Take the node out
-        let node = self.sequences.remove_at(path)?;
+        let node = self.track_root.remove_at(path)?;
 
         // 2) Build the group (adapt fields to your TrackNode::Group)
         let group = TrackNode::Group {
@@ -267,7 +267,7 @@ impl Score {
         // 3) Insert group back at the same position
         let mut new_path = parent_path.to_vec();
         new_path.push(idx);
-        let ok = self.sequences.insert_at(&new_path, group);
+        let ok = self.track_root.insert_at(&new_path, group);
         if ok {
             Some(new_path)
         } else {
