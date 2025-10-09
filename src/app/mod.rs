@@ -106,6 +106,7 @@ where
             muted: false,
             volume: 1.0,
             spacial: 0.5,
+            collapsed: false,
             children,
         },
         SequencesCompat::Seqs(seqs) => TrackNode::Group {
@@ -114,6 +115,7 @@ where
             muted: false,
             volume: 1.0,
             spacial: 0.5,
+            collapsed: false,
             children: seqs.into_iter().map(TrackNode::Seq).collect(),
         },
     })
@@ -458,7 +460,7 @@ impl GuiApp {
     }
 
     // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.
-    fn clone_note(&mut self, path: &[usize]) {
+    fn clone_node(&mut self, path: &[usize]) {
         if path.is_empty() {
             return;
         }

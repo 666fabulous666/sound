@@ -261,6 +261,7 @@ impl Score {
             muted: false,
             volume: 1.0,
             spacial: 0.5,
+            collapsed: false,
             children: vec![node],
         };
 

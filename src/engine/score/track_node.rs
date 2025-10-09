@@ -11,6 +11,7 @@ pub enum TrackNode {
         muted: bool,
         volume: f64,  // mix gain multiplier (>= 0.0)
         spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
+        collapsed: bool,
         children: Vec<TrackNode>,
     },
     Seq(Sequence),
@@ -46,6 +47,7 @@ impl TrackNode {
             muted: false,
             volume: 1.0,
             spacial: 0.5,
+            collapsed: false,
             children: Vec::new(),
         }
     }
@@ -282,6 +284,35 @@ impl TrackNode {
             // start with the root at the empty path
             stack: vec![(self, Vec::new())],
         }
+    }
+    /// Returns `true` if the node at `path` should be visible,
+    /// i.e. none of its *ancestor* groups are collapsed.
+    pub fn path_visible(&self, path: &[usize]) -> bool {
+        let mut node = self;
+
+        for (depth, &idx) in path.iter().enumerate() {
+            match node {
+                TrackNode::Group {
+                    collapsed,
+                    children,
+                    ..
+                } => {
+                    // If an *ancestor* is collapsed, hide descendants.
+                    if *collapsed && depth < path.len() {
+                        return false;
+                    }
+                    node = match children.get(idx) {
+                        Some(n) => n,
+                        None => return false, // invalid path
+                    };
+                }
+                TrackNode::Seq(_) => {
+                    // Can't have children under a sequence; only valid if this is the last step.
+                    return depth + 1 == path.len();
+                }
+            }
+        }
+        true
     }
 }
 

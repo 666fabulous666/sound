@@ -7,6 +7,7 @@ pub const SELECT_DOWN: Key = Key::ArrowDown;
 pub const SWAP_UP: Key = Key::U;
 pub const SWAP_DOWN: Key = Key::D;
 pub const GROUP: Key = Key::G;
+pub const COLLAPSE: Key = Key::C;
 pub const MUTE: Key = Key::M;
 
 pub fn shortcut(key: Key) -> String {

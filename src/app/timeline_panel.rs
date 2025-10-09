@@ -31,6 +31,14 @@ impl GuiApp {
 
         // ----- PRECOMPUTE OWNED DATA (no long borrows) -----
         let node_paths = all_paths(&self.score.track_root); // owned paths
+        let visible_paths: Vec<Vec<usize>> = node_paths
+            .iter()
+            .filter(|p| self.score.track_root.path_visible(p))
+            .cloned()
+            .collect();
+
+        // You can use `visible_paths.len()` for lane count:
+        let lanes = visible_paths.len().max(1);
         let current_time = self.now();
 
         // Grid params based on sequences only:
@@ -89,7 +97,13 @@ impl GuiApp {
             }
 
             // --- lanes: iterate owned paths, fetch node on-demand ---
-            for (i, path) in node_paths.iter().enumerate() {
+            // for (i, path) in node_paths.iter().enumerate() {
+            for (i, path) in visible_paths.iter().enumerate() {
+                // Fetch node on-demand (short borrow)
+                let node = match self.score.track_root.get(path) {
+                    Some(n) => n,
+                    None => continue,
+                };
                 let top = rect.top() + i as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
@@ -287,8 +301,12 @@ impl GuiApp {
                                         painter.rect_filled(
                                             tmp,
                                             0.0,
-                                            egui::Color32::BLACK
-                                                .gamma_multiply(e / seq.normalization as f32),
+                                            if ui.visuals().dark_mode {
+                                                egui::Color32::WHITE
+                                            } else {
+                                                egui::Color32::BLACK
+                                            }
+                                            .gamma_multiply(e / seq.normalization as f32),
                                         );
                                     }
                                 }
@@ -406,377 +424,4 @@ impl GuiApp {
             );
         });
     }
-    // pub fn old_timeline_panel(&mut self, ctx: &egui::Context) {
-    //     // lanes = groups + sequences (everything)
-    //     let nodes = nodes_with_paths(&self.score.track_root);
-    //     let len = nodes.len().max(1);
-
-    //     let current_time = self.now();
-    //     egui::CentralPanel::default().show(ctx, |ui| {
-    //         let (rect, _resp) = ui.allocate_exact_size(
-    //             egui::vec2(ui.available_width(), ui.available_height()),
-    //             egui::Sense::click_and_drag(),
-    //         );
-    //         let painter = ui.painter_at(rect);
-
-    //         let lanes = len;
-    //         let lane_h = rect.height() / lanes as f32;
-    //         let block_h = lane_h * 0.6;
-    //         let lane_gap = (lane_h - block_h) * 0.5;
-
-    //         // grid based on sequences only (unchanged)
-    //         let max_loop_len = (&self.score.track_root)
-    //             .sequences()
-    //             .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
-    //         let playhead = NOTE_LINGER_TIME.min(max_loop_len);
-    //         let track_display_length = max_loop_len + playhead;
-
-    //         // --- grid (unchanged) ------------------------------------------------
-    //         for sub_grid in self
-    //             .score
-    //             .track_root
-    //             .sequences()
-    //             .map(|s| s.time_quantum.1 as isize)
-    //         {
-    //             let n = track_display_length.as_secs() as isize * sub_grid;
-    //             for s in -n..=2 * n {
-    //                 let x = Self::t_to_x(
-    //                     rect,
-    //                     Time(s as f64 / sub_grid as f64) - self.now().rem_euclid(max_loop_len)
-    //                         + playhead,
-    //                     track_display_length,
-    //                 );
-    //                 let base_col = hsl_to_color32(((279 * sub_grid) % 360) as _, 0.5, 0.5);
-    //                 let (col, thickness) = if s % sub_grid == 0 {
-    //                     (base_col.gamma_multiply(0.75), 2.0)
-    //                 } else if sub_grid != 0 && s % (sub_grid / 2) == 0 {
-    //                     (base_col.gamma_multiply(0.25), 1.0)
-    //                 } else {
-    //                     (base_col.gamma_multiply(0.125), 1.0)
-    //                 };
-    //                 painter.line_segment(
-    //                     [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-    //                     egui::Stroke::new(thickness, col),
-    //                 );
-    //             }
-    //         }
-
-    //         // --- lanes: groups + sequences --------------------------------------
-    //         for (i, (path, node)) in nodes.iter().enumerate() {
-    //             let top = rect.top() + i as f32 * lane_h + lane_gap;
-    //             let y0 = top;
-    //             let y1 = top + block_h;
-
-    //             let track_rect = egui::Rect::from_min_max(
-    //                 egui::pos2(Self::t_to_x(rect, Time::new(0.0), track_display_length), y0),
-    //                 egui::pos2(
-    //                     Self::t_to_x(rect, track_display_length, track_display_length),
-    //                     y1,
-    //                 ),
-    //             );
-
-    //             let selected =
-    //                 self.selected.as_ref().map(|p| p.as_slice()) == Some(path.as_slice());
-
-    //             match node {
-    //                 TrackNode::Group { name, .. } => {
-    //                     // Draw a full-width gray band (no notes)
-    //                     let mut col = egui::Color32::from_gray(128);
-    //                     if selected {
-    //                         col = Self::brighten(col);
-    //                         // subtle glow like you already do:
-    //                         for k in -16..16 {
-    //                             let tmp = (30 + k) as f32;
-    //                             painter.rect_filled(
-    //                                 track_rect.expand2(egui::Vec2 {
-    //                                     x: 0.0,
-    //                                     y: k as f32,
-    //                                 }),
-    //                                 tmp.sqrt(),
-    //                                 col.gamma_multiply(1.0 / tmp),
-    //                             );
-    //                         }
-    //                     }
-    //                     painter.rect_filled(track_rect, 4.0, col.gamma_multiply(0.35));
-    //                     painter.rect_stroke(
-    //                         track_rect,
-    //                         4.0,
-    //                         egui::Stroke::new(
-    //                             1.0,
-    //                             if ui.visuals().dark_mode {
-    //                                 egui::Color32::WHITE
-    //                             } else {
-    //                                 egui::Color32::BLACK
-    //                             },
-    //                         ),
-    //                         egui::StrokeKind::Middle,
-    //                     );
-
-    //                     // Group label (name + child count)
-    //                     let bar_color = col.lerp_to_gamma(
-    //                         if ui.visuals().dark_mode {
-    //                             egui::Color32::WHITE
-    //                         } else {
-    //                             egui::Color32::BLACK
-    //                         },
-    //                         0.6,
-    //                     );
-    //                     let child_count = match node {
-    //                         TrackNode::Group { children, .. } => children.len(),
-    //                         _ => 0,
-    //                     };
-    //                     painter.text(
-    //                         egui::pos2(rect.left() + 8.0, rect.top() + (i as f32 + 0.5) * lane_h),
-    //                         egui::Align2::LEFT_CENTER,
-    //                         if name.is_empty() {
-    //                             format!("Group ({})", child_count)
-    //                         } else {
-    //                             format!("{} ({})", name, child_count)
-    //                         },
-    //                         egui::TextStyle::Body.resolve(ui.style()),
-    //                         bar_color,
-    //                     );
-
-    //                     // Click to select
-    //                     if ui
-    //                         .interact(track_rect, egui::Id::new(("grp", i)), egui::Sense::click())
-    //                         .clicked()
-    //                     {
-    //                         self.selected = Some(path.clone());
-    //                     }
-    //                 }
-
-    //                 TrackNode::Seq(seq) => {
-    //                     // --- your existing Seq drawing (unchanged) ----------------
-    //                     // Color (highlight if selected)
-    //                     let mut col = Self::hash_color(&seq.wave_type);
-    //                     if selected {
-    //                         col = Self::brighten(col);
-    //                         for k in -16..16 {
-    //                             let tmp = (30 + k) as f32;
-    //                             painter.rect_filled(
-    //                                 track_rect.expand2(egui::Vec2 {
-    //                                     x: 0.0,
-    //                                     y: k as f32,
-    //                                 }),
-    //                                 tmp.sqrt(),
-    //                                 col.gamma_multiply(1.0 / tmp),
-    //                             );
-    //                         }
-    //                     }
-
-    //                     // Repeat window tiling modulo loop
-    //                     let loop_len = seq.loop_len;
-    //                     let win_len = seq.t_max - seq.t_min;
-    //                     let start0 = (seq.t_min - current_time).rem_euclid(loop_len) + playhead;
-    //                     let repeats =
-    //                         (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
-
-    //                     for n in -repeats..repeats {
-    //                         let shift = loop_len * (n as f64);
-    //                         let s = start0 + shift;
-    //                         let e = s + win_len;
-
-    //                         if e <= Time(0.0) || s >= track_display_length {
-    //                             continue;
-    //                         }
-
-    //                         let s_clamped = s.max(Time(0.0));
-    //                         let e_clamped = e.min(track_display_length);
-
-    //                         let x_s = Self::t_to_x(track_rect, s_clamped, track_display_length);
-    //                         let x_e = Self::t_to_x(track_rect, e_clamped, track_display_length);
-
-    //                         if x_e > x_s {
-    //                             let block_rect = egui::Rect::from_min_max(
-    //                                 egui::pos2(x_s, y0),
-    //                                 egui::pos2(x_e, y1),
-    //                             );
-    //                             painter.rect_filled(block_rect, 4.0, col);
-    //                             painter.rect_stroke(
-    //                                 block_rect,
-    //                                 4.0,
-    //                                 egui::Stroke::new(1.0, egui::Color32::BLACK),
-    //                                 egui::StrokeKind::Middle,
-    //                             );
-    //                         }
-    //                     }
-
-    //                     // notes rendering (unchanged)
-    //                     self.score
-    //                         .notes
-    //                         .iter()
-    //                         .filter(|NotesGroup { token, .. }| *token == seq.token)
-    //                         .flat_map(|NotesGroup { notes, .. }| notes.iter())
-    //                         .collect::<Vec<_>>()
-    //                         .iter()
-    //                         .for_each(|n| {
-    //                             if let Interval::Tempered(degree, _) = n.interval {
-    //                                 let dy = track_rect.top() - track_rect.bottom();
-    //                                 let note_rect = egui::Rect::from_min_max(
-    //                                     egui::pos2(
-    //                                         Self::t_to_x(
-    //                                             track_rect,
-    //                                             n.time - current_time + playhead,
-    //                                             track_display_length,
-    //                                         ),
-    //                                         0.5 * (track_rect.bottom() + track_rect.top())
-    //                                             + dy * (degree as f32 + 0.5) / 24.0,
-    //                                     ),
-    //                                     egui::pos2(
-    //                                         Self::t_to_x(
-    //                                             track_rect,
-    //                                             (n.time + n.duration - current_time) + playhead,
-    //                                             track_display_length,
-    //                                         ),
-    //                                         0.5 * (track_rect.bottom() + track_rect.top())
-    //                                             + dy * (degree as f32 - 0.5) / 24.0,
-    //                                     ),
-    //                                 );
-
-    //                                 let tmp = 100f32.min(note_rect.width()).floor();
-    //                                 let tmp_inv = 1.0 / tmp;
-    //                                 let es: Vec<_> = (0..tmp as _)
-    //                                     .map(|i| {
-    //                                         envelope(
-    //                                             seq.attack_decay.0,
-    //                                             seq.attack_decay.1,
-    //                                             n.duration,
-    //                                         )(
-    //                                             n.duration * i as f64 * tmp_inv as f64
-    //                                         ) as f32
-    //                                     })
-    //                                     .collect();
-    //                                 for (i, e) in es.iter().enumerate() {
-    //                                     let fract = i as f32 * tmp_inv;
-    //                                     let tmp = note_rect
-    //                                         .with_min_x(
-    //                                             note_rect.left() + note_rect.width() * fract,
-    //                                         )
-    //                                         .with_max_x(
-    //                                             note_rect.left()
-    //                                                 + note_rect.width() * (fract + tmp_inv),
-    //                                         );
-    //                                     painter.rect_filled(
-    //                                         tmp,
-    //                                         0.0,
-    //                                         egui::Color32::BLACK
-    //                                             .gamma_multiply(e / seq.normalization as f32),
-    //                                     );
-    //                                 }
-    //                             }
-    //                         });
-
-    //                     let bar_color = col.lerp_to_gamma(
-    //                         if ui.visuals().dark_mode {
-    //                             egui::Color32::WHITE
-    //                         } else {
-    //                             egui::Color32::BLACK
-    //                         },
-    //                         0.5,
-    //                     );
-    //                     painter.text(
-    //                         egui::pos2(
-    //                             rect.right() - 4.0,
-    //                             rect.top() + (i as f32 + 0.5) * lane_h + 4.0,
-    //                         ),
-    //                         egui::Align2::RIGHT_CENTER,
-    //                         format!(
-    //                             "{} oct {}",
-    //                             (&seq.wave_type).to_string(),
-    //                             if let Interval::RDTempered(_, _, octave) = &seq.interval {
-    //                                 octave
-    //                             } else {
-    //                                 &0
-    //                             },
-    //                         ),
-    //                         egui::TextStyle::Body.resolve(ui.style()),
-    //                         bar_color,
-    //                     );
-
-    //                     // repeat bars (unchanged)
-    //                     let rep_loop_len = seq.loop_len * seq.repeat as f64;
-    //                     let bar_pos =
-    //                         rep_loop_len + playhead - (self.now()).rem_euclid(rep_loop_len);
-    //                     let last_bar_pos = bar_pos - rep_loop_len;
-    //                     (0..seq.repeat).for_each(|j| {
-    //                         let pos = seq.loop_len * j as f64 + playhead
-    //                             - (self.now()).rem_euclid(rep_loop_len);
-    //                         painter.text(
-    //                             egui::pos2(
-    //                                 Self::t_to_x(rect, pos, track_display_length),
-    //                                 y0 - 0.333 * lane_gap,
-    //                             ),
-    //                             Align2::CENTER_BOTTOM,
-    //                             format!("{}/{}", j + 1, seq.repeat),
-    //                             egui::TextStyle::Body.resolve(ui.style()),
-    //                             bar_color,
-    //                         );
-    //                     });
-    //                     painter.text(
-    //                         egui::pos2(
-    //                             Self::t_to_x(rect, bar_pos, track_display_length),
-    //                             y0 - 0.333 * lane_gap,
-    //                         ),
-    //                         Align2::CENTER_BOTTOM,
-    //                         format!("x{}", seq.repeat),
-    //                         egui::TextStyle::Body.resolve(ui.style()),
-    //                         bar_color,
-    //                     );
-    //                     painter.line_segment(
-    //                         [
-    //                             egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y0),
-    //                             egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y1),
-    //                         ],
-    //                         egui::Stroke::new(2.0, bar_color),
-    //                     );
-    //                     painter.line_segment(
-    //                         [
-    //                             egui::pos2(
-    //                                 Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-    //                                 y0,
-    //                             ),
-    //                             egui::pos2(
-    //                                 Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-    //                                 y1,
-    //                             ),
-    //                         ],
-    //                         egui::Stroke::new(2.0, bar_color),
-    //                     );
-    //                     painter.circle_filled(
-    //                         egui::pos2(
-    //                             Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-    //                             0.75 * y0 + 0.25 * y1,
-    //                         ),
-    //                         2.0,
-    //                         bar_color,
-    //                     );
-    //                     painter.circle_filled(
-    //                         egui::pos2(
-    //                             Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-    //                             0.25 * y0 + 0.75 * y1,
-    //                         ),
-    //                         2.0,
-    //                         bar_color,
-    //                     );
-
-    //                     // click to select
-    //                     if ui
-    //                         .interact(track_rect, egui::Id::new(("seq", i)), egui::Sense::click())
-    //                         .clicked()
-    //                     {
-    //                         self.selected = Some(path.clone());
-    //                     }
-    //                 }
-    //             }
-    //         }
-
-    //         // playhead
-    //         let x = Self::t_to_x(rect, playhead, track_display_length);
-    //         painter.line_segment(
-    //             [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-    //             egui::Stroke::new(3.0, egui::Color32::GOLD),
-    //         );
-    //     });
-    // }
 }

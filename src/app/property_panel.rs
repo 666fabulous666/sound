@@ -18,7 +18,7 @@ use crate::{
     engine::score::{
         default_params::*,
         sequence::Sequence,
-        track_node::{tracknode_to_tree, TreePrintOptions},
+        track_node::{tracknode_to_tree, TrackNode, TreePrintOptions},
         ChorusParams, DetRythm, Interval, RdRythm, Rythm,
     },
     layout_left,
@@ -1052,67 +1052,81 @@ impl GuiApp {
                                     &track_node_mut,
                                     TreePrintOptions::default(),
                                 ));
+                                match track_node_mut {
+                                    TrackNode::Group { collapsed, .. } => {
+                                        if ui
+                                            .button(if *collapsed {
+                                                "Uncollapse"
+                                            } else {
+                                                "Collapse"
+                                            })
+                                            .on_hover_ui(|ui| {
+                                                ui.label(RichText::new(shortcut(COLLAPSE)).weak());
+                                            })
+                                            .clicked()
+                                            || ui.input(|i| i.key_pressed(COLLAPSE))
+                                        {
+                                            *collapsed = !(*collapsed)
+                                        }
+                                    }
+                                    TrackNode::Seq(_) => unreachable!(),
+                                }
                             }
                         }
                     } else {
                         ui.label("Click a block to edit");
                     }
 
-                    if let Some(sel) = self.selected.clone() {
+                    if let Some(mut sel) = self.selected.clone() {
                         match action {
                             Action::None => {}
                             Action::Delete => {
-                                if let Some(sel_path) = self.selected.clone() {
-                                    // Compute selection target BEFORE deletion
-                                    let (idx, parent_path, siblings) = {
-                                        let idx = *sel_path.last().unwrap();
-                                        let parent_path =
-                                            &sel_path[..sel_path.len().saturating_sub(1)];
-                                        let siblings = self
-                                            .score
-                                            .track_root
-                                            .get(parent_path)
-                                            .map(|p| p.child_count())
-                                            .unwrap_or(0);
-                                        (idx, parent_path.to_vec(), siblings)
-                                    };
+                                // Compute selection target BEFORE deletion
+                                let (idx, parent_path, siblings) = {
+                                    let idx = *sel.last().unwrap();
+                                    let parent_path = &sel[..sel.len().saturating_sub(1)];
+                                    let siblings = self
+                                        .score
+                                        .track_root
+                                        .get(parent_path)
+                                        .map(|p| p.child_count())
+                                        .unwrap_or(0);
+                                    (idx, parent_path.to_vec(), siblings)
+                                };
 
-                                    // Perform deletion
-                                    self.del_node(&sel_path);
+                                // Perform deletion
+                                self.del_node(&sel);
 
-                                    // Decide new selection
-                                    self.selected = if siblings > 1 {
-                                        // There will be at least one sibling left after deletion
-                                        let mut p = parent_path.clone();
-                                        // Prefer next sibling at the same index (which now points to what was "next")
-                                        let new_idx = if idx < siblings - 1 {
-                                            idx
-                                        } else {
-                                            idx.saturating_sub(1)
-                                        };
-                                        p.push(new_idx);
-                                        Some(p)
+                                // Decide new selection
+                                self.selected = if siblings > 1 {
+                                    // There will be at least one sibling left after deletion
+                                    let mut p = parent_path.clone();
+                                    // Prefer next sibling at the same index (which now points to what was "next")
+                                    let new_idx = if idx < siblings - 1 {
+                                        idx
                                     } else {
-                                        // No siblings left: select the parent (or None if we deleted the only root child)
-                                        if parent_path.is_empty() {
-                                            None
-                                        } else {
-                                            Some(parent_path)
-                                        }
+                                        idx.saturating_sub(1)
                                     };
-                                }
+                                    p.push(new_idx);
+                                    Some(p)
+                                } else {
+                                    // No siblings left: select the parent (or None if we deleted the only root child)
+                                    if parent_path.is_empty() {
+                                        None
+                                    } else {
+                                        Some(parent_path)
+                                    }
+                                };
                             }
                             Action::Clone => {
-                                if let Some(mut sel_path) = self.selected.clone() {
-                                    // Clone the selected node (implementation assumed: inserts right after original)
-                                    self.clone_note(&sel_path);
+                                // Clone the selected node (implementation assumed: inserts right after original)
+                                self.clone_node(&sel);
 
-                                    // Move selection to the new clone (original index + 1)
-                                    if let Some(last) = sel_path.last_mut() {
-                                        *last += 1;
-                                    }
-                                    self.selected = Some(sel_path);
+                                // Move selection to the new clone (original index + 1)
+                                if let Some(last) = sel.last_mut() {
+                                    *last += 1;
                                 }
+                                self.selected = Some(sel);
                             }
                             Action::Up => {
                                 if let Some(new_path) = self.score.swap_with_prev(&sel) {
@@ -1125,12 +1139,10 @@ impl GuiApp {
                                 }
                             }
                             Action::Group => {
-                                if let Some(path) = self.selected.clone() {
-                                    if let Some(new_path) =
-                                        self.score.wrap_into_group_at(&path, "Group".into())
-                                    {
-                                        self.selected = Some(new_path);
-                                    }
+                                if let Some(new_path) =
+                                    self.score.wrap_into_group_at(&sel, "Group".into())
+                                {
+                                    self.selected = Some(new_path);
                                 }
                             }
                         }
