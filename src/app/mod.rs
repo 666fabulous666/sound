@@ -334,12 +334,12 @@ impl App for GuiApp {
         if self.score.track_root.child_count() != 0 {
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
                 if let Some(ref path) = self.selected {
-                    self.selected = self.score.prev_sibling(path, /*wrap=*/ true);
+                    self.selected = self.score.prev_sibling(path, /*wrap=*/ false);
                 }
             }
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
                 if let Some(ref path) = self.selected {
-                    self.selected = self.score.next_sibling(path, /*wrap=*/ true);
+                    self.selected = self.score.next_sibling(path, /*wrap=*/ false);
                 }
             }
         }

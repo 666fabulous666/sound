@@ -12,7 +12,7 @@ use crate::{
         waves::envelope,
     },
     time_freq::Time,
-    NOTE_LINGER_TIME,
+    NOTE_LINGER_TIME, TREE_DEPTH_WIDTH,
 };
 
 impl GuiApp {
@@ -35,7 +35,7 @@ impl GuiApp {
         let node_paths = all_paths(&self.score.track_root); // owned paths
         let visible_paths: Vec<Vec<usize>> = node_paths
             .iter()
-            .filter(|p| self.score.track_root.path_visible(p))
+            .filter(|p| self.score.track_root.path_visible(p) && p.len() > 0)
             .cloned()
             .collect();
 
@@ -138,21 +138,6 @@ impl GuiApp {
                                 );
                             }
                         }
-                        painter.rect_filled(track_rect, 4.0, col.gamma_multiply(0.35));
-                        painter.rect_stroke(
-                            track_rect,
-                            4.0,
-                            egui::Stroke::new(
-                                1.0,
-                                if ui.visuals().dark_mode {
-                                    egui::Color32::WHITE
-                                } else {
-                                    egui::Color32::BLACK
-                                },
-                            ),
-                            egui::StrokeKind::Middle,
-                        );
-
                         let bar_color = col.lerp_to_gamma(
                             if ui.visuals().dark_mode {
                                 egui::Color32::WHITE
@@ -161,6 +146,81 @@ impl GuiApp {
                             },
                             0.6,
                         );
+                        // --- draw encompassing rectangle over all visible children ---
+                        let group_prefix = path.clone();
+                        let mut first_y = f32::MAX;
+                        let mut last_y = f32::MIN;
+
+                        // find visible children (and self)
+                        for (j, child_path) in visible_paths.iter().enumerate() {
+                            if child_path.starts_with(&group_prefix) {
+                                let top_j = rect.top() + j as f32 * lane_h + lane_gap;
+                                let bottom_j = top_j + block_h;
+                                first_y = first_y.min(top_j);
+                                last_y = last_y.max(bottom_j);
+                            }
+                        }
+
+                        if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
+                            let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
+                            let left = rect.left() + subbox_offset;
+                            let right = rect.right() - subbox_offset;
+                            let encompass_rect = egui::Rect::from_min_max(
+                                egui::pos2(left, first_y - lane_gap),
+                                egui::pos2(right, last_y + lane_gap),
+                            );
+
+                            painter.rect_stroke(
+                                encompass_rect,
+                                6.0,
+                                egui::Stroke::new(
+                                    1.0,
+                                    if ui.visuals().dark_mode {
+                                        egui::Color32::WHITE
+                                    } else {
+                                        egui::Color32::BLACK
+                                    },
+                                ),
+                                egui::StrokeKind::Inside,
+                            );
+
+                            // Optional subtle background fill:
+                            painter.rect_filled(
+                                encompass_rect,
+                                6.0,
+                                egui::Color32::from_gray(60).gamma_multiply(0.05),
+                            );
+                            let header_rect =
+                                encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
+                            painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
+                            painter.rect_stroke(
+                                header_rect.with_min_y(header_rect.bottom()),
+                                6.0,
+                                egui::Stroke::new(
+                                    1.0,
+                                    if ui.visuals().dark_mode {
+                                        egui::Color32::WHITE
+                                    } else {
+                                        egui::Color32::BLACK
+                                    },
+                                ),
+                                egui::StrokeKind::Middle,
+                            );
+                            // painter.rect_stroke(
+                            //     header_rect,
+                            //     6.0,
+                            //     egui::Stroke::new(
+                            //         1.0,
+                            //         if ui.visuals().dark_mode {
+                            //             egui::Color32::WHITE
+                            //         } else {
+                            //             egui::Color32::BLACK
+                            //         },
+                            //     ),
+                            //     egui::StrokeKind::Middle,
+                            // );
+                        }
+
                         let label = if name.is_empty() {
                             format!("Group ({})", children.len())
                         } else {
@@ -168,7 +228,7 @@ impl GuiApp {
                         };
                         painter.text(
                             egui::pos2(
-                                rect.left() + 8.0 + 25.0 * (path.len() + 1) as f32,
+                                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
                                 rect.top() + (i as f32 + 0.5) * lane_h,
                             ),
                             egui::Align2::LEFT_CENTER,
@@ -330,7 +390,7 @@ impl GuiApp {
                         );
                         painter.text(
                             egui::pos2(
-                                rect.left() + 8.0 + 25.0 * (path.len() + 1) as f32,
+                                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
                                 rect.top() + (i as f32 + 0.5) * lane_h,
                             ),
                             egui::Align2::LEFT_CENTER,
@@ -338,17 +398,6 @@ impl GuiApp {
                             egui::TextStyle::Body.resolve(ui.style()),
                             bar_color,
                         );
-
-                        // painter.text(
-                        //     egui::pos2(
-                        //         rect.right() - 4.0,
-                        //         rect.top() + (i as f32 + 0.5) * lane_h + 4.0,
-                        //     ),
-                        //     egui::Align2::RIGHT_CENTER,
-                        //     label,
-                        //     egui::TextStyle::Body.resolve(ui.style()),
-                        //     bar_color,
-                        // );
 
                         // repeat bars (unchanged)
                         let rep_loop_len = seq.loop_len * seq.repeat as f64;
@@ -426,44 +475,44 @@ impl GuiApp {
                 }
                 anchor_points_with_path.push((
                     egui::pos2(
-                        track_rect.left() + 25.0 * (path.len() + 1) as f32,
+                        track_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
                         0.5 * (track_rect.top() + track_rect.bottom()),
                     ),
                     path,
                 ));
             }
 
-            // tree
-            // 1) Build a lookup map for parent anchors.
-            let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
-                HashMap::with_capacity(anchor_points_with_path.len());
-            for (anchor, path) in &anchor_points_with_path {
-                anchor_by_path.insert(path.to_vec(), *anchor);
-            }
+            // // tree
+            // // 1) Build a lookup map for parent anchors.
+            // let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
+            //     HashMap::with_capacity(anchor_points_with_path.len());
+            // for (anchor, path) in &anchor_points_with_path {
+            //     anchor_by_path.insert(path.to_vec(), *anchor);
+            // }
 
-            // 2) Draw one connector per node that has a visible parent.
-            for (anchor, path) in &anchor_points_with_path {
-                // root has no parent → skip
-                if path.is_empty() {
-                    continue;
-                }
+            // // 2) Draw one connector per node that has a visible parent.
+            // for (anchor, path) in &anchor_points_with_path {
+            //     // root has no parent → skip
+            //     if path.is_empty() {
+            //         continue;
+            //     }
 
-                // parent path = path without last index
-                let parent_path = &path[..path.len() - 1];
+            //     // parent path = path without last index
+            //     let parent_path = &path[..path.len() - 1];
 
-                if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
-                    let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
-                    painter.line_segment(
-                        [*parent_anchor, angle_anchor],
-                        egui::Stroke::new(2.0, egui::Color32::GRAY),
-                    );
-                    painter.line_segment(
-                        [angle_anchor, *anchor],
-                        egui::Stroke::new(2.0, egui::Color32::GRAY),
-                    );
-                }
-                // else: parent not visible → no line
-            }
+            //     if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
+            //         let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
+            //         painter.line_segment(
+            //             [*parent_anchor, angle_anchor],
+            //             egui::Stroke::new(2.0, egui::Color32::GRAY),
+            //         );
+            //         painter.line_segment(
+            //             [angle_anchor, *anchor],
+            //             egui::Stroke::new(2.0, egui::Color32::GRAY),
+            //         );
+            //     }
+            //     // else: parent not visible → no line
+            // }
 
             // playhead
             let x = Self::t_to_x(rect, playhead, track_display_length);
