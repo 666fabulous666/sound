@@ -44,11 +44,8 @@ impl GuiApp {
                     }
 
                     let mut action = Action::None;
-                    // let mut edited_seq: Option<TrackNode> = None;
                     let mut edited_seq = false;
-
                     if let Some(sel) = self.selected.clone() {
-                        // if sel < len {
                         if let Some(track_node_mut) = self.score.sequences.get_mut(&sel) {
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
@@ -1141,14 +1138,8 @@ impl GuiApp {
                     if edited_seq {
                         if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                let sequence = self
-                                    .score
-                                    .sequences
-                                    .get_mut(&sel)
-                                    .unwrap()
-                                    .seq_mut_unchecked()
-                                    .clone();
-                                self.edit_seq_at(sequence, &sel);
+                                let sequence = self.score.sequences.get_mut(&sel).unwrap().clone();
+                                self.edit_node_at(sequence, &sel);
                             }
                         }
                     }

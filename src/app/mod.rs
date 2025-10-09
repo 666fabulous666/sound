@@ -558,20 +558,21 @@ impl GuiApp {
         }
     }
 
-    /// Replace the sequence at `path`, then regenerate that sequence and all that follow it
-    /// in preorder traversal (mirrors old "regen from i to end" behavior).
-    fn edit_seq_at(&mut self, sequence: Sequence, path: &[usize]) {
-        // 1) Replace node at path (limit &mut borrow scope)
+    /// Replace the node at `path` (Seq or Group), then regenerate that sequence
+    /// and all that follow it in preorder traversal. If a Group is inserted,
+    /// regeneration starts from the first sequence inside that group; if the
+    /// group has no sequences, it starts from the first sequence after the group.
+    fn edit_node_at(&mut self, node: TrackNode, path: &[usize]) {
+        // 1) Replace node at path
         {
             if let Some(slot) = self.score.sequences.get_mut(path) {
-                *slot = TrackNode::Seq(sequence);
+                *slot = node;
             } else {
-                // Invalid path: nothing to do
-                return;
+                return; // invalid path
             }
         }
 
-        // 2) Preorder list of all sequence paths
+        // 2) Compute the preorder list of all *sequence* paths
         let seq_paths: Vec<Vec<usize>> = {
             let mut out = Vec::new();
             let mut cur = Vec::new();
@@ -579,17 +580,32 @@ impl GuiApp {
             out
         };
 
-        // 3) Find edited path
-        if let Some(pos) = seq_paths.iter().position(|p| p.as_slice() == path) {
-            // 4) Regenerate from edited onward
+        // 3) Find where to start regenerating:
+        //    - If the edited path is exactly a sequence, start there.
+        //    - Else (a Group), start at the first sequence *inside* the group.
+        //    - If the group is empty, start at the first sequence *after* the group.
+        let start_idx = if let Some(pos) = seq_paths.iter().position(|p| p.as_slice() == path) {
+            Some(pos)
+        } else if let Some(pos) = seq_paths.iter().position(|p| starts_with(p, path)) {
+            Some(pos)
+        } else {
+            // No sequence inside the group — pick the first sequence whose path is lexicographically > path
+            seq_paths
+                .iter()
+                .enumerate()
+                .find(|(_, p)| path_lex_gt(p, path))
+                .map(|(i, _)| i)
+        };
+
+        // 4) Regenerate from that point onward
+        if let Some(pos) = start_idx {
             for p in &seq_paths[pos..] {
                 self.regen_seq_at(p);
             }
-        } else {
-            // If not found (e.g., path pointed to a group), fallback: regen subtree at `path`
-            self.regen_seq_at(path);
         }
+        // else: nothing to regenerate (e.g., no sequences at/after this path)
     }
+
     // --- delete --------------------------------------------------------------
     fn del_seq(&mut self, path: &[usize]) {
         let tokens: Vec<Token> = {
@@ -714,4 +730,14 @@ fn hash32(s: &str) -> u32 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     s.hash(&mut h);
     h.finish() as u32
+}
+#[inline]
+fn starts_with(a: &[usize], prefix: &[usize]) -> bool {
+    a.starts_with(prefix)
+}
+
+#[inline]
+fn path_lex_gt(a: &[usize], b: &[usize]) -> bool {
+    use std::cmp::Ordering;
+    matches!(a.cmp(b), Ordering::Greater)
 }
