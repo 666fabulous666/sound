@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
 use egui::Align2;
 
 use crate::{
     app::{hsl_to_color32, GuiApp, NotesGroup},
     engine::{
         score::{
-            track_node::{all_paths, nodes_with_paths, TrackNode},
+            track_node::{all_paths, TrackNode},
             Interval,
         },
         waves::envelope,
@@ -37,8 +39,6 @@ impl GuiApp {
             .cloned()
             .collect();
 
-        // You can use `visible_paths.len()` for lane count:
-        let lanes = visible_paths.len().max(1);
         let current_time = self.now();
 
         // Grid params based on sequences only:
@@ -66,7 +66,7 @@ impl GuiApp {
             );
             let painter = ui.painter_at(rect);
 
-            let lanes = node_paths.len().max(1);
+            let lanes = visible_paths.len().max(1);
             let lane_h = rect.height() / lanes as f32;
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
@@ -97,13 +97,8 @@ impl GuiApp {
             }
 
             // --- lanes: iterate owned paths, fetch node on-demand ---
-            // for (i, path) in node_paths.iter().enumerate() {
+            let mut anchor_points_with_path = Vec::new();
             for (i, path) in visible_paths.iter().enumerate() {
-                // Fetch node on-demand (short borrow)
-                let node = match self.score.track_root.get(path) {
-                    Some(n) => n,
-                    None => continue,
-                };
                 let top = rect.top() + i as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
@@ -172,7 +167,10 @@ impl GuiApp {
                             format!("{} ({})", name, children.len())
                         };
                         painter.text(
-                            egui::pos2(rect.left() + 8.0, rect.top() + (i as f32 + 0.5) * lane_h),
+                            egui::pos2(
+                                rect.left() + 8.0 + 25.0 * (path.len() + 1) as f32,
+                                rect.top() + (i as f32 + 0.5) * lane_h,
+                            ),
                             egui::Align2::LEFT_CENTER,
                             label,
                             egui::TextStyle::Body.resolve(ui.style()),
@@ -320,30 +318,42 @@ impl GuiApp {
                             },
                             0.5,
                         );
+
+                        let label = format!(
+                            "{} oct {}",
+                            (&seq.wave_type).to_string(),
+                            if let Interval::RDTempered(_, _, octave) = &seq.interval {
+                                octave
+                            } else {
+                                &0
+                            },
+                        );
                         painter.text(
                             egui::pos2(
-                                rect.right() - 4.0,
-                                rect.top() + (i as f32 + 0.5) * lane_h + 4.0,
+                                rect.left() + 8.0 + 25.0 * (path.len() + 1) as f32,
+                                rect.top() + (i as f32 + 0.5) * lane_h,
                             ),
-                            egui::Align2::RIGHT_CENTER,
-                            format!(
-                                "{} oct {}",
-                                (&seq.wave_type).to_string(),
-                                if let Interval::RDTempered(_, _, octave) = &seq.interval {
-                                    octave
-                                } else {
-                                    &0
-                                },
-                            ),
+                            egui::Align2::LEFT_CENTER,
+                            label,
                             egui::TextStyle::Body.resolve(ui.style()),
                             bar_color,
                         );
+
+                        // painter.text(
+                        //     egui::pos2(
+                        //         rect.right() - 4.0,
+                        //         rect.top() + (i as f32 + 0.5) * lane_h + 4.0,
+                        //     ),
+                        //     egui::Align2::RIGHT_CENTER,
+                        //     label,
+                        //     egui::TextStyle::Body.resolve(ui.style()),
+                        //     bar_color,
+                        // );
 
                         // repeat bars (unchanged)
                         let rep_loop_len = seq.loop_len * seq.repeat as f64;
                         let bar_pos =
                             rep_loop_len + playhead - (self.now()).rem_euclid(rep_loop_len);
-                        let last_bar_pos = bar_pos - rep_loop_len;
                         (0..seq.repeat).for_each(|j| {
                             let pos = seq.loop_len * j as f64 + playhead
                                 - (self.now()).rem_euclid(rep_loop_len);
@@ -414,6 +424,45 @@ impl GuiApp {
                         }
                     }
                 }
+                anchor_points_with_path.push((
+                    egui::pos2(
+                        track_rect.left() + 25.0 * (path.len() + 1) as f32,
+                        0.5 * (track_rect.top() + track_rect.bottom()),
+                    ),
+                    path,
+                ));
+            }
+
+            // tree
+            // 1) Build a lookup map for parent anchors.
+            let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
+                HashMap::with_capacity(anchor_points_with_path.len());
+            for (anchor, path) in &anchor_points_with_path {
+                anchor_by_path.insert(path.to_vec(), *anchor);
+            }
+
+            // 2) Draw one connector per node that has a visible parent.
+            for (anchor, path) in &anchor_points_with_path {
+                // root has no parent → skip
+                if path.is_empty() {
+                    continue;
+                }
+
+                // parent path = path without last index
+                let parent_path = &path[..path.len() - 1];
+
+                if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
+                    let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
+                    painter.line_segment(
+                        [*parent_anchor, angle_anchor],
+                        egui::Stroke::new(2.0, egui::Color32::GRAY),
+                    );
+                    painter.line_segment(
+                        [angle_anchor, *anchor],
+                        egui::Stroke::new(2.0, egui::Color32::GRAY),
+                    );
+                }
+                // else: parent not visible → no line
             }
 
             // playhead

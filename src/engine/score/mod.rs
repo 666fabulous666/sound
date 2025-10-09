@@ -284,7 +284,7 @@ impl Score {
         if path.is_empty() {
             return None;
         }
-        let mut parent = path[..path.len() - 1].to_vec();
+        let parent = path[..path.len() - 1].to_vec();
         let idx = *path.last().unwrap();
 
         // Sibling bounds
@@ -362,8 +362,6 @@ impl Score {
         }
 
         let parent_path = &path[..path.len() - 1];
-        let child_idx = *path.last().unwrap();
-
         let grand_path = &path[..path.len() - 2];
         let parent_idx = *parent_path.last().unwrap();
 
