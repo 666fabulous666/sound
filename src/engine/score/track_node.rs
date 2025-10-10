@@ -1,7 +1,11 @@
 use core::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 
-use crate::{engine::score::sequence::Sequence, Token, TokenGen};
+use crate::{
+    engine::score::{sequence::Sequence, NotesGroup},
+    time_freq::Time,
+    Token, TokenGen,
+};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum TrackNode {
@@ -189,6 +193,27 @@ impl TrackNode {
         match self {
             TrackNode::Group { muted, .. } => *muted,
             TrackNode::Seq(sequence) => sequence.mute,
+        }
+    }
+
+    /// Recursively draw all sequences under this node.
+    pub fn draw_node(
+        &mut self,
+        // node: &mut TrackNode,
+        notes: &mut Vec<NotesGroup>,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+        anticipate: bool,
+    ) {
+        match self {
+            TrackNode::Seq(seq) => {
+                seq.draw_sequence_core(notes, rng, now, anticipate);
+            }
+            TrackNode::Group { children, .. } => {
+                for ch in children {
+                    ch.draw_node(notes, rng, now, anticipate);
+                }
+            }
         }
     }
 }

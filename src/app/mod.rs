@@ -425,7 +425,7 @@ impl GuiApp {
             .collect();
 
         for p in paths {
-            self.draw_node_at(&p);
+            self.score.draw_node_at(&p, self.now(), &mut self.rng);
         }
     }
     fn new_score(&mut self) {
@@ -465,8 +465,7 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        Self::draw_node(
-            &mut node,
+        node.draw_node(
             &mut self.score.notes,
             &mut self.rng,
             now,
@@ -493,8 +492,7 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree (no anticipation)
         let now = self.now();
-        Self::draw_node(
-            &mut cloned,
+        cloned.draw_node(
             &mut self.score.notes,
             &mut self.rng,
             now,
@@ -525,8 +523,7 @@ impl GuiApp {
         }
         let now = self.now();
         if let Some(n) = self.score.track_root.get_mut(path) {
-            Self::draw_node(
-                n,
+            n.draw_node(
                 &mut self.score.notes,
                 &mut self.rng,
                 now,
@@ -614,41 +611,6 @@ impl GuiApp {
         self.score.track_root.remove_at(path);
     }
 
-    /// Recursively draw all sequences under this node.
-    fn draw_node(
-        node: &mut TrackNode,
-        notes: &mut Vec<NotesGroup>,
-        rng: &mut rand::rngs::ThreadRng,
-        now: Time,
-        anticipate: bool,
-    ) {
-        match node {
-            TrackNode::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, anticipate);
-            }
-            TrackNode::Group {
-                children, muted, ..
-            } => {
-                for ch in children {
-                    Self::draw_node(ch, notes, rng, now, anticipate);
-                }
-            }
-        }
-    }
-
-    /// Draw the node at `path` (recursively if it's a Group).
-    fn draw_node_at(&mut self, path: &[usize]) {
-        let now = self.now();
-        if let Some(node) = self.score.track_root.get_mut(path) {
-            Self::draw_node(
-                node,
-                &mut self.score.notes,
-                &mut self.rng,
-                now,
-                /*anticipate=*/ true,
-            );
-        }
-    }
     fn drain_notes_from_seq(&mut self, tk: Token) {
         self.score
             .notes

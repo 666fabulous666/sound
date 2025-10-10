@@ -15,6 +15,7 @@ use crate::{
 };
 use arc_swap::ArcSwap;
 use default_params::*;
+use rand::rngs::ThreadRng;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -377,5 +378,11 @@ impl Score {
         let _ok = self.track_root.insert_at(&new_path, node);
 
         Some(new_path)
+    }
+    /// Draw the node at `path` (recursively if it's a Group).
+    pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
+        if let Some(node) = self.track_root.get_mut(path) {
+            node.draw_node(&mut self.notes, rng, now, /*anticipate=*/ true);
+        }
     }
 }
