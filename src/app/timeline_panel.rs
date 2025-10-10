@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use egui::epaint::{Mesh, Vertex};
+use egui::{Color32, Painter, Rect};
 
 use egui::Align2;
 
 use crate::{
-    app::{hsl_to_color32, GuiApp, NotesGroup},
+    app::{GuiApp, NotesGroup},
     engine::{
         score::{
             track_node::{all_paths, TrackNode},
@@ -60,11 +61,7 @@ impl GuiApp {
 
         // ----- UI -----
         egui::CentralPanel::default().show(ctx, |ui| {
-            let black_or_white = if ui.visuals().dark_mode {
-                egui::Color32::WHITE
-            } else {
-                egui::Color32::BLACK
-            };
+            let text_color = ui.visuals().text_color();
             let (rect, _resp) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), ui.available_height()),
                 egui::Sense::click_and_drag(),
@@ -86,7 +83,8 @@ impl GuiApp {
                             + playhead,
                         track_display_length,
                     );
-                    let base_col = hsl_to_color32(((279 * *sub_grid) % 360) as _, 0.5, 0.5);
+                    // let base_col = hsl_to_color32(((279 * *sub_grid) % 360) as _, 0.5, 0.5);
+                    let base_col = text_color;
                     let (col, thickness) = if s % *sub_grid == 0 {
                         (base_col.gamma_multiply(0.75), 2.0)
                     } else if *sub_grid != 0 && s % (*sub_grid / 2) == 0 {
@@ -127,17 +125,16 @@ impl GuiApp {
                     .unwrap_or(false);
 
                 match node {
-                    TrackNode::Group { name, children, .. } => {
-                        // let col = egui::Color32::from_gray(128);
+                    TrackNode::Group { .. } => {
                         let col = highlight_if_selected(
                             &painter,
                             lane_gap,
                             track_rect,
                             is_selected,
-                            egui::Color32::from_gray(128),
+                            ui.visuals().text_color(),
+                            ui.visuals().panel_fill,
+                            // egui::Color32::from_gray(128),
                         );
-                        let bar_color = col.lerp_to_gamma(black_or_white, 0.6);
-                        // let bar_color = col;
                         let group_prefix = path.clone();
                         let (first_y, last_y) = first_last_y(
                             &visible_paths,
@@ -161,7 +158,7 @@ impl GuiApp {
                             );
 
                             if is_selected {
-                                highlight_group(black_or_white, &painter, encompass_rect);
+                                highlight_group(text_color, &painter, encompass_rect);
                             }
 
                             let header_rect = track_rect;
@@ -177,26 +174,10 @@ impl GuiApp {
                             painter.rect_stroke(
                                 header_rect,
                                 6.0,
-                                egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
+                                egui::Stroke::new(1.0, text_color.gamma_multiply(0.5)),
                                 egui::StrokeKind::Middle,
                             );
                         }
-
-                        let label = if name.is_empty() {
-                            format!("Group ({})", children.len())
-                        } else {
-                            format!("{} ({})", name, children.len())
-                        };
-                        painter.text(
-                            egui::pos2(
-                                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
-                                rect.top() + (i as f32 + 0.5) * lane_h,
-                            ),
-                            egui::Align2::LEFT_CENTER,
-                            label,
-                            egui::TextStyle::Body.resolve(ui.style()),
-                            bar_color,
-                        );
 
                         if ui
                             .interact(track_rect, egui::Id::new(("grp", i)), egui::Sense::click())
@@ -213,6 +194,7 @@ impl GuiApp {
                             track_rect,
                             is_selected,
                             Self::hash_color(&seq.wave_type),
+                            ui.visuals().panel_fill,
                         );
                         // Repeat window tiling modulo loop
                         let loop_len = seq.loop_len;
@@ -309,34 +291,13 @@ impl GuiApp {
                                         painter.rect_filled(
                                             tmp,
                                             0.0,
-                                            black_or_white
-                                                .gamma_multiply(e / seq.normalization as f32),
+                                            text_color.gamma_multiply(e / seq.normalization as f32),
                                         );
                                     }
                                 }
                             });
 
-                        let bar_color = col.lerp_to_gamma(black_or_white, 0.5);
-
-                        let label = format!(
-                            "{} oct {}",
-                            (&seq.wave_type).to_string(),
-                            if let Interval::RDTempered(_, _, octave) = &seq.interval {
-                                octave
-                            } else {
-                                &0
-                            },
-                        );
-                        painter.text(
-                            egui::pos2(
-                                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
-                                rect.top() + (i as f32 + 0.5) * lane_h,
-                            ),
-                            egui::Align2::LEFT_CENTER,
-                            label,
-                            egui::TextStyle::Body.resolve(ui.style()),
-                            bar_color,
-                        );
+                        let bar_color = col.lerp_to_gamma(text_color, 0.5);
 
                         // repeat bars (unchanged)
                         let rep_loop_len = seq.loop_len * seq.repeat as f64;
@@ -422,44 +383,200 @@ impl GuiApp {
             }
 
             // tree
-            // 1) Build a lookup map for parent anchors.
-            let mut anchor_by_path: HashMap<Vec<usize>, egui::Pos2> =
-                HashMap::with_capacity(anchor_points_with_path.len());
-            for (anchor, path) in &anchor_points_with_path {
-                anchor_by_path.insert(path.to_vec(), *anchor);
-            }
-
-            // 2) Draw one connector per node that has a visible parent.
-            for (anchor, path) in &anchor_points_with_path {
-                // root has no parent → skip
-                if path.is_empty() {
-                    continue;
-                }
-
-                // parent path = path without last index
-                let parent_path = &path[..path.len() - 1];
-
-                if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
-                    let angle_anchor = egui::Pos2::new(parent_anchor.x, anchor.y);
-                    painter.line_segment(
-                        [*parent_anchor, angle_anchor],
-                        egui::Stroke::new(1.0, black_or_white),
-                    );
-                    painter.line_segment(
-                        [angle_anchor, *anchor],
-                        egui::Stroke::new(1.0, black_or_white),
-                    );
-                }
-                // else: parent not visible → no line
-            }
+            self.paint_tree_band(
+                ui,
+                &painter,
+                rect.with_max_x(rect.left() + rect.width() * 0.25), // left band for the tree
+                rect,
+                &visible_paths,
+                lane_h,
+                block_h,
+                lane_gap,
+            );
 
             // playhead
             let x = Self::t_to_x(rect, playhead, track_display_length);
             painter.line_segment(
                 [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(3.0, egui::Color32::GOLD),
+                egui::Stroke::new(3.0, text_color),
             );
         });
+    }
+    fn paint_tree_band(
+        &self,
+        ui: &egui::Ui,
+        painter: &egui::Painter,
+        band_rect: egui::Rect,        // gradient background area (left band)
+        rect: egui::Rect,             // whole timeline rect
+        visible_paths: &[Vec<usize>], // already filtered by collapsed parents
+        lane_h: f32,
+        block_h: f32,
+        lane_gap: f32,
+    ) {
+        use crate::engine::score::track_node::TrackNode;
+        use crate::engine::score::Interval;
+
+        use egui::{Align2, Pos2, Stroke};
+
+        let text_color = ui.visuals().text_color();
+
+        // --- background gradient for the band (left→right fade) -------------
+        horizontal_fade_rect(
+            painter,
+            band_rect,
+            ui.visuals().panel_fill.gamma_multiply(0.5),
+        );
+
+        // --- compute anchors (left X depends on depth) -----------------------
+        let mut anchors: Vec<(Pos2, &Vec<usize>)> = Vec::with_capacity(visible_paths.len());
+        for (i, path) in visible_paths.iter().enumerate() {
+            let top = rect.top() + i as f32 * lane_h + lane_gap;
+            let y0 = top;
+            let y1 = top + block_h;
+            let lane_rect =
+                egui::Rect::from_min_max(egui::pos2(rect.left(), y0), egui::pos2(rect.right(), y1));
+
+            let anchor = egui::pos2(
+                lane_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
+                0.5 * (lane_rect.top() + lane_rect.bottom()),
+            );
+            anchors.push((anchor, path));
+        }
+
+        // --- lookup for parent anchors ---------------------------------------
+        let mut anchor_by_path: std::collections::HashMap<Vec<usize>, Pos2> =
+            std::collections::HashMap::with_capacity(anchors.len());
+        for (a, p) in &anchors {
+            anchor_by_path.insert(p.to_vec(), *a);
+        }
+
+        // --- draw connectors (roots have no parent) --------------------------
+        for (anchor, path) in &anchors {
+            if path.is_empty() {
+                continue;
+            }
+            let parent_path = &path[..path.len() - 1];
+            if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
+                let elbow = Pos2::new(parent_anchor.x, anchor.y);
+                painter.line_segment([*parent_anchor, elbow], Stroke::new(1.0, text_color));
+                painter.line_segment([elbow, *anchor], Stroke::new(1.0, text_color));
+            }
+        }
+
+        // --- draw labels in the band (group/seq info) ------------------------
+        for (i, (anchor, path)) in anchors.iter().enumerate() {
+            // Resolve node briefly
+            let Some(node) = self.score.track_root.get(path) else {
+                continue;
+            };
+
+            // Baseline Y for text
+            let y = rect.top() + (i as f32 + 0.5) * lane_h;
+
+            // Left text X with a small padding beyond the vertical line
+            let label_pos = egui::pos2(
+                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
+                y,
+            );
+
+            // Selection highlight color mix target (white in dark mode, black in light)
+            let base_text_col = text_color;
+            // check selection
+            let is_selected = self
+                .selected
+                .as_ref()
+                .map(|p| p.as_slice() == path.as_slice())
+                .unwrap_or(false);
+
+            let text_style = if is_selected {
+                // stronger visual presence (slightly larger or bold)
+                egui::TextStyle::Heading
+            } else {
+                egui::TextStyle::Body
+            };
+
+            match node {
+                TrackNode::Group { name, children, .. } => {
+                    let label = if name.is_empty() {
+                        format!("Group ({})", children.len())
+                    } else {
+                        format!("{} ({})", name, children.len())
+                    };
+
+                    // let base_col = text_color.gamma_multiply(if is_selected { 1.5 } else { 0.9 });
+                    painter.text(
+                        label_pos,
+                        Align2::LEFT_CENTER,
+                        label,
+                        text_style.resolve(ui.style()),
+                        base_text_col,
+                    );
+                }
+                TrackNode::Seq(seq) => {
+                    // let wave_col = Self::hash_color(&seq.wave_type);
+                    // let base_col = if is_selected {
+                    //     wave_col.lerp_to_gamma(text_color, 0.2).gamma_multiply(1.5)
+                    // } else {
+                    //     wave_col.lerp_to_gamma(text_color, 0.5)
+                    // };
+                    let label = format!(
+                        "{} oct {}",
+                        (&seq.wave_type).to_string(),
+                        if let Interval::RDTempered(_, _, octave) = &seq.interval {
+                            octave
+                        } else {
+                            &0
+                        },
+                    );
+                    painter.text(
+                        label_pos,
+                        Align2::LEFT_CENTER,
+                        label,
+                        text_style.resolve(ui.style()),
+                        base_text_col,
+                    );
+                }
+            }
+            // match node {
+            //     TrackNode::Group { name, children, .. } => {
+            //         // Groups: gray-ish label color (derived from text color)
+            //         let label = if name.is_empty() {
+            //             format!("Group ({})", children.len())
+            //         } else {
+            //             format!("{} ({})", name, children.len())
+            //         };
+            //         let col = base_text_col.gamma_multiply(0.9);
+            //         painter.text(
+            //             label_pos,
+            //             Align2::LEFT_CENTER,
+            //             label,
+            //             egui::TextStyle::Body.resolve(ui.style()),
+            //             col,
+            //         );
+            //     }
+            //     TrackNode::Seq(seq) => {
+            //         // Sequences: use wave hash to tint, then lerp to text color
+            //         let wave_col = Self::hash_color(&seq.wave_type);
+            //         let label_col = wave_col.lerp_to_gamma(base_text_col, 0.5);
+            //         let label = format!(
+            //             "{} oct {}",
+            //             (&seq.wave_type).to_string(),
+            //             if let Interval::RDTempered(_, _, octave) = &seq.interval {
+            //                 octave
+            //             } else {
+            //                 &0
+            //             }
+            //         );
+            //         painter.text(
+            //             label_pos,
+            //             Align2::LEFT_CENTER,
+            //             label,
+            //             egui::TextStyle::Body.resolve(ui.style()),
+            //             label_col,
+            //         );
+            //     }
+            // }
+        }
     }
 }
 
@@ -469,11 +586,12 @@ fn highlight_if_selected(
     track_rect: egui::Rect,
     is_selected: bool,
     col: egui::Color32,
+    background_color: egui::Color32,
 ) -> egui::Color32 {
     let col = {
         let mut col = col;
         if is_selected {
-            col = brighten(col, 20);
+            col = col.lerp_to_gamma(background_color, 0.25);
             highlight_glow_smooth(
                 col.gamma_multiply(0.5),
                 painter,
@@ -579,12 +697,46 @@ fn first_last_y(
     (first_y, last_y)
 }
 
-fn brighten(col: egui::Color32, add: u8) -> egui::Color32 {
-    let [r, g, b, a] = col.to_array();
-    egui::Color32::from_rgba_premultiplied(
-        r.saturating_add(add),
-        g.saturating_add(add),
-        b.saturating_add(add),
-        a,
-    )
+pub fn horizontal_fade_rect(painter: &Painter, rect: Rect, left_color: Color32) {
+    let mut mesh = Mesh::default();
+
+    let (min, max) = (rect.min, rect.max);
+
+    let right_color = left_color.gamma_multiply(0.0); // fully transparent
+
+    // Four corners: opaque left → transparent right
+    let idx_base = mesh.vertices.len() as u32;
+    mesh.vertices.extend_from_slice(&[
+        Vertex {
+            pos: egui::pos2(min.x, min.y),
+            uv: Default::default(),
+            color: left_color,
+        },
+        Vertex {
+            pos: egui::pos2(max.x, min.y),
+            uv: Default::default(),
+            color: right_color,
+        },
+        Vertex {
+            pos: egui::pos2(max.x, max.y),
+            uv: Default::default(),
+            color: right_color,
+        },
+        Vertex {
+            pos: egui::pos2(min.x, max.y),
+            uv: Default::default(),
+            color: left_color,
+        },
+    ]);
+
+    mesh.indices.extend_from_slice(&[
+        idx_base,
+        idx_base + 1,
+        idx_base + 2,
+        idx_base,
+        idx_base + 2,
+        idx_base + 3,
+    ]);
+
+    painter.add(egui::Shape::mesh(mesh));
 }
