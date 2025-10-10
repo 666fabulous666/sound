@@ -317,120 +317,9 @@ impl GuiApp {
                 });
             });
     }
-}
 
-impl App for GuiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.load_logo(ctx);
-
-        let mut style: egui::Style = (*ctx.style()).clone();
-        style.interaction.tooltip_delay = 0.01;
-        ctx.set_style(style);
-        let mut save = false;
-        let mut load = false;
-        let mut exit = false;
-        #[cfg(target_arch = "wasm32")]
-        self.poll_loaded_state();
-        if self.score.track_root.child_count() != 0 {
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
-                if let Some(ref path) = self.selected {
-                    self.selected = self.score.prev_sibling(path, /*wrap=*/ false);
-                }
-            }
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
-                if let Some(ref path) = self.selected {
-                    self.selected = self.score.next_sibling(path, /*wrap=*/ false);
-                }
-            }
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, GROUP)) {
-                if let Some(ref path) = self.selected {
-                    let new_selected = self.score.first_child_of(path);
-                    if new_selected.is_some() {
-                        self.selected = new_selected;
-                    }
-                }
-            }
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, GROUP)) {
-                if let Some(ref path) = self.selected {
-                    let new_selected = self.score.parent_of(path);
-                    if new_selected.as_ref().is_some_and(|path| path.len() > 0) {
-                        self.selected = new_selected
-                    };
-                }
-            }
-        }
-        if !self.show_start {
-            self.top_panel(ctx, &mut save, &mut load, &mut exit);
-        }
-        if save {
-            self.save_state();
-        }
-        if load {
-            self.load_state(ctx);
-        }
-        if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
-            self.exit(ctx);
-        }
-        if self.show_default_picker {
-            self.default_picker_window(ctx);
-        }
-        if self.show_doc {
-            self.doc_page(ctx);
-            if self.show_doc {
-                return;
-            };
-        }
-        if self.show_start || self.score.track_root.child_count() == 0 {
-            self.start_page(ctx);
-            if self.show_start {
-                return;
-            };
-        }
-        self.property_panel(ctx);
-        self.timeline_panel(ctx);
-        ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
-        self.generate_notes();
-        let now = self.now();
-        self.retain_notes(now);
-        self.score
-            .shared_notes
-            .store(Arc::new(self.score.notes.clone()));
-        self.shared_delays
-            .store(Arc::new(self.score.delays.clone()));
-    }
-}
-
-impl GuiApp {
-    fn retain_notes(&mut self, now: Time) {
-        let _ = self
-            .score
-            .notes
-            .iter_mut()
-            .for_each(|NotesGroup { notes, .. }| {
-                notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
-            });
-    }
-    fn generate_notes(&mut self) {
-        let now = self.now();
-        let paths: Vec<_> = self
-            .score
-            .track_root
-            .sequences_with_paths()
-            .filter(|(_, seq)| {
-                seq.not_generate_until
-                    .as_ref()
-                    .map_or(true, |until| now >= *until)
-            })
-            .map(|(path, _)| path)
-            .collect();
-
-        for p in paths {
-            self.score.draw_node_at(&p, self.now(), &mut self.rng);
-        }
-    }
     fn new_score(&mut self) {
         self.score = Score::new();
-        // self.score_mut().sequences;
         self.score.notes.clear();
     }
 
@@ -629,6 +518,86 @@ impl GuiApp {
     }
     fn try_load_default(&mut self, _ctx: &egui::Context) {
         self.show_default_picker = true;
+    }
+}
+
+impl App for GuiApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.load_logo(ctx);
+
+        let mut style: egui::Style = (*ctx.style()).clone();
+        style.interaction.tooltip_delay = 0.01;
+        ctx.set_style(style);
+        let mut save = false;
+        let mut load = false;
+        let mut exit = false;
+        #[cfg(target_arch = "wasm32")]
+        self.poll_loaded_state();
+        if self.score.track_root.child_count() != 0 {
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
+                if let Some(ref path) = self.selected {
+                    self.selected = self.score.prev_sibling(path, /*wrap=*/ false);
+                }
+            }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
+                if let Some(ref path) = self.selected {
+                    self.selected = self.score.next_sibling(path, /*wrap=*/ false);
+                }
+            }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, GROUP)) {
+                if let Some(ref path) = self.selected {
+                    let new_selected = self.score.first_child_of(path);
+                    if new_selected.is_some() {
+                        self.selected = new_selected;
+                    }
+                }
+            }
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, GROUP)) {
+                if let Some(ref path) = self.selected {
+                    let new_selected = self.score.parent_of(path);
+                    if new_selected.as_ref().is_some_and(|path| path.len() > 0) {
+                        self.selected = new_selected
+                    };
+                }
+            }
+        }
+        if !self.show_start {
+            self.top_panel(ctx, &mut save, &mut load, &mut exit);
+        }
+        if save {
+            self.save_state();
+        }
+        if load {
+            self.load_state(ctx);
+        }
+        if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+            self.exit(ctx);
+        }
+        if self.show_default_picker {
+            self.default_picker_window(ctx);
+        }
+        if self.show_doc {
+            self.doc_page(ctx);
+            if self.show_doc {
+                return;
+            };
+        }
+        if self.show_start || self.score.track_root.child_count() == 0 {
+            self.start_page(ctx);
+            if self.show_start {
+                return;
+            };
+        }
+        self.property_panel(ctx);
+        self.timeline_panel(ctx);
+        ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
+        self.score.generate_notes(self.now(), &mut self.rng);
+        self.score.retain_notes(self.now());
+        self.score
+            .shared_notes
+            .store(Arc::new(self.score.notes.clone()));
+        self.shared_delays
+            .store(Arc::new(self.score.delays.clone()));
     }
 }
 

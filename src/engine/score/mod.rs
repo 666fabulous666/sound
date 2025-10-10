@@ -11,7 +11,7 @@ use crate::{
         waves::WaveType,
     },
     time_freq::{Freq, Time},
-    Token, TokenGen,
+    Token, TokenGen, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use default_params::*;
@@ -383,6 +383,28 @@ impl Score {
     pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
         if let Some(node) = self.track_root.get_mut(path) {
             node.draw_node(&mut self.notes, rng, now, /*anticipate=*/ true);
+        }
+    }
+    pub fn retain_notes(&mut self, now: Time) {
+        let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
+            notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
+        });
+    }
+
+    pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
+        let paths: Vec<_> = self
+            .track_root
+            .sequences_with_paths()
+            .filter(|(_, seq)| {
+                seq.not_generate_until
+                    .as_ref()
+                    .map_or(true, |until| now >= *until)
+            })
+            .map(|(path, _)| path)
+            .collect();
+
+        for p in paths {
+            self.draw_node_at(&p, now, rng);
         }
     }
 }
