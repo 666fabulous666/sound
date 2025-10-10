@@ -1,7 +1,4 @@
-use crate::{
-    app::{GuiApp, GuiState},
-    engine::score::track_node::TrackNode,
-};
+use crate::app::{GuiApp, GuiState};
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]

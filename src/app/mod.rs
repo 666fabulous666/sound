@@ -18,7 +18,7 @@ use crate::{
     shortcuts::*,
     texts::README_MD,
     time_freq::Time,
-    Token, GENERATE_EARLY, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
+    Token, GROOVE_DEFAULTS,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -210,16 +210,6 @@ impl GuiApp {
     }
     fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {
         rect.left() + t.as_secs() as f32 / loop_len.as_secs() as f32 * rect.width()
-    }
-
-    fn brighten(col: egui::Color32) -> egui::Color32 {
-        let [r, g, b, a] = col.to_array();
-        egui::Color32::from_rgba_premultiplied(
-            r.saturating_add(40),
-            g.saturating_add(40),
-            b.saturating_add(40),
-            a,
-        )
     }
 
     fn hash_color(w: &WaveType) -> egui::Color32 {

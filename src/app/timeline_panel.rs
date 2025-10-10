@@ -128,36 +128,18 @@ impl GuiApp {
 
                 match node {
                     TrackNode::Group { name, children, .. } => {
-                        let mut col = egui::Color32::from_gray(128);
-                        if is_selected {
-                            col = Self::brighten(col);
-                            for k in -16..16 {
-                                let tmp = (30 + k) as f32;
-                                painter.rect_filled(
-                                    track_rect.expand2(egui::Vec2 {
-                                        x: 0.0,
-                                        y: k as f32,
-                                    }),
-                                    tmp.sqrt(),
-                                    col.gamma_multiply(1.0 / tmp),
-                                );
-                            }
-                        }
+                        let col = egui::Color32::from_gray(128);
                         let bar_color = col.lerp_to_gamma(black_or_white, 0.6);
                         // --- draw encompassing rectangle over all visible children ---
                         let group_prefix = path.clone();
-                        let mut first_y = f32::MAX;
-                        let mut last_y = f32::MIN;
-
-                        // find visible children (and self)
-                        for (j, child_path) in visible_paths.iter().enumerate() {
-                            if child_path.starts_with(&group_prefix) {
-                                let top_j = rect.top() + j as f32 * lane_h + lane_gap;
-                                let bottom_j = top_j + block_h;
-                                first_y = first_y.min(top_j);
-                                last_y = last_y.max(bottom_j);
-                            }
-                        }
+                        let (first_y, last_y) = first_last_y(
+                            &visible_paths,
+                            rect,
+                            lane_h,
+                            block_h,
+                            lane_gap,
+                            group_prefix,
+                        );
 
                         if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
                             let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
@@ -168,26 +150,19 @@ impl GuiApp {
                                 egui::pos2(right, last_y + lane_gap),
                             );
 
-                            // painter.rect_stroke(
-                            //     encompass_rect,
-                            //     6.0,
-                            //     egui::Stroke::new(
-                            //         1.0,
-                            //         if ui.visuals().dark_mode {
-                            //             egui::Color32::WHITE
-                            //         } else {
-                            //             egui::Color32::BLACK
-                            //         },
-                            //     ),
-                            //     egui::StrokeKind::Inside,
-                            // );
-
-                            // // Optional subtle background fill:
-                            // painter.rect_filled(
-                            //     encompass_rect,
-                            //     6.0,
-                            //     egui::Color32::from_gray(60).gamma_multiply(0.05),
-                            // );
+                            if is_selected {
+                                painter.rect_stroke(
+                                    encompass_rect,
+                                    6.0,
+                                    egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.15)),
+                                    egui::StrokeKind::Inside,
+                                );
+                                painter.rect_filled(
+                                    encompass_rect,
+                                    6.0,
+                                    black_or_white.gamma_multiply(0.15),
+                                );
+                            }
 
                             // let header_rect =
                             //     encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
@@ -237,18 +212,7 @@ impl GuiApp {
                         // Color (highlight if selected)
                         let mut col = Self::hash_color(&seq.wave_type).gamma_multiply(0.5);
                         if is_selected {
-                            col = Self::brighten(col);
-                            for k in -16..16 {
-                                let tmp = (30 + k) as f32;
-                                painter.rect_filled(
-                                    track_rect.expand2(egui::Vec2 {
-                                        x: 0.0,
-                                        y: k as f32,
-                                    }),
-                                    tmp.sqrt(),
-                                    col.gamma_multiply(1.0 / tmp),
-                                );
-                            }
+                            highlight(&painter, track_rect, &mut col);
                         }
 
                         // Repeat window tiling modulo loop
@@ -498,4 +462,52 @@ impl GuiApp {
             );
         });
     }
+}
+
+fn highlight(painter: &egui::Painter, track_rect: egui::Rect, col: &mut egui::Color32) {
+    *col = brighten(*col);
+    for k in -16..16 {
+        let tmp = (30 + k) as f32;
+        painter.rect_filled(
+            track_rect.expand2(egui::Vec2 {
+                x: 0.0,
+                y: k as f32,
+            }),
+            tmp.sqrt(),
+            col.gamma_multiply(1.0 / tmp),
+        );
+    }
+}
+
+fn first_last_y(
+    visible_paths: &Vec<Vec<usize>>,
+    rect: egui::Rect,
+    lane_h: f32,
+    block_h: f32,
+    lane_gap: f32,
+    group_prefix: Vec<usize>,
+) -> (f32, f32) {
+    let mut first_y = f32::MAX;
+    let mut last_y = f32::MIN;
+
+    // find visible children (and self)
+    for (j, child_path) in visible_paths.iter().enumerate() {
+        if child_path.starts_with(&group_prefix) {
+            let top_j = rect.top() + j as f32 * lane_h + lane_gap;
+            let bottom_j = top_j + block_h;
+            first_y = first_y.min(top_j);
+            last_y = last_y.max(bottom_j);
+        }
+    }
+    (first_y, last_y)
+}
+
+fn brighten(col: egui::Color32) -> egui::Color32 {
+    let [r, g, b, a] = col.to_array();
+    egui::Color32::from_rgba_premultiplied(
+        r.saturating_add(40),
+        g.saturating_add(40),
+        b.saturating_add(40),
+        a,
+    )
 }
