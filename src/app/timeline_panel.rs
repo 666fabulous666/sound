@@ -110,7 +110,7 @@ impl GuiApp {
                     .unwrap_or(false);
 
                 match node {
-                    TrackNode::Group { .. } => {
+                    TrackNode::Group { collapsed, .. } => {
                         let col = highlight_if_selected(
                             &painter,
                             lane_gap,
@@ -142,7 +142,7 @@ impl GuiApp {
                                 egui::pos2(right, last_y + lane_gap),
                             );
 
-                            if is_selected {
+                            if is_selected && !collapsed {
                                 highlight_group(text_color, &painter, encompass_rect);
                             }
 
@@ -422,7 +422,7 @@ impl GuiApp {
                 egui::Rect::from_min_max(egui::pos2(rect.left(), y0), egui::pos2(rect.right(), y1));
 
             let anchor = egui::pos2(
-                lane_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
+                lane_rect.left() + TREE_DEPTH_WIDTH * path.len() as f32,
                 0.5 * (lane_rect.top() + lane_rect.bottom()),
             );
             anchors.push((anchor, path));
@@ -638,7 +638,7 @@ fn highlight_group(
     //     egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
     //     egui::StrokeKind::Outside,
     // );
-    painter.rect_filled(encompass_rect, 0.0, black_or_white.gamma_multiply(0.20));
+    painter.rect_filled(encompass_rect, 0.0, black_or_white.gamma_multiply(0.35));
 }
 fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
     use egui::epaint::{Mesh, Vertex};

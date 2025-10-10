@@ -2,8 +2,8 @@ use egui::Key;
 
 pub const DELETE: Key = Key::Delete;
 pub const CLONE: Key = Key::Insert;
-pub const SELECT_UP: Key = Key::ArrowUp;
-pub const SELECT_DOWN: Key = Key::ArrowDown;
+pub const SELECT_UP: Key = Key::K;
+pub const SELECT_DOWN: Key = Key::J;
 pub const SWAP_UP: Key = Key::U;
 pub const SWAP_DOWN: Key = Key::D;
 pub const WRAP: Key = Key::W;

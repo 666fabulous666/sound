@@ -215,7 +215,7 @@ impl GuiApp {
     fn hash_color(w: &WaveType) -> egui::Color32 {
         let txt = format!("{:?}", w.to_string());
         let h = hash32(&txt) % 360;
-        hsl_to_color32(h as _, 0.25, 0.5)
+        hsl_to_color32(h as _, 0.5, 0.5)
     }
 
     fn now(&self) -> Time {
