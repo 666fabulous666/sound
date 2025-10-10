@@ -442,9 +442,11 @@ impl GuiApp {
             }
             let parent_path = &path[..path.len() - 1];
             if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
+                let stroke = Stroke::new(1.0, text_color);
                 let elbow = Pos2::new(parent_anchor.x, anchor.y);
-                painter.line_segment([*parent_anchor, elbow], Stroke::new(1.0, text_color));
-                painter.line_segment([elbow, *anchor], Stroke::new(1.0, text_color));
+                painter.line_segment([*parent_anchor, elbow], stroke);
+                painter.line_segment([elbow, *anchor], stroke);
+                painter.circle_filled(elbow, 2.0, text_color);
             }
         }
 
@@ -481,7 +483,12 @@ impl GuiApp {
             };
 
             match node {
-                TrackNode::Group { name, children, .. } => {
+                TrackNode::Group {
+                    name,
+                    children,
+                    collapsed,
+                    ..
+                } => {
                     let label = if name.is_empty() {
                         format!("Group ({})", children.len())
                     } else {
@@ -496,14 +503,21 @@ impl GuiApp {
                         text_style.resolve(ui.style()),
                         base_text_col,
                     );
+                    let radius = if is_selected { 5.0 } else { 2.0 };
+                    let fill = if *collapsed {
+                        ui.visuals().panel_fill
+                    } else {
+                        text_color
+                    };
+
+                    painter.circle_filled(*anchor, radius, fill);
+                    painter.circle_stroke(
+                        *anchor,
+                        radius,
+                        Stroke::new(1.0, ui.visuals().strong_text_color()),
+                    );
                 }
                 TrackNode::Seq(seq) => {
-                    // let wave_col = Self::hash_color(&seq.wave_type);
-                    // let base_col = if is_selected {
-                    //     wave_col.lerp_to_gamma(text_color, 0.2).gamma_multiply(1.5)
-                    // } else {
-                    //     wave_col.lerp_to_gamma(text_color, 0.5)
-                    // };
                     let label = format!(
                         "{} oct {}",
                         (&seq.wave_type).to_string(),
@@ -520,6 +534,10 @@ impl GuiApp {
                         text_style.resolve(ui.style()),
                         base_text_col,
                     );
+                    let wave_color = Self::hash_color(&seq.wave_type);
+                    let size = if is_selected { 5.0 } else { 3.0 };
+                    painter.circle_filled(*anchor, size, wave_color);
+                    painter.circle_stroke(*anchor, size, Stroke::new(1.0, text_color));
                 }
             }
             // match node {
