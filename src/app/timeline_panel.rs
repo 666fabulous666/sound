@@ -388,7 +388,7 @@ impl GuiApp {
         });
     }
     fn paint_tree_band(
-        &self,
+        &mut self,
         ui: &egui::Ui,
         painter: &egui::Painter,
         band_rect: egui::Rect,        // gradient background area (left band)
@@ -453,7 +453,7 @@ impl GuiApp {
         // --- draw labels in the band (group/seq info) ------------------------
         for (i, (anchor, path)) in anchors.iter().enumerate() {
             // Resolve node briefly
-            let Some(node) = self.score.track_root.get(path) else {
+            let Some(node) = self.score.track_root.get_mut(path) else {
                 continue;
             };
 
@@ -482,11 +482,12 @@ impl GuiApp {
                 egui::TextStyle::Body
             };
 
+            let bullet_radius = if is_selected { 5.0 } else { 3.0 };
             match node {
                 TrackNode::Group {
                     name,
                     children,
-                    collapsed,
+                    ref mut collapsed,
                     ..
                 } => {
                     let label = if name.is_empty() {
@@ -503,19 +504,31 @@ impl GuiApp {
                         text_style.resolve(ui.style()),
                         base_text_col,
                     );
-                    let radius = if is_selected { 5.0 } else { 2.0 };
                     let fill = if *collapsed {
                         ui.visuals().panel_fill
                     } else {
                         text_color
                     };
-
-                    painter.circle_filled(*anchor, radius, fill);
+                    painter.circle_filled(*anchor, bullet_radius, fill);
                     painter.circle_stroke(
                         *anchor,
-                        radius,
+                        bullet_radius,
                         Stroke::new(1.0, ui.visuals().strong_text_color()),
                     );
+                    if ui
+                        .interact(
+                            egui::Rect::from_center_size(
+                                *anchor,
+                                egui::vec2(bullet_radius * 2.5, bullet_radius * 2.5),
+                            ),
+                            egui::Id::new(("circle", path)),
+                            egui::Sense::click(),
+                        )
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                        .clicked()
+                    {
+                        *collapsed ^= true;
+                    }
                 }
                 TrackNode::Seq(seq) => {
                     let label = format!(
@@ -535,50 +548,10 @@ impl GuiApp {
                         base_text_col,
                     );
                     let wave_color = Self::hash_color(&seq.wave_type);
-                    let size = if is_selected { 5.0 } else { 3.0 };
-                    painter.circle_filled(*anchor, size, wave_color);
-                    painter.circle_stroke(*anchor, size, Stroke::new(1.0, text_color));
+                    painter.circle_filled(*anchor, bullet_radius, wave_color);
+                    painter.circle_stroke(*anchor, bullet_radius, Stroke::new(1.0, text_color));
                 }
             }
-            // match node {
-            //     TrackNode::Group { name, children, .. } => {
-            //         // Groups: gray-ish label color (derived from text color)
-            //         let label = if name.is_empty() {
-            //             format!("Group ({})", children.len())
-            //         } else {
-            //             format!("{} ({})", name, children.len())
-            //         };
-            //         let col = base_text_col.gamma_multiply(0.9);
-            //         painter.text(
-            //             label_pos,
-            //             Align2::LEFT_CENTER,
-            //             label,
-            //             egui::TextStyle::Body.resolve(ui.style()),
-            //             col,
-            //         );
-            //     }
-            //     TrackNode::Seq(seq) => {
-            //         // Sequences: use wave hash to tint, then lerp to text color
-            //         let wave_col = Self::hash_color(&seq.wave_type);
-            //         let label_col = wave_col.lerp_to_gamma(base_text_col, 0.5);
-            //         let label = format!(
-            //             "{} oct {}",
-            //             (&seq.wave_type).to_string(),
-            //             if let Interval::RDTempered(_, _, octave) = &seq.interval {
-            //                 octave
-            //             } else {
-            //                 &0
-            //             }
-            //         );
-            //         painter.text(
-            //             label_pos,
-            //             Align2::LEFT_CENTER,
-            //             label,
-            //             egui::TextStyle::Body.resolve(ui.style()),
-            //             label_col,
-            //         );
-            //     }
-            // }
         }
     }
 }
