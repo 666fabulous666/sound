@@ -73,31 +73,16 @@ impl GuiApp {
             let block_h = lane_h * 0.6;
             let lane_gap = (lane_h - block_h) * 0.5;
 
-            // --- grid (uses precomputed sub_grids) ---
-            for sub_grid in &sub_grids {
-                let n = (track_display_length.as_secs() as isize) * *sub_grid;
-                for s in -n..=2 * n {
-                    let x = Self::t_to_x(
-                        rect,
-                        Time(s as f64 / *sub_grid as f64) - current_time.rem_euclid(max_loop_len)
-                            + playhead,
-                        track_display_length,
-                    );
-                    // let base_col = hsl_to_color32(((279 * *sub_grid) % 360) as _, 0.5, 0.5);
-                    let base_col = text_color;
-                    let (col, thickness) = if s % *sub_grid == 0 {
-                        (base_col.gamma_multiply(0.75), 2.0)
-                    } else if *sub_grid != 0 && s % (*sub_grid / 2) == 0 {
-                        (base_col.gamma_multiply(0.25), 1.0)
-                    } else {
-                        (base_col.gamma_multiply(0.125), 1.0)
-                    };
-                    painter.line_segment(
-                        [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                        egui::Stroke::new(thickness, col),
-                    );
-                }
-            }
+            paint_grid(
+                current_time,
+                max_loop_len,
+                playhead,
+                track_display_length,
+                sub_grids,
+                text_color,
+                rect,
+                &painter,
+            );
 
             // --- lanes: iterate owned paths, fetch node on-demand ---
             let mut anchor_points_with_path = Vec::new();
@@ -398,7 +383,7 @@ impl GuiApp {
             let x = Self::t_to_x(rect, playhead, track_display_length);
             painter.line_segment(
                 [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(3.0, text_color),
+                egui::Stroke::new(1.0, ui.visuals().strong_text_color()),
             );
         });
     }
@@ -424,7 +409,7 @@ impl GuiApp {
         horizontal_fade_rect(
             painter,
             band_rect,
-            ui.visuals().panel_fill.gamma_multiply(0.5),
+            ui.visuals().panel_fill.gamma_multiply(0.75),
         );
 
         // --- compute anchors (left X depends on depth) -----------------------
@@ -576,6 +561,43 @@ impl GuiApp {
             //         );
             //     }
             // }
+        }
+    }
+}
+
+fn paint_grid(
+    current_time: Time,
+    max_loop_len: Time,
+    playhead: Time,
+    track_display_length: Time,
+    sub_grids: Vec<isize>,
+    text_color: Color32,
+    rect: Rect,
+    painter: &Painter,
+) {
+    for sub_grid in &sub_grids {
+        let n = (track_display_length.as_secs() as isize) * *sub_grid;
+        for s in -n..=2 * n {
+            let x = GuiApp::t_to_x(
+                rect,
+                Time(s as f64 / *sub_grid as f64) - current_time.rem_euclid(max_loop_len)
+                    + playhead,
+                track_display_length,
+            );
+            // let base_col = hsl_to_color32(((279 * *sub_grid) % 360) as _, 0.5, 0.5);
+            let base_col = text_color;
+            let thickness = 1.0;
+            let col = if s % *sub_grid == 0 {
+                base_col.gamma_multiply(0.2)
+            } else if *sub_grid != 0 && s % (*sub_grid / 2) == 0 {
+                base_col.gamma_multiply(0.1)
+            } else {
+                base_col.gamma_multiply(0.05)
+            };
+            painter.line_segment(
+                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                egui::Stroke::new(thickness, col),
+            );
         }
     }
 }
