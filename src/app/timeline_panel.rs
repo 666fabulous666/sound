@@ -128,9 +128,14 @@ impl GuiApp {
 
                 match node {
                     TrackNode::Group { name, children, .. } => {
-                        let col = egui::Color32::from_gray(128);
+                        let col = highlight_if_selected(
+                            &painter,
+                            lane_gap,
+                            track_rect,
+                            is_selected,
+                            egui::Color32::from_gray(128),
+                        );
                         let bar_color = col.lerp_to_gamma(black_or_white, 0.6);
-                        // --- draw encompassing rectangle over all visible children ---
                         let group_prefix = path.clone();
                         let (first_y, last_y) = first_last_y(
                             &visible_paths,
@@ -146,35 +151,16 @@ impl GuiApp {
                             let left = rect.left() + subbox_offset;
                             let right = rect.right() - subbox_offset;
                             let encompass_rect = egui::Rect::from_min_max(
-                                egui::pos2(left, first_y - lane_gap),
-                                egui::pos2(right, last_y + lane_gap),
+                                egui::pos2(left, first_y - 0.25 * lane_gap),
+                                egui::pos2(right, last_y + 0.25 * lane_gap),
                             );
 
                             if is_selected {
-                                painter.rect_stroke(
-                                    encompass_rect,
-                                    6.0,
-                                    egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.15)),
-                                    egui::StrokeKind::Inside,
-                                );
-                                painter.rect_filled(
-                                    encompass_rect,
-                                    6.0,
-                                    black_or_white.gamma_multiply(0.15),
-                                );
+                                highlight(black_or_white, &painter, encompass_rect);
                             }
-
-                            // let header_rect =
-                            //     encompass_rect.with_max_y(track_rect.bottom()).shrink(0.0);
 
                             let header_rect = track_rect;
                             painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
-                            // painter.rect_stroke(
-                            //     header_rect.with_min_y(header_rect.bottom()),
-                            //     6.0,
-                            //     egui::Stroke::new(1.0, black_or_white),
-                            //     egui::StrokeKind::Middle,
-                            // );
                             painter.rect_stroke(
                                 header_rect,
                                 6.0,
@@ -208,13 +194,13 @@ impl GuiApp {
                     }
 
                     TrackNode::Seq(seq) => {
-                        // --- your existing Seq drawing (unchanged) ----------------
-                        // Color (highlight if selected)
-                        let mut col = Self::hash_color(&seq.wave_type).gamma_multiply(0.5);
-                        if is_selected {
-                            highlight(&painter, track_rect, &mut col);
-                        }
-
+                        let col = highlight_if_selected(
+                            &painter,
+                            lane_gap,
+                            track_rect,
+                            is_selected,
+                            Self::hash_color(&seq.wave_type),
+                        );
                         // Repeat window tiling modulo loop
                         let loop_len = seq.loop_len;
                         let win_len = seq.t_max - seq.t_min;
@@ -464,9 +450,42 @@ impl GuiApp {
     }
 }
 
-fn highlight(painter: &egui::Painter, track_rect: egui::Rect, col: &mut egui::Color32) {
-    *col = brighten(*col);
-    for k in -16..16 {
+fn highlight_if_selected(
+    painter: &egui::Painter,
+    lane_gap: f32,
+    track_rect: egui::Rect,
+    is_selected: bool,
+    col: egui::Color32,
+) -> egui::Color32 {
+    let col = {
+        let mut col = col;
+        if is_selected {
+            col = brighten(col, 20);
+            highlight_glow_smooth(
+                col.gamma_multiply(0.5),
+                painter,
+                track_rect.expand(lane_gap),
+            );
+        } else {
+            col = col.gamma_multiply(0.5);
+        }
+        col
+    };
+    col
+}
+
+fn highlight(black_or_white: egui::Color32, painter: &egui::Painter, encompass_rect: egui::Rect) {
+    painter.rect_stroke(
+        encompass_rect,
+        6.0,
+        egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
+        egui::StrokeKind::Outside,
+    );
+    painter.rect_filled(encompass_rect, 6.0, black_or_white.gamma_multiply(0.15));
+}
+
+fn highlight_glow(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
+    for k in -8..8 {
         let tmp = (30 + k) as f32;
         painter.rect_filled(
             track_rect.expand2(egui::Vec2 {
@@ -477,6 +496,65 @@ fn highlight(painter: &egui::Painter, track_rect: egui::Rect, col: &mut egui::Co
             col.gamma_multiply(1.0 / tmp),
         );
     }
+}
+fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
+    use egui::epaint::{Mesh, Vertex};
+
+    let (top, bottom) = (track_rect.top(), track_rect.bottom());
+    let center = 0.5 * (top + bottom);
+    let height = bottom - top;
+
+    // Top fades out → col → col → fades out
+    let top_color = col.gamma_multiply(0.0);
+    let mid_color = col;
+    let bottom_color = col.gamma_multiply(0.0);
+
+    let mut mesh = Mesh::default();
+
+    // We’ll make a vertical gradient mesh with more interpolation control
+    let steps = 32; // higher = smoother
+    for i in 0..steps {
+        let t0 = i as f32 / steps as f32;
+        let t1 = (i + 1) as f32 / steps as f32;
+
+        let y0 = egui::lerp(top..=bottom, t0);
+        let y1 = egui::lerp(top..=bottom, t1);
+
+        // Gradient intensity based on distance to center
+        let i0 = 1.0 - ((y0 - center).abs() / (0.5 * height)).powf(2.0);
+        let i1 = 1.0 - ((y1 - center).abs() / (0.5 * height)).powf(2.0);
+
+        let c0 = mid_color.gamma_multiply(i0.clamp(0.0, 1.0));
+        let c1 = mid_color.gamma_multiply(i1.clamp(0.0, 1.0));
+
+        let idx = mesh.vertices.len() as u32;
+        mesh.vertices.extend_from_slice(&[
+            Vertex {
+                pos: egui::pos2(track_rect.left(), y0),
+                uv: Default::default(),
+                color: c0,
+            },
+            Vertex {
+                pos: egui::pos2(track_rect.right(), y0),
+                uv: Default::default(),
+                color: c0,
+            },
+            Vertex {
+                pos: egui::pos2(track_rect.right(), y1),
+                uv: Default::default(),
+                color: c1,
+            },
+            Vertex {
+                pos: egui::pos2(track_rect.left(), y1),
+                uv: Default::default(),
+                color: c1,
+            },
+        ]);
+        mesh.indices
+            .extend_from_slice(&[idx, idx + 1, idx + 2, idx, idx + 2, idx + 3]);
+    }
+
+    painter.add(egui::Shape::mesh(mesh));
 }
 
 fn first_last_y(
@@ -502,12 +580,12 @@ fn first_last_y(
     (first_y, last_y)
 }
 
-fn brighten(col: egui::Color32) -> egui::Color32 {
+fn brighten(col: egui::Color32, add: u8) -> egui::Color32 {
     let [r, g, b, a] = col.to_array();
     egui::Color32::from_rgba_premultiplied(
-        r.saturating_add(40),
-        g.saturating_add(40),
-        b.saturating_add(40),
+        r.saturating_add(add),
+        g.saturating_add(add),
+        b.saturating_add(add),
         a,
     )
 }
