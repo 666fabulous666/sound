@@ -1,7 +1,7 @@
 use egui::Key;
 
-pub const DELETE: Key = Key::Delete;
-pub const CLONE: Key = Key::Insert;
+pub const DELETE: Key = Key::D;
+pub const CLONE: Key = Key::I;
 pub const SELECT_UP: Key = Key::K;
 pub const SELECT_DOWN: Key = Key::J;
 pub const SWAP_UP: Key = Key::U;
