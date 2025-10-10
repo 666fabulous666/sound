@@ -128,6 +128,7 @@ impl GuiApp {
 
                 match node {
                     TrackNode::Group { name, children, .. } => {
+                        // let col = egui::Color32::from_gray(128);
                         let col = highlight_if_selected(
                             &painter,
                             lane_gap,
@@ -136,6 +137,7 @@ impl GuiApp {
                             egui::Color32::from_gray(128),
                         );
                         let bar_color = col.lerp_to_gamma(black_or_white, 0.6);
+                        // let bar_color = col;
                         let group_prefix = path.clone();
                         let (first_y, last_y) = first_last_y(
                             &visible_paths,
@@ -149,18 +151,29 @@ impl GuiApp {
                         if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
                             let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
                             let left = rect.left() + subbox_offset;
-                            let right = rect.right() - subbox_offset;
+                            // let right = rect.right() - subbox_offset;
+                            let right = rect.right();
                             let encompass_rect = egui::Rect::from_min_max(
-                                egui::pos2(left, first_y - 0.25 * lane_gap),
-                                egui::pos2(right, last_y + 0.25 * lane_gap),
+                                // egui::pos2(left, first_y - 0.25 * lane_gap),
+                                // egui::pos2(right, last_y + 0.25 * lane_gap),
+                                egui::pos2(left, first_y - lane_gap),
+                                egui::pos2(right, last_y + lane_gap),
                             );
 
                             if is_selected {
-                                highlight(black_or_white, &painter, encompass_rect);
+                                highlight_group(black_or_white, &painter, encompass_rect);
                             }
 
                             let header_rect = track_rect;
-                            painter.rect_filled(header_rect, 6.0, col.gamma_multiply(0.35));
+                            painter.rect_filled(
+                                header_rect,
+                                6.0,
+                                if is_selected {
+                                    col
+                                } else {
+                                    col.gamma_multiply(0.35)
+                                },
+                            );
                             painter.rect_stroke(
                                 header_rect,
                                 6.0,
@@ -474,28 +487,18 @@ fn highlight_if_selected(
     col
 }
 
-fn highlight(black_or_white: egui::Color32, painter: &egui::Painter, encompass_rect: egui::Rect) {
-    painter.rect_stroke(
-        encompass_rect,
-        6.0,
-        egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
-        egui::StrokeKind::Outside,
-    );
-    painter.rect_filled(encompass_rect, 6.0, black_or_white.gamma_multiply(0.15));
-}
-
-fn highlight_glow(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
-    for k in -8..8 {
-        let tmp = (30 + k) as f32;
-        painter.rect_filled(
-            track_rect.expand2(egui::Vec2 {
-                x: 0.0,
-                y: k as f32,
-            }),
-            tmp.sqrt(),
-            col.gamma_multiply(1.0 / tmp),
-        );
-    }
+fn highlight_group(
+    black_or_white: egui::Color32,
+    painter: &egui::Painter,
+    encompass_rect: egui::Rect,
+) {
+    // painter.rect_stroke(
+    //     encompass_rect,
+    //     0.0,
+    //     egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
+    //     egui::StrokeKind::Outside,
+    // );
+    painter.rect_filled(encompass_rect, 0.0, black_or_white.gamma_multiply(0.20));
 }
 fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
     use egui::epaint::{Mesh, Vertex};
@@ -504,14 +507,10 @@ fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect
     let center = 0.5 * (top + bottom);
     let height = bottom - top;
 
-    // Top fades out → col → col → fades out
-    let top_color = col.gamma_multiply(0.0);
     let mid_color = col;
-    let bottom_color = col.gamma_multiply(0.0);
 
     let mut mesh = Mesh::default();
 
-    // We’ll make a vertical gradient mesh with more interpolation control
     let steps = 32; // higher = smoother
     for i in 0..steps {
         let t0 = i as f32 / steps as f32;
