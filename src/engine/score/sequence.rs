@@ -107,7 +107,7 @@ impl Sequence {
         notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
-        // tempo: f64,
+        volume: f64, // tempo: f64,
     ) {
         if self.mute {
             return;
@@ -156,7 +156,7 @@ impl Sequence {
                 time: t + seq_start,
                 duration: *d,
                 interval: self.interval.clone(),
-                volume: GLOBAL_VOLUME / self.normalization
+                volume: volume / self.normalization
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
                     / (self.accents.0
                         + self
@@ -215,7 +215,7 @@ impl Sequence {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         anticipate: bool,
-        // seq: &mut Sequence,
+        volume: f64,
     ) {
         let base = if anticipate {
             now + GENERATE_EARLY
@@ -224,8 +224,14 @@ impl Sequence {
         };
         let start = self.loop_len * (base / self.loop_len).floor();
 
-        self.draw(notes, rng, start);
-        self.not_generate_until =
-            Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);
+        if self
+            .not_generate_until
+            .as_ref()
+            .map_or(true, |until| now >= *until)
+        {
+            self.draw(notes, rng, start, volume);
+            self.not_generate_until =
+                Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);
+        }
     }
 }

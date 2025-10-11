@@ -344,12 +344,7 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        node.draw_node(
-            &mut self.score.notes,
-            &mut self.rng,
-            now,
-            /*anticipate=*/ false,
-        );
+        node.draw_node(&mut self.score.notes, &mut self.rng, now, true, 1.0);
         self.score.track_root.push_child(node);
     }
 
@@ -371,12 +366,8 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree (no anticipation)
         let now = self.now();
-        cloned.draw_node(
-            &mut self.score.notes,
-            &mut self.rng,
-            now,
-            /*anticipate=*/ false,
-        );
+        let volume = self.score.volume_chain_product(path).unwrap();
+        cloned.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
 
         // 4) Insert clone right after the original
         let insert_idx = path[path.len() - 1] + 1;
@@ -401,13 +392,9 @@ impl GuiApp {
             self.drain_notes_from_seq(tk);
         }
         let now = self.now();
+        let volume = self.score.volume_chain_product(path).unwrap();
         if let Some(n) = self.score.track_root.get_mut(path) {
-            n.draw_node(
-                &mut self.score.notes,
-                &mut self.rng,
-                now,
-                /*anticipate=*/ false,
-            );
+            n.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
         }
     }
     // Collect paths to *sequences* (preorder)

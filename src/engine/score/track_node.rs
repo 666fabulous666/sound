@@ -1,4 +1,5 @@
 use core::marker::PhantomData;
+use num_traits::AsPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -199,19 +200,26 @@ impl TrackNode {
     /// Recursively draw all sequences under this node.
     pub fn draw_node(
         &mut self,
-        // node: &mut TrackNode,
         notes: &mut Vec<NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         anticipate: bool,
+        volume: f64,
     ) {
         match self {
             TrackNode::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, anticipate);
+                seq.draw_sequence_core(notes, rng, now, anticipate, volume);
             }
-            TrackNode::Group { children, .. } => {
-                for ch in children {
-                    ch.draw_node(notes, rng, now, anticipate);
+            TrackNode::Group {
+                children,
+                muted,
+                volume,
+                ..
+            } => {
+                if !muted.deref() {
+                    for ch in children {
+                        ch.draw_node(notes, rng, now, anticipate, *volume);
+                    }
                 }
             }
         }
@@ -386,7 +394,7 @@ impl<'a> Iterator for SequencesWithPathIter<'a> {
         None
     }
 }
-use std::fmt::Write as _;
+use std::{fmt::Write as _, ops::Deref};
 
 /// Customize how the tree is printed.
 #[derive(Clone, Copy)]

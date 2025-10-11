@@ -1,7 +1,7 @@
 pub mod hover_texts;
 use std::fmt::Display;
 
-use egui::{RichText, ScrollArea};
+use egui::{RichText, ScrollArea, Slider};
 
 use crate::{
     app::{
@@ -1100,12 +1100,14 @@ impl GuiApp {
                                 });
                             } else {
                                 ui.heading(format!("Group {:?}", sel));
-                                ui.label(tracknode_to_tree(
-                                    &track_node_mut,
-                                    TreePrintOptions::default(),
-                                ));
+                                // ui.label(tracknode_to_tree(
+                                //     &track_node_mut,
+                                //     TreePrintOptions::default(),
+                                // ));
                                 match track_node_mut {
-                                    TrackNode::Group { collapsed, .. } => {
+                                    TrackNode::Group {
+                                        collapsed, volume, ..
+                                    } => {
                                         if ui
                                             .button(if *collapsed {
                                                 "Uncollapse"
@@ -1120,6 +1122,7 @@ impl GuiApp {
                                         {
                                             *collapsed = !(*collapsed)
                                         }
+                                        ui.add(Slider::new(volume, 0.0..=2.0));
                                     }
                                     TrackNode::Seq(_) => unreachable!(),
                                 }

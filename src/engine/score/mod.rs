@@ -11,7 +11,7 @@ use crate::{
         waves::WaveType,
     },
     time_freq::{Freq, Time},
-    Token, TokenGen, NOTE_LINGER_TIME,
+    Token, TokenGen, GLOBAL_VOLUME, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use default_params::*;
@@ -112,6 +112,37 @@ impl Score {
             delays: default_delays(),
             shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
         }
+    }
+    /// Product of volumes from the root down to (and including) the node at `path`.
+    /// Returns `None` if `path` is invalid.
+    pub fn volume_chain_product(&self, path: &[usize]) -> Option<f64> {
+        use crate::engine::score::track_node::TrackNode;
+
+        // Helper: get a node's own volume
+        fn node_volume(node: &TrackNode) -> f64 {
+            match node {
+                TrackNode::Group { volume, .. } => *volume,
+                TrackNode::Seq(seq) => seq.volume,
+            }
+        }
+
+        let mut node = &self.track_root;
+        let mut product = node_volume(node); // include root
+
+        for &idx in path {
+            match node {
+                TrackNode::Group { children, .. } => {
+                    node = children.get(idx)?;
+                    product *= node_volume(node);
+                }
+                TrackNode::Seq(_) => {
+                    // Tried to go deeper under a Seq: invalid path
+                    return None;
+                }
+            }
+        }
+
+        Some(product)
     }
     /// Return a new path pointing to the next sibling. If `wrap` is false and we’re
     /// at the last sibling, returns `None`.
@@ -381,8 +412,9 @@ impl Score {
     }
     /// Draw the node at `path` (recursively if it's a Group).
     pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
+        let volume_opt = self.volume_chain_product(path);
         if let Some(node) = self.track_root.get_mut(path) {
-            node.draw_node(&mut self.notes, rng, now, /*anticipate=*/ true);
+            node.draw_node(&mut self.notes, rng, now, true, volume_opt.unwrap());
         }
     }
     pub fn retain_notes(&mut self, now: Time) {
@@ -392,19 +424,21 @@ impl Score {
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
-        let paths: Vec<_> = self
-            .track_root
-            .sequences_with_paths()
-            .filter(|(_, seq)| {
-                seq.not_generate_until
-                    .as_ref()
-                    .map_or(true, |until| now >= *until)
-            })
-            .map(|(path, _)| path)
-            .collect();
+        self.track_root
+            .draw_node(&mut self.notes, rng, now, true, GLOBAL_VOLUME);
+        // let paths: Vec<_> = self
+        //     .track_root
+        //     .sequences_with_paths()
+        //     .filter(|(_, seq)| {
+        //         seq.not_generate_until
+        //             .as_ref()
+        //             .map_or(true, |until| now >= *until)
+        //     })
+        //     .map(|(path, _)| path)
+        //     .collect();
 
-        for p in paths {
-            self.draw_node_at(&p, now, rng);
-        }
+        // for p in paths {
+        //     self.draw_node_at(&p, now, rng);
+        // }
     }
 }
