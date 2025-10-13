@@ -368,7 +368,7 @@ impl GuiApp {
         Self::visit_sequences_mut(&mut cloned, &mut |seq: &mut Sequence| {
             seq.token = self.score.last_token.next();
         });
-        // 3) Redraw the whole cloned subtree (no anticipation)
+        // 3) Redraw the whole cloned subtree
         let now = self.now();
         let volume = self.score.volume_chain_product(path).unwrap();
         cloned.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
