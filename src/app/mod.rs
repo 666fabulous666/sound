@@ -125,7 +125,6 @@ where
 pub struct GuiState {
     #[serde(deserialize_with = "deserialize_sequences_compat")]
     pub seqs: TrackNode,
-    // pub selected: Option<Vec<usize>>,
     #[serde(default = "default_delays")]
     pub delays: (Vec<f64>, Vec<f64>),
 }
@@ -311,6 +310,7 @@ impl GuiApp {
     fn new_score(&mut self) {
         self.score = Score::new();
         self.score.notes.clear();
+        self.clock.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 
     fn visit_sequences<F>(node: &TrackNode, f: &mut F)
@@ -515,16 +515,16 @@ impl App for GuiApp {
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
         if self.score.track_root.child_count() != 0 {
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
-                if let Some(ref path) = self.selected {
-                    self.selected = self.score.prev_sibling(path, /*wrap=*/ false);
-                }
-            }
-            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
-                if let Some(ref path) = self.selected {
-                    self.selected = self.score.next_sibling(path, /*wrap=*/ false);
-                }
-            }
+            // if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
+            //     if let Some(ref path) = self.selected {
+            //         self.selected = self.score.prev_sibling(path, /*wrap=*/ false);
+            //     }
+            // }
+            // if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_DOWN)) {
+            //     if let Some(ref path) = self.selected {
+            //         self.selected = self.score.next_sibling(path, /*wrap=*/ false);
+            //     }
+            // }
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::SHIFT, GROUP)) {
                 if let Some(ref path) = self.selected {
                     let new_selected = self.score.first_child_of(path);

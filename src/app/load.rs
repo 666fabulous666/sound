@@ -57,6 +57,7 @@ impl GuiApp {
                 .unwrap_or(Token(0))
                 .saturating_add(1),
         );
+        self.score.generate_notes(self.now(), &mut self.rng);
         // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
         self.score.delays = state.delays;
     }

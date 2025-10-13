@@ -36,8 +36,10 @@ impl GuiApp {
                         None,
                         Delete,
                         Clone,
-                        Up,
-                        Down,
+                        SelectUp,
+                        SelectDown,
+                        MoveUp,
+                        MoveDown,
                         Wrap,
                         Unwrap,
                         GroupAbove,
@@ -87,63 +89,72 @@ impl GuiApp {
                                     {
                                         action = Action::Clone;
                                     }
-                                    // Show buttons (same as before)
+                                    // --- Buttons (same as before) ---
                                     if ui
-                                        .button("Up")
+                                        .button("Move up")
                                         .on_hover_ui(|ui| {
                                             ui.label(
-                                                RichText::new(format!(
-                                                    "{}  |  Shift+U → Group into previous",
-                                                    shortcut(SWAP_UP)
+                                                RichText::new(concat!(
+                                                    "J: move selection up\n",
+                                                    "Ctrl+J: move track up\n",
+                                                    "Shift+J: group into previous",
                                                 ))
                                                 .weak(),
                                             );
                                         })
                                         .clicked()
                                     {
-                                        action = Action::Up;
+                                        action = Action::MoveUp;
                                     }
 
                                     if ui
-                                        .button("Down")
+                                        .button("Move down")
                                         .on_hover_ui(|ui| {
                                             ui.label(
-                                                RichText::new(format!(
-                                                    "{}  |  Shift+D → Group into next",
-                                                    shortcut(SWAP_DOWN)
+                                                RichText::new(concat!(
+                                                    "K: move selection down\n",
+                                                    "Ctrl+K: move track down\n",
+                                                    "Shift+K: group into next",
                                                 ))
                                                 .weak(),
                                             );
                                         })
                                         .clicked()
                                     {
-                                        action = Action::Down;
+                                        action = Action::MoveDown;
                                     }
 
-                                    // Keyboard: U / D (with optional Shift)
-                                    let (shift_held, u_pressed, d_pressed) = ui.input(|i| {
+                                    // --- Keyboard handling ---
+                                    let (mods, u_pressed, d_pressed) = ui.input(|i| {
                                         (
-                                            i.modifiers.shift,
-                                            i.key_pressed(SWAP_UP),
-                                            i.key_pressed(SWAP_DOWN),
+                                            i.modifiers,
+                                            i.key_pressed(SELECT_UP),
+                                            i.key_pressed(SELECT_DOWN),
                                         )
                                     });
 
-                                    // If U was pressed this frame:
+                                    let shift_held = mods.shift;
+                                    let ctrl_held = mods.ctrl;
+
+                                    // U pressed
                                     if u_pressed {
                                         action = if shift_held {
                                             Action::GroupAbove // Shift+U
+                                        } else if ctrl_held {
+                                            Action::MoveUp
                                         } else {
-                                            Action::Up // plain U
+                                            Action::SelectUp
                                         };
                                     }
 
-                                    // If D was pressed this frame:
+                                    // D pressed
                                     if d_pressed {
                                         action = if shift_held {
                                             Action::GroupBelow // Shift+D
+                                        } else if ctrl_held {
+                                            Action::MoveDown
                                         } else {
-                                            Action::Down // plain D
+                                            Action::SelectDown
                                         };
                                     }
                                     if ui
@@ -1181,12 +1192,12 @@ impl GuiApp {
                                 }
                                 self.selected = Some(sel);
                             }
-                            Action::Up => {
+                            Action::MoveUp => {
                                 if let Some(new_path) = self.score.swap_with_prev(&sel) {
                                     self.selected = Some(new_path);
                                 }
                             }
-                            Action::Down => {
+                            Action::MoveDown => {
                                 if let Some(new_path) = self.score.swap_with_next(&sel) {
                                     self.selected = Some(new_path);
                                 }
@@ -1218,6 +1229,19 @@ impl GuiApp {
                             Action::GroupBelow => {
                                 if let Some(new_path) = self.score.move_into_next_group(&sel) {
                                     self.selected = Some(new_path);
+                                }
+                            }
+                            Action::SelectUp => {
+                                if let Some(ref path) = self.selected {
+                                    self.selected =
+                                        self.score.prev_sibling(path, /*wrap=*/ false);
+                                }
+                            }
+
+                            Action::SelectDown => {
+                                if let Some(ref path) = self.selected {
+                                    self.selected =
+                                        self.score.next_sibling(path, /*wrap=*/ false);
                                 }
                             }
                         }
