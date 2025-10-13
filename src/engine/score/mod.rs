@@ -410,13 +410,13 @@ impl Score {
 
         Some(new_path)
     }
-    /// Draw the node at `path` (recursively if it's a Group).
-    pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
-        let volume_opt = self.volume_chain_product(path);
-        if let Some(node) = self.track_root.get_mut(path) {
-            node.draw_node(&mut self.notes, rng, now, true, volume_opt.unwrap());
-        }
-    }
+    // /// Draw the node at `path` (recursively if it's a Group).
+    // pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
+    //     let volume_opt = self.volume_chain_product(path);
+    //     if let Some(node) = self.track_root.get_mut(path) {
+    //         node.draw_node(&mut self.notes, rng, now, true, volume_opt.unwrap());
+    //     }
+    // }
     pub fn retain_notes(&mut self, now: Time) {
         let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
             notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)

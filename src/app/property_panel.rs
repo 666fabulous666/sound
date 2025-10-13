@@ -16,10 +16,8 @@ use crate::{
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
     engine::score::{
-        default_params::*,
-        sequence::Sequence,
-        track_node::{tracknode_to_tree, TrackNode, TreePrintOptions},
-        ChorusParams, DetRythm, Interval, RdRythm, Rythm,
+        default_params::*, sequence::Sequence, track_node::TrackNode, ChorusParams, DetRythm,
+        Interval, RdRythm, Rythm,
     },
     layout_left,
     rescale_factor,
@@ -170,7 +168,7 @@ impl GuiApp {
                                         let vol_resp = slider_with_reset(
                                             ui,
                                             &mut seq_mut.volume,
-                                            0.0..=32.0,
+                                            0.0..=2.0,
                                             "Volume",
                                             Some("+ / - (Shift×10)"),
                                             default_volume(),

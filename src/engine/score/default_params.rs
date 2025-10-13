@@ -51,7 +51,7 @@ pub fn default_beat_offset() -> usize {
 }
 
 pub fn default_volume() -> f64 {
-    5.0
+    1.0
 }
 pub fn default_mute() -> bool {
     false

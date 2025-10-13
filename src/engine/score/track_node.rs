@@ -1,5 +1,4 @@
 use core::marker::PhantomData;
-use num_traits::AsPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -41,11 +40,11 @@ impl TrackNode {
     // ---------- Constructors ----------
     /// Root group with safe defaults.
     pub fn new_root(gen: &mut TokenGen) -> Self {
-        Self::new_group(gen, "Root")
+        Self::new_node(gen, "Root")
     }
 
     /// New group with a fresh Token id and safe defaults.
-    pub fn new_group(gen: &mut TokenGen, name: impl Into<String>) -> Self {
+    pub fn new_node(gen: &mut TokenGen, name: impl Into<String>) -> Self {
         TrackNode::Group {
             id: gen.next(),
             name: name.into(),
@@ -196,7 +195,6 @@ impl TrackNode {
             TrackNode::Seq(sequence) => sequence.mute,
         }
     }
-
     /// Recursively draw all sequences under this node.
     pub fn draw_node(
         &mut self,
@@ -204,11 +202,11 @@ impl TrackNode {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         anticipate: bool,
-        volume: f64,
+        node_volume: f64,
     ) {
         match self {
             TrackNode::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, anticipate, volume);
+                seq.draw_sequence_core(notes, rng, now, anticipate, node_volume);
             }
             TrackNode::Group {
                 children,
@@ -216,9 +214,9 @@ impl TrackNode {
                 volume,
                 ..
             } => {
-                if !muted.deref() {
+                if !(*muted) {
                     for ch in children {
-                        ch.draw_node(notes, rng, now, anticipate, *volume);
+                        ch.draw_node(notes, rng, now, anticipate, *volume * node_volume);
                     }
                 }
             }
@@ -394,7 +392,7 @@ impl<'a> Iterator for SequencesWithPathIter<'a> {
         None
     }
 }
-use std::{fmt::Write as _, ops::Deref};
+use std::fmt::Write as _;
 
 /// Customize how the tree is printed.
 #[derive(Clone, Copy)]

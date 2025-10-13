@@ -16,7 +16,6 @@ use crate::engine::waves::WaveType;
 use crate::Token;
 use crate::DEFAULT_LOOP_LEN;
 use crate::GENERATE_EARLY;
-use crate::GLOBAL_VOLUME;
 
 use super::Interval;
 

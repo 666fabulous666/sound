@@ -18,7 +18,7 @@ use crate::{
     shortcuts::*,
     texts::README_MD,
     time_freq::Time,
-    Token, GROOVE_DEFAULTS,
+    Token, GLOBAL_VOLUME, GROOVE_DEFAULTS,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -344,7 +344,11 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        node.draw_node(&mut self.score.notes, &mut self.rng, now, true, 1.0);
+        let volume = match self.score.track_root {
+            TrackNode::Group { volume, .. } => volume * GLOBAL_VOLUME,
+            TrackNode::Seq(_) => unreachable!(),
+        };
+        node.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
         self.score.track_root.push_child(node);
     }
 

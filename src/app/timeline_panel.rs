@@ -36,7 +36,8 @@ impl GuiApp {
         let node_paths = all_paths(&self.score.track_root); // owned paths
         let visible_paths: Vec<Vec<usize>> = node_paths
             .iter()
-            .filter(|p| self.score.track_root.path_visible(p) && p.len() > 0)
+            // .filter(|p| self.score.track_root.path_visible(p) && p.len() > 0)
+            .filter(|p| self.score.track_root.path_visible(p))
             .cloned()
             .collect();
 
@@ -131,7 +132,8 @@ impl GuiApp {
                         );
 
                         if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
-                            let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
+                            // let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
+                            let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32;
                             let left = rect.left() + subbox_offset;
                             // let right = rect.right() - subbox_offset;
                             let right = rect.right();
@@ -422,7 +424,7 @@ impl GuiApp {
                 egui::Rect::from_min_max(egui::pos2(rect.left(), y0), egui::pos2(rect.right(), y1));
 
             let anchor = egui::pos2(
-                lane_rect.left() + TREE_DEPTH_WIDTH * path.len() as f32,
+                lane_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
                 0.5 * (lane_rect.top() + lane_rect.bottom()),
             );
             anchors.push((anchor, path));
@@ -629,7 +631,7 @@ fn highlight_group(
     //     egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
     //     egui::StrokeKind::Outside,
     // );
-    painter.rect_filled(encompass_rect, 0.0, black_or_white.gamma_multiply(0.35));
+    painter.rect_filled(encompass_rect, 10.0, black_or_white.gamma_multiply(0.35));
 }
 fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
     use egui::epaint::{Mesh, Vertex};
