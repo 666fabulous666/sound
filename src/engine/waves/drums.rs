@@ -3,6 +3,7 @@ use std::f64::consts::PI;
 use crate::{
     sign_f,
     time_freq::{DivByFreq, Freq, Time},
+    GLOBAL_VOLUME,
 };
 
 /// A simple xorshift64* pseudo‐random number generator
@@ -99,11 +100,13 @@ impl Layer {
 }
 
 #[inline]
-fn mix_env_layers(time: Time, layers: &[Layer]) -> f64 {
-    layers
-        .iter()
-        .map(|l| l.gain * exp_env(time, l.tau) * l.signal)
-        .sum()
+fn mix_env_layers(time: Time, layers: &[Layer], compressor: impl Fn(f64) -> f64) -> f64 {
+    compressor(
+        layers
+            .iter()
+            .map(|l| l.gain * exp_env(time, l.tau) * l.signal)
+            .sum(),
+    )
 }
 
 /// A single entry point that reproduces your per-drum functions exactly
@@ -149,10 +152,11 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
         DrumParams::Kick => mix_env_layers(
             time,
             &[
-                Layer::sweep(Time(0.1), 5.0, Freq(10.0))(time, freq),
-                Layer::basic(Time(0.05), 1.0)(time, freq),
-                Layer::noise(Time(0.01), 0.1)(time, freq),
+                Layer::sweep(Time(0.1), 25.0, Freq(10.0))(time, freq),
+                Layer::basic(Time(0.05), 5.0)(time, freq),
+                Layer::noise(Time(0.01), 0.5)(time, freq),
             ],
+            |x| (0.25 * x).tanh() / GLOBAL_VOLUME,
         ),
         DrumParams::Snare => mix_env_layers(
             time,
@@ -160,6 +164,7 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
                 Layer::basic(Time(0.2), 0.75)(time, freq),
                 Layer::noise(Time(0.1), 0.25)(time, freq),
             ],
+            |x| x,
         ),
         DrumParams::Darbuka => {
             // === your darbuka() numerics ===
@@ -232,6 +237,7 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
                         signal: det_noise(time, true),
                     },
                 ],
+                |x| x,
             )
         }
         DrumParams::Bell => {
@@ -266,6 +272,7 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
                         signal: det_noise(time, true),
                     },
                 ],
+                |x| x,
             )
         }
 
@@ -337,7 +344,7 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
             let out =
                 0.65 * wash_env * wash + 0.45 * ping_env * ping + click_level * click_env * noise;
 
-            0.9 * out
+            0.25 * out
         }
     }
 }

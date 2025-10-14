@@ -410,6 +410,63 @@ impl Score {
 
         Some(new_path)
     }
+    /// Dissolve the group at `path`:
+    /// - If `path` points to a `Group`, remove that group and splice all its children
+    ///   into the parent at the same index (preserving order).
+    /// - If it's not a `Group`, do nothing.
+    /// Returns the path of the first inserted child (for convenient selection),
+    /// or `None` if the group was empty / invalid path / not a group.
+    pub fn dissolve_group_at(&mut self, path: &[usize]) -> Option<Vec<usize>> {
+        // Root cannot be dissolved and must have at least a parent/index
+        if path.is_empty() {
+            return None;
+        }
+
+        let parent_path = &path[..path.len() - 1];
+        let idx = *path.last().unwrap();
+
+        // Get mutable access to the parent group's children
+        let parent = self.track_root.get_mut(parent_path)?;
+        let TrackNode::Group {
+            children: parent_children,
+            ..
+        } = parent
+        else {
+            // Parent must be a group/root-group to splice into
+            return None;
+        };
+
+        // Bounds check
+        if idx >= parent_children.len() {
+            return None;
+        }
+
+        // Take the node at `idx`
+        let node = parent_children.remove(idx);
+
+        // Only act if it is a Group
+        if let TrackNode::Group { mut children, .. } = node {
+            if children.is_empty() {
+                // Nothing to splice; group was empty
+                return None;
+            }
+
+            // Splice its children back into parent at the original index, preserving order
+            let first_insert = idx;
+            for (k, ch) in children.drain(..).enumerate() {
+                parent_children.insert(first_insert + k, ch);
+            }
+
+            // Return the path to the first child now at `idx`
+            let mut new_path = parent_path.to_vec();
+            new_path.push(first_insert);
+            Some(new_path)
+        } else {
+            // Not a group: put it back where it was (no-op externally)
+            parent_children.insert(idx, node);
+            None
+        }
+    }
     // /// Draw the node at `path` (recursively if it's a Group).
     // pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
     //     let volume_opt = self.volume_chain_product(path);

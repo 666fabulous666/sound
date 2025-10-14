@@ -36,12 +36,15 @@ impl GuiApp {
                         None,
                         Delete,
                         Clone,
+                        Parent,
+                        FirstChild,
                         SelectUp,
                         SelectDown,
                         MoveUp,
                         MoveDown,
                         Wrap,
                         Unwrap,
+                        Dissolve,
                         GroupAbove,
                         GroupBelow,
                     }
@@ -66,113 +69,141 @@ impl GuiApp {
                                 track_node_mut.toggle_mute();
                                 edited_seq ^= true;
                             }
+                            if ui
+                                .button("Delete")
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new(shortcut(DELETE)).weak());
+                                })
+                                .clicked()
+                                || ui.input(|i| i.key_pressed(DELETE))
+                            {
+                                action = Action::Delete;
+                            }
+                            if ui
+                                .button("Clone")
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new(shortcut(CLONE)).weak());
+                                })
+                                .clicked()
+                                || ui.input(|i| i.key_pressed(CLONE))
+                            {
+                                action = Action::Clone;
+                            }
+                            // --- Buttons (same as before) ---
+                            if ui
+                                .button("Move up")
+                                .on_hover_ui(|ui| {
+                                    ui.label(
+                                        RichText::new(concat!(
+                                            "J: move selection up\n",
+                                            "Ctrl+J: move track up\n",
+                                            "Shift+J: group into previous",
+                                        ))
+                                        .weak(),
+                                    );
+                                })
+                                .clicked()
+                            {
+                                action = Action::MoveUp;
+                            }
+
+                            if ui
+                                .button("Move down")
+                                .on_hover_ui(|ui| {
+                                    ui.label(
+                                        RichText::new(concat!(
+                                            "K: move selection down\n",
+                                            "Ctrl+K: move track down\n",
+                                            "Shift+K: group into next",
+                                        ))
+                                        .weak(),
+                                    );
+                                })
+                                .clicked()
+                            {
+                                action = Action::MoveDown;
+                            }
+
+                            // --- Keyboard handling ---
+                            let (mods, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
+                                (
+                                    i.modifiers,
+                                    i.key_pressed(SELECT_UP),
+                                    i.key_pressed(SELECT_DOWN),
+                                    i.key_pressed(PARENT),
+                                    i.key_pressed(FIRST_CHILD),
+                                )
+                            });
+
+                            let shift_held = mods.shift;
+                            let ctrl_held = mods.ctrl;
+
+                            // U pressed
+                            if sel_up {
+                                action = if shift_held {
+                                    Action::GroupAbove // Shift+U
+                                } else if ctrl_held {
+                                    Action::MoveUp
+                                } else {
+                                    Action::SelectUp
+                                };
+                            }
+
+                            // D pressed
+                            if sel_down {
+                                action = if shift_held {
+                                    Action::GroupBelow // Shift+D
+                                } else if ctrl_held {
+                                    Action::MoveDown
+                                } else {
+                                    Action::SelectDown
+                                };
+                            }
+
+                            // U pressed
+                            if sel_ch {
+                                action = if shift_held {
+                                    Action::Wrap
+                                } else if ctrl_held {
+                                    Action::Unwrap
+                                } else {
+                                    Action::FirstChild
+                                };
+                            }
+
+                            // D pressed
+                            if sel_par {
+                                action = if shift_held {
+                                    Action::Dissolve
+                                } else if ctrl_held {
+                                    Action::GroupAbove
+                                } else {
+                                    Action::Parent
+                                };
+                            }
+                            if ui
+                                .button("Wrap")
+                                .on_hover_ui(|ui| {
+                                    ui.label(RichText::new(shortcut(WRAP)).weak());
+                                })
+                                .clicked()
+                                || ui.input(|i| i.key_pressed(WRAP))
+                            {
+                                action = Action::Wrap;
+                            }
+                            let (g_pressed, modifiers) =
+                                ui.input(|i| (i.key_pressed(WRAP), i.modifiers));
+                            if g_pressed {
+                                action = if modifiers.shift {
+                                    Action::Unwrap
+                                } else if modifiers.ctrl {
+                                    Action::Dissolve
+                                } else {
+                                    Action::Wrap
+                                };
+                            }
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
-                                ui.horizontal(|ui| {
-                                    if ui
-                                        .button("Delete")
-                                        .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(DELETE)).weak());
-                                        })
-                                        .clicked()
-                                        || ui.input(|i| i.key_pressed(DELETE))
-                                    {
-                                        action = Action::Delete;
-                                    }
-                                    if ui
-                                        .button("Clone")
-                                        .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(CLONE)).weak());
-                                        })
-                                        .clicked()
-                                        || ui.input(|i| i.key_pressed(CLONE))
-                                    {
-                                        action = Action::Clone;
-                                    }
-                                    // --- Buttons (same as before) ---
-                                    if ui
-                                        .button("Move up")
-                                        .on_hover_ui(|ui| {
-                                            ui.label(
-                                                RichText::new(concat!(
-                                                    "J: move selection up\n",
-                                                    "Ctrl+J: move track up\n",
-                                                    "Shift+J: group into previous",
-                                                ))
-                                                .weak(),
-                                            );
-                                        })
-                                        .clicked()
-                                    {
-                                        action = Action::MoveUp;
-                                    }
-
-                                    if ui
-                                        .button("Move down")
-                                        .on_hover_ui(|ui| {
-                                            ui.label(
-                                                RichText::new(concat!(
-                                                    "K: move selection down\n",
-                                                    "Ctrl+K: move track down\n",
-                                                    "Shift+K: group into next",
-                                                ))
-                                                .weak(),
-                                            );
-                                        })
-                                        .clicked()
-                                    {
-                                        action = Action::MoveDown;
-                                    }
-
-                                    // --- Keyboard handling ---
-                                    let (mods, u_pressed, d_pressed) = ui.input(|i| {
-                                        (
-                                            i.modifiers,
-                                            i.key_pressed(SELECT_UP),
-                                            i.key_pressed(SELECT_DOWN),
-                                        )
-                                    });
-
-                                    let shift_held = mods.shift;
-                                    let ctrl_held = mods.ctrl;
-
-                                    // U pressed
-                                    if u_pressed {
-                                        action = if shift_held {
-                                            Action::GroupAbove // Shift+U
-                                        } else if ctrl_held {
-                                            Action::MoveUp
-                                        } else {
-                                            Action::SelectUp
-                                        };
-                                    }
-
-                                    // D pressed
-                                    if d_pressed {
-                                        action = if shift_held {
-                                            Action::GroupBelow // Shift+D
-                                        } else if ctrl_held {
-                                            Action::MoveDown
-                                        } else {
-                                            Action::SelectDown
-                                        };
-                                    }
-                                    if ui
-                                        .button("Wrap")
-                                        .on_hover_ui(|ui| {
-                                            ui.label(RichText::new(shortcut(WRAP)).weak());
-                                        })
-                                        .clicked()
-                                        || ui.input(|i| i.key_pressed(WRAP))
-                                    {
-                                        action = Action::Wrap;
-                                    }
-                                    let (g_pressed, shift) =
-                                        ui.input(|i| (i.key_pressed(WRAP), i.modifiers.shift));
-                                    if g_pressed {
-                                        action = if shift { Action::Unwrap } else { Action::Wrap };
-                                    }
-                                });
 
                                 {
                                     ui.horizontal(|ui| {
@@ -1215,11 +1246,13 @@ impl GuiApp {
                                         self.selected = Some(new_path);
                                     }
                                 }
-                                // if let Some(sel) = &self.selected {
-                                //     if let Some(new_path) = self.score.ungroup_at(sel) {
-                                //         self.selected = Some(new_path);
-                                //     }
-                                // }
+                            }
+                            Action::Dissolve => {
+                                if let Some(sel) = &self.selected {
+                                    if let Some(new_path) = self.score.dissolve_group_at(sel) {
+                                        self.selected = Some(new_path);
+                                    }
+                                }
                             }
                             Action::GroupAbove => {
                                 if let Some(new_path) = self.score.move_into_prev_group(&sel) {
@@ -1233,15 +1266,22 @@ impl GuiApp {
                             }
                             Action::SelectUp => {
                                 if let Some(ref path) = self.selected {
-                                    self.selected =
-                                        self.score.prev_sibling(path, /*wrap=*/ false);
+                                    self.selected = self.score.prev_sibling(path, true);
                                 }
                             }
-
                             Action::SelectDown => {
                                 if let Some(ref path) = self.selected {
-                                    self.selected =
-                                        self.score.next_sibling(path, /*wrap=*/ false);
+                                    self.selected = self.score.next_sibling(path, true);
+                                }
+                            }
+                            Action::Parent => {
+                                if let Some(ref path) = self.selected {
+                                    self.selected = self.score.parent_of(path);
+                                }
+                            }
+                            Action::FirstChild => {
+                                if let Some(ref path) = self.selected {
+                                    self.selected = self.score.first_child_of(path);
                                 }
                             }
                         }
