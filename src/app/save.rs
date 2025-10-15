@@ -13,7 +13,6 @@ impl GuiApp {
             use crate::app::GuiState;
             let state = GuiState {
                 seqs: self.score.track_root.clone(),
-                // selected: self.selected,
                 delays: self.score.delays.clone(),
             };
 
@@ -34,8 +33,7 @@ impl GuiApp {
 
         // Build the state the same way as native
         let state = crate::app::GuiState {
-            seqs: self.score.sequences.clone(),
-            selected: self.selected,
+            seqs: self.score.track_root.clone(),
             delays: self.score.delays.clone(),
         };
 
