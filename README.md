@@ -26,10 +26,11 @@ No AI — **you** control the rules, the rest is beautiful randomness.
 - **New Score** — starts blank.
 - **Top panel** — Load / Save, plus app-level actions.
 - **Select track** — click a block in the timeline.
-- **Keyboard** — `↑`/`↓` to move selection between tracks.
+- **Keyboard navigation** — H, J, K and L go left, down, up and right in the track tree.
 
 ---
-## 🧭 Top Panel (Global Controls)
+
+## Top Panel (Global Controls)
 
 The **top panel** provides access to the main functions of the sequencer:
 
@@ -51,9 +52,9 @@ These control the built-in recursive reverb effect and shape the stereo image.
 Select a track to reveal its **Property Panel** on the left.
 
 ### Track actions
-- `✖` — Delete the selected track  
+- `Delete` — Delete the selected track  
 - `Clone` — Duplicate the track  
-- `Up` / `Down` — Reorder tracks
+- See **Track Groups** section for navigation and reordenig 
 
 > Actions apply after the UI interaction ends (once the primary mouse button is up).
 
@@ -69,8 +70,8 @@ Select a track to reveal its **Property Panel** on the left.
 
 ### Wave
 
-Choose the **waveform** (`Mute, Sine, Square, Triangle, Sawtooth, HiHat, Kick, Snare`).  
-If you choose a **drum** wave (`HiHat, Kick, Snare`), the **Envelope** defaults to drum-friendly values.
+Choose the **waveform** (`Mute, Sine, Square, Triangle, Sawtooth, HiHat, Kick, Ride, Snare`).  
+If you choose a **drum** wave (`HiHat, Kick, Ride, Snare`), the **Envelope** defaults to drum-friendly values.
 
 ---
 
@@ -138,10 +139,10 @@ Introduces distortion/metallic timbre.
 - **Evolution over time** — `-10 … 10 Hz` (internally squared with sign preserved)
 
 Hints:
-- `|value| = 0` → square-ish
-- `|value| < 1` → distortion
-- `= 1` → unchanged wave
-- Very small/large values → metallic
+- `|value| = 0`: square-ish
+- `|value| < 1`: distortion
+- `= 1`: unchanged wave
+- Very small/large values: metallic
 
 *Double-click to reset.*
 
@@ -208,12 +209,59 @@ Each step shifts by one selected interval; steps can combine and wrap octaves.
 
 Accents scale note energy across the bar.
 
-- **Magnitude** (base inverse) — `0.01 … 100.0` (log) → internally stored as its inverse.  
+- **Magnitude** (base inverse) — `0.01 … 100.0` (log): internally stored as its inverse.  
 - **Generators** (list) — values displayed as inverses for intuitive control; editing updates the internal representation.
 
 Use the `Generators` list UI (`+` to add, right-click a value to remove).
 
 ---
+
+## Track Groups
+
+You can now **group multiple sequences** together into hierarchical “groups”.  
+A **Group** behaves like a folder or bus:
+
+- It can **contain** sequences and/or sub-groups.  
+- It exposes **shared parameters** (currently only **volume**, more to come).  
+- It can be **collapsed** to hide its children from the timeline view.  
+- When a group is **muted**, all its children are muted too.
+
+This enables both:
+- **Hierarchical organization** (folders within folders).
+- **Global control** (e.g., volume automation for all contained sequences).
+
+### Creating and managing groups
+- **Wrap in group**: turns a sequence (or several selected tracks) into a new group.  
+- **Promote**: moves the node one rank up, removing its group.  
+- **Dissolve group**: removes the group container and moves all its contents into the parent.
+
+Groups appear in the **tree view** (left band), which can be collapsed/expanded.
+
+---
+
+## 🌳 Navigating the Track Tree
+
+Navigation now works within this hierarchy.  
+You can move between, promote, group, or dissolve tracks directly from the keyboard.
+
+| Action | Description | Default Shortcut |
+|:--|:--|:--|
+| **Select Up / Down** | Move selection between visible tracks | `J` / `K` |
+| **Parent / Child** | Move to parent group or first child | `H` / `L` |
+| **Group Above / Below** | Move current node into adjacent group | `Shift+J` / `Shift+K` |
+| **Move Up / Down** | Reorder within same group | `Ctrl+J` / `Ctrl+K` |
+| **Wrap in Group** | Enclose the current sequence in a new group | `Shift+L` |
+| **Promote** | Move current node one rank up in the tree | `Ctrl+L` |
+| **Dissolve Group** | Remove current group and merge contents with parent | `Shift+H` |
+
+Each navigation key (J, K, H, L) can be modified by `Ctrl` or `Shift` to access related actions.  
+Tooltips dynamically display all variants.
+
+---
+
+### Mouse interaction
+- Clicking the **bullet** toggles group collapse/expand.  
+- Clicking and dragging (coming soon) will let you reorder and reparent tracks interactively.  
 
 ## Persistence
 
@@ -231,4 +279,4 @@ cargo run --release
 
 # WASM (with trunk)
 cargo install trunk
-trunk serve            # or trunk build --release
+trunk serve --release

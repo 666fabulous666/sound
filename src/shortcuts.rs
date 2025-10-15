@@ -14,3 +14,25 @@ pub const MUTE: Key = Key::M;
 pub fn shortcut(key: Key) -> String {
     format!("Shortcut: {}", key.symbol_or_name())
 }
+
+pub struct Shortcut {
+    pub keys: &'static [Key],
+}
+
+impl Shortcut {
+    pub const fn new(keys: &'static [Key]) -> Self {
+        Self { keys }
+    }
+
+    pub fn name(&self) -> String {
+        self.keys
+            .iter()
+            .map(|k| format!("{:?}", k)) // or your own formatting
+            .collect::<Vec<_>>()
+            .join(" / ")
+    }
+
+    pub fn pressed(&self, i: &egui::InputState) -> bool {
+        self.keys.iter().any(|&k| i.key_pressed(k))
+    }
+}

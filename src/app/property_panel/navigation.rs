@@ -119,7 +119,7 @@ pub fn navigation(
 
         // Up
         let tips_up = make_tooltips(
-            SELECT_UP.name(),
+            &SELECT_UP.name(),
             [
                 up_variant(Modifiers::NONE).0,
                 up_variant(Modifiers::SHIFT).0,
@@ -131,7 +131,7 @@ pub fn navigation(
         }
         // Down
         let tips_down = make_tooltips(
-            SELECT_DOWN.name(),
+            &SELECT_DOWN.name(),
             [
                 down_variant(Modifiers::NONE).0,
                 down_variant(Modifiers::SHIFT).0,
@@ -143,7 +143,7 @@ pub fn navigation(
         }
         // Parent
         let tips_parent = make_tooltips(
-            PARENT.name(),
+            &PARENT.name(),
             [
                 parent_variant(Modifiers::NONE).0,
                 parent_variant(Modifiers::SHIFT).0,
@@ -155,7 +155,7 @@ pub fn navigation(
         }
         // First child
         let tips_first_child = make_tooltips(
-            FIRST_CHILD.name(),
+            &FIRST_CHILD.name(),
             [
                 first_child_variant(Modifiers::NONE).0,
                 first_child_variant(Modifiers::SHIFT).0,
