@@ -1,17 +1,22 @@
 pub mod hover_texts;
+mod navigation;
 use std::fmt::Display;
 
 use egui::{RichText, ScrollArea, Slider};
 
 use crate::{
     app::{
-        property_panel::hover_texts::{
-            ASYM_DETUNE_TEXT, DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT,
-            DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
-            GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_EVOL_TEXT, POW_FACT_TEXT,
-            RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT, REPEAT_TEXT, SHUFFLE_TEXT,
-            SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT, UNISSON_DETUNE_TEXT,
-            VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT, VOICE_LAYERS_TEXT,
+        property_panel::{
+            hover_texts::{
+                ASYM_DETUNE_TEXT, DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT,
+                DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
+                GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_EVOL_TEXT,
+                POW_FACT_TEXT, RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT, REPEAT_TEXT,
+                SHUFFLE_TEXT, SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT,
+                UNISSON_DETUNE_TEXT, VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT,
+                VOICE_LAYERS_TEXT,
+            },
+            navigation::navigation,
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
@@ -25,6 +30,44 @@ use crate::{
     time_freq::{Freq, Time}, // range_slider::*,
 };
 
+#[derive(Clone)]
+pub enum Action {
+    None,
+    Delete,
+    Clone,
+    Parent,
+    FirstChild,
+    SelectUp,
+    SelectDown,
+    MoveUp,
+    MoveDown,
+    Wrap,
+    Promote,
+    Dissolve,
+    GroupAbove,
+    GroupBelow,
+}
+impl Action {
+    pub fn label_and_action(self) -> (&'static str, Self) {
+        match self {
+            Action::None => ("None", self),
+            Action::Delete => ("Delete", self),
+            Action::Clone => ("Clone", self),
+            Action::Parent => ("Parent", self),
+            Action::FirstChild => ("First child", self),
+            Action::SelectUp => ("Select up", self),
+            Action::SelectDown => ("Select down", self),
+            Action::MoveUp => ("Move up", self),
+            Action::MoveDown => ("Move down", self),
+            Action::Wrap => ("Wrap", self),
+            Action::Promote => ("Promote", self),
+            Action::Dissolve => ("Dissolve", self),
+            Action::GroupAbove => ("Group above", self),
+            Action::GroupBelow => ("Group below", self),
+        }
+    }
+}
+
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
         // let len = self.score.sequences.sequences().count();
@@ -32,176 +75,11 @@ impl GuiApp {
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    enum Action {
-                        None,
-                        Delete,
-                        Clone,
-                        Parent,
-                        FirstChild,
-                        SelectUp,
-                        SelectDown,
-                        MoveUp,
-                        MoveDown,
-                        Wrap,
-                        Unwrap,
-                        Dissolve,
-                        GroupAbove,
-                        GroupBelow,
-                    }
-
                     let mut action = Action::None;
                     let mut edited_seq = false;
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
-                            if ui
-                                .button(if track_node_mut.is_mute() {
-                                    "Unute"
-                                } else {
-                                    "Mute"
-                                })
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new(shortcut(MUTE)).weak());
-                                })
-                                .clicked()
-                                || ui.input(|i| i.key_pressed(MUTE))
-                            {
-                                // seq_mut.mute ^= true;
-                                track_node_mut.toggle_mute();
-                                edited_seq ^= true;
-                            }
-                            if ui
-                                .button("Delete")
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new(shortcut(DELETE)).weak());
-                                })
-                                .clicked()
-                                || ui.input(|i| i.key_pressed(DELETE))
-                            {
-                                action = Action::Delete;
-                            }
-                            if ui
-                                .button("Clone")
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new(shortcut(CLONE)).weak());
-                                })
-                                .clicked()
-                                || ui.input(|i| i.key_pressed(CLONE))
-                            {
-                                action = Action::Clone;
-                            }
-                            // --- Buttons (same as before) ---
-                            if ui
-                                .button("Move up")
-                                .on_hover_ui(|ui| {
-                                    ui.label(
-                                        RichText::new(concat!(
-                                            "J: move selection up\n",
-                                            "Ctrl+J: move track up\n",
-                                            "Shift+J: group into previous",
-                                        ))
-                                        .weak(),
-                                    );
-                                })
-                                .clicked()
-                            {
-                                action = Action::MoveUp;
-                            }
-
-                            if ui
-                                .button("Move down")
-                                .on_hover_ui(|ui| {
-                                    ui.label(
-                                        RichText::new(concat!(
-                                            "K: move selection down\n",
-                                            "Ctrl+K: move track down\n",
-                                            "Shift+K: group into next",
-                                        ))
-                                        .weak(),
-                                    );
-                                })
-                                .clicked()
-                            {
-                                action = Action::MoveDown;
-                            }
-
-                            // --- Keyboard handling ---
-                            let (mods, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
-                                (
-                                    i.modifiers,
-                                    i.key_pressed(SELECT_UP),
-                                    i.key_pressed(SELECT_DOWN),
-                                    i.key_pressed(PARENT),
-                                    i.key_pressed(FIRST_CHILD),
-                                )
-                            });
-
-                            let shift_held = mods.shift;
-                            let ctrl_held = mods.ctrl;
-
-                            // U pressed
-                            if sel_up {
-                                action = if shift_held {
-                                    Action::GroupAbove // Shift+U
-                                } else if ctrl_held {
-                                    Action::MoveUp
-                                } else {
-                                    Action::SelectUp
-                                };
-                            }
-
-                            // D pressed
-                            if sel_down {
-                                action = if shift_held {
-                                    Action::GroupBelow // Shift+D
-                                } else if ctrl_held {
-                                    Action::MoveDown
-                                } else {
-                                    Action::SelectDown
-                                };
-                            }
-
-                            // U pressed
-                            if sel_ch {
-                                action = if shift_held {
-                                    Action::Wrap
-                                } else if ctrl_held {
-                                    Action::Unwrap
-                                } else {
-                                    Action::FirstChild
-                                };
-                            }
-
-                            // D pressed
-                            if sel_par {
-                                action = if shift_held {
-                                    Action::Dissolve
-                                } else if ctrl_held {
-                                    Action::GroupAbove
-                                } else {
-                                    Action::Parent
-                                };
-                            }
-                            if ui
-                                .button("Wrap")
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new(shortcut(WRAP)).weak());
-                                })
-                                .clicked()
-                                || ui.input(|i| i.key_pressed(WRAP))
-                            {
-                                action = Action::Wrap;
-                            }
-                            let (g_pressed, modifiers) =
-                                ui.input(|i| (i.key_pressed(WRAP), i.modifiers));
-                            if g_pressed {
-                                action = if modifiers.shift {
-                                    Action::Unwrap
-                                } else if modifiers.ctrl {
-                                    Action::Dissolve
-                                } else {
-                                    Action::Wrap
-                                };
-                            }
+                            navigation(ui, &mut action, &mut edited_seq, track_node_mut);
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
 
@@ -1240,7 +1118,7 @@ impl GuiApp {
                                     self.selected = Some(new_path);
                                 }
                             }
-                            Action::Unwrap => {
+                            Action::Promote => {
                                 if let Some(sel) = &self.selected {
                                     if let Some(new_path) = self.score.promote_one_rank(sel) {
                                         self.selected = Some(new_path);
@@ -1299,7 +1177,6 @@ impl GuiApp {
             });
     }
 }
-
 fn rescale_envelope(e: &mut Sequence) {
     let a = 1.0 / e.attack_decay.0;
     let b = 1.0 / e.attack_decay.1;
