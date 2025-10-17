@@ -2,7 +2,7 @@ pub mod hover_texts;
 mod navigation;
 use std::fmt::Display;
 
-use egui::{RichText, ScrollArea, Slider};
+use egui::{RichText, ScrollArea, Slider, TextEdit};
 
 use crate::{
     app::{
@@ -33,6 +33,7 @@ use crate::{
 #[derive(Clone)]
 pub enum Action {
     None,
+    Mute,
     Delete,
     Clone,
     Parent,
@@ -64,13 +65,13 @@ impl Action {
             Action::Dissolve => ("Dissolve", self),
             Action::GroupAbove => ("Group above", self),
             Action::GroupBelow => ("Group below", self),
+            Action::Mute => ("Mute", self),
         }
     }
 }
 
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
-        // let len = self.score.sequences.sequences().count();
         egui::SidePanel::left("props")
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
@@ -1018,14 +1019,30 @@ impl GuiApp {
                                 });
                             } else {
                                 ui.heading(format!("Group {:?}", sel));
-                                // ui.label(tracknode_to_tree(
-                                //     &track_node_mut,
-                                //     TreePrintOptions::default(),
-                                // ));
                                 match track_node_mut {
                                     TrackNode::Group {
-                                        collapsed, volume, ..
+                                        name,
+                                        collapsed,
+                                        volume,
+                                        ..
                                     } => {
+                                        // Name field
+                                        ui.horizontal(|ui| {
+                                            ui.label("Name:");
+                                            let resp = ui.add(
+                                                TextEdit::singleline(name)
+                                                    .hint_text("Group name…")
+                                                    .desired_width(200.0),
+                                            );
+                                            // Optional: commit on Enter
+                                            if resp.lost_focus()
+                                                && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                                            {
+                                                ui.memory_mut(|m| m.surrender_focus(resp.id));
+                                            }
+                                        });
+
+                                        // Collapse / expand
                                         if ui
                                             .button(if *collapsed {
                                                 "Uncollapse"
@@ -1036,11 +1053,14 @@ impl GuiApp {
                                                 ui.label(RichText::new(shortcut(COLLAPSE)).weak());
                                             })
                                             .clicked()
-                                            || ui.input(|i| i.key_pressed(COLLAPSE))
+                                            || (!ui.ctx().wants_keyboard_input()
+                                                && ui.input(|i| i.key_pressed(COLLAPSE)))
                                         {
-                                            *collapsed = !(*collapsed)
+                                            *collapsed = !*collapsed;
                                         }
-                                        ui.add(Slider::new(volume, 0.0..=2.0));
+
+                                        // Group volume
+                                        ui.add(Slider::new(volume, 0.0..=2.0).text("Volume"));
                                     }
                                     TrackNode::Seq(_) => unreachable!(),
                                 }
@@ -1119,17 +1139,13 @@ impl GuiApp {
                                 }
                             }
                             Action::Promote => {
-                                if let Some(sel) = &self.selected {
-                                    if let Some(new_path) = self.score.promote_one_rank(sel) {
-                                        self.selected = Some(new_path);
-                                    }
+                                if let Some(new_path) = self.score.promote_one_rank(&sel) {
+                                    self.selected = Some(new_path);
                                 }
                             }
                             Action::Dissolve => {
-                                if let Some(sel) = &self.selected {
-                                    if let Some(new_path) = self.score.dissolve_group_at(sel) {
-                                        self.selected = Some(new_path);
-                                    }
+                                if let Some(new_path) = self.score.dissolve_group_at(&sel) {
+                                    self.selected = Some(new_path);
                                 }
                             }
                             Action::GroupAbove => {
@@ -1153,14 +1169,20 @@ impl GuiApp {
                                 }
                             }
                             Action::Parent => {
-                                if let Some(ref path) = self.selected {
-                                    self.selected = self.score.parent_of(path);
-                                }
+                                self.selected = self.score.parent_of(&sel);
                             }
                             Action::FirstChild => {
-                                if let Some(ref path) = self.selected {
-                                    self.selected = self.score.first_child_of(path);
-                                }
+                                self.selected = self.score.first_child_of(&sel);
+                            }
+                            Action::Mute => {
+                                self.score
+                                    .track_root
+                                    .get_mut(&sel)
+                                    .as_mut()
+                                    .map(|track_node| {
+                                        track_node.toggle_mute();
+                                        edited_seq = true;
+                                    });
                             }
                         }
                     }

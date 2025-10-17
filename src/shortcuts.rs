@@ -27,7 +27,7 @@ impl Shortcut {
     pub fn name(&self) -> String {
         self.keys
             .iter()
-            .map(|k| format!("{:?}", k)) // or your own formatting
+            .map(|k| format!("{:?}", k))
             .collect::<Vec<_>>()
             .join(" / ")
     }

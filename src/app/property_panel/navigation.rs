@@ -84,7 +84,7 @@ pub fn navigation(
 ) {
     // Buttons row
     ui.horizontal_wrapped(|ui| {
-        // Mute / Unmute stays simple
+        // Mute / Unmute
         let mute_label = if track_node_mut.is_mute() {
             "Unmute"
         } else {
@@ -94,10 +94,10 @@ pub fn navigation(
             .button(mute_label)
             .on_hover_text(shortcut(MUTE))
             .clicked()
-            || ui.input(|i| i.key_pressed(MUTE))
         {
-            track_node_mut.toggle_mute();
-            *edited_seq = true;
+            *action = Action::Mute;
+            // track_node_mut.toggle_mute();
+            // *edited_seq = true;
         }
 
         // Delete
@@ -105,15 +105,12 @@ pub fn navigation(
             .button("Delete")
             .on_hover_text(shortcut(DELETE))
             .clicked()
-            || ui.input(|i| i.key_pressed(DELETE))
         {
             *action = Action::Delete;
         }
 
         // Clone
-        if ui.button("Clone").on_hover_text(shortcut(CLONE)).clicked()
-            || ui.input(|i| i.key_pressed(CLONE))
-        {
+        if ui.button("Clone").on_hover_text(shortcut(CLONE)).clicked() {
             *action = Action::Clone;
         }
 
@@ -167,55 +164,70 @@ pub fn navigation(
         }
     });
 
-    // Keyboard handling (unchanged)
-    let (mods, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
-        (
-            i.modifiers,
-            i.key_pressed(SELECT_UP),
-            i.key_pressed(SELECT_DOWN),
-            i.key_pressed(PARENT),
-            i.key_pressed(FIRST_CHILD),
-        )
-    });
+    // Keyboard handling
+    if !ui.ctx().wants_keyboard_input() {
+        let (mods, mute, delete, clone, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
+            (
+                i.modifiers,
+                i.key_pressed(MUTE),
+                i.key_pressed(DELETE),
+                i.key_pressed(CLONE),
+                i.key_pressed(SELECT_UP),
+                i.key_pressed(SELECT_DOWN),
+                i.key_pressed(PARENT),
+                i.key_pressed(FIRST_CHILD),
+            )
+        });
 
-    let shift = mods.shift;
-    let ctrl = mods.ctrl;
+        let shift = mods.shift;
+        let ctrl = mods.ctrl;
 
-    if sel_up {
-        *action = if shift {
-            Action::GroupAbove
-        } else if ctrl {
-            Action::MoveUp
-        } else {
-            Action::SelectUp
-        };
-    }
-    if sel_down {
-        *action = if shift {
-            Action::GroupBelow
-        } else if ctrl {
-            Action::MoveDown
-        } else {
-            Action::SelectDown
-        };
-    }
-    if sel_ch {
-        *action = if shift {
-            Action::Wrap
-        } else if ctrl {
-            Action::Promote
-        } else {
-            Action::FirstChild
-        };
-    }
-    if sel_par {
-        *action = if shift {
-            Action::Dissolve
-        } else if ctrl {
-            Action::GroupAbove
-        } else {
-            Action::Parent
-        };
+        if mute {
+            *action = Action::Mute;
+        }
+        if delete {
+            *action = Action::Delete;
+        }
+        if clone {
+            *action = Action::Clone;
+        }
+
+        if sel_up {
+            *action = if shift {
+                Action::GroupAbove
+            } else if ctrl {
+                Action::MoveUp
+            } else {
+                Action::SelectUp
+            };
+        }
+        if sel_down {
+            *action = if shift {
+                Action::GroupBelow
+            } else if ctrl {
+                Action::MoveDown
+            } else {
+                Action::SelectDown
+            };
+        }
+        if sel_ch {
+            *action = if shift {
+                Action::Wrap
+            } else if ctrl {
+                Action::Promote
+            } else {
+                Action::FirstChild
+            };
+        }
+        if sel_par {
+            *action = if shift {
+                Action::Dissolve
+            } else if ctrl {
+                Action::GroupAbove
+            } else {
+                Action::Parent
+            };
+        }
     }
 }
 fn make_tooltips(key_name: &str, labels: [&'static str; 3]) -> [(String, &'static str); 3] {
