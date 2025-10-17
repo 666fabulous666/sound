@@ -106,10 +106,10 @@ impl Sequence {
         notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
-        volume: f64, // tempo: f64,
+        mut volume: f64,
     ) {
         if self.mute {
-            return;
+            volume = 0.0;
         }
         let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)

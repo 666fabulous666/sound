@@ -214,10 +214,9 @@ impl TrackNode {
                 volume,
                 ..
             } => {
-                if !(*muted) {
-                    for ch in children {
-                        ch.draw_node(notes, rng, now, anticipate, *volume * node_volume);
-                    }
+                let volume = if *muted { 0.0 } else { *volume };
+                for ch in children {
+                    ch.draw_node(notes, rng, now, anticipate, volume * node_volume);
                 }
             }
         }
