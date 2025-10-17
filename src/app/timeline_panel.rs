@@ -111,7 +111,9 @@ impl GuiApp {
                     .unwrap_or(false);
 
                 match node {
-                    TrackNode::Group { collapsed, .. } => {
+                    TrackNode::Group {
+                        collapsed, muted, ..
+                    } => {
                         let col = highlight_if_selected(
                             &painter,
                             lane_gap,
@@ -119,7 +121,6 @@ impl GuiApp {
                             is_selected,
                             ui.visuals().text_color(),
                             ui.visuals().panel_fill,
-                            // egui::Color32::from_gray(128),
                         );
                         let group_prefix = path.clone();
                         let (first_y, last_y) = first_last_y(
@@ -132,20 +133,16 @@ impl GuiApp {
                         );
 
                         if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
-                            // let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32 + 2.0;
                             let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32;
                             let left = rect.left() + subbox_offset;
-                            // let right = rect.right() - subbox_offset;
                             let right = rect.right();
                             let encompass_rect = egui::Rect::from_min_max(
-                                // egui::pos2(left, first_y - 0.25 * lane_gap),
-                                // egui::pos2(right, last_y + 0.25 * lane_gap),
                                 egui::pos2(left, first_y - lane_gap),
                                 egui::pos2(right, last_y + lane_gap),
                             );
 
                             if is_selected && !collapsed {
-                                highlight_group(text_color, &painter, encompass_rect);
+                                highlight_group(text_color, &painter, encompass_rect, *muted);
                             }
 
                             let header_rect = track_rect;
@@ -619,19 +616,125 @@ fn highlight_if_selected(
     };
     col
 }
-
 fn highlight_group(
-    black_or_white: egui::Color32,
+    color: egui::Color32,
     painter: &egui::Painter,
     encompass_rect: egui::Rect,
+    muted: bool,
 ) {
-    // painter.rect_stroke(
-    //     encompass_rect,
-    //     0.0,
-    //     egui::Stroke::new(1.0, black_or_white.gamma_multiply(0.5)),
-    //     egui::StrokeKind::Outside,
-    // );
-    painter.rect_filled(encompass_rect, 10.0, black_or_white.gamma_multiply(0.35));
+    // Base fill
+    let rounding = 10.0;
+    painter.rect_filled(encompass_rect, rounding, color.gamma_multiply(0.35));
+
+    if !muted {
+        return;
+    }
+
+    // Stripe params
+    let stripe_base = egui::Color32::GRAY.gamma_multiply(0.5);
+    let spacing = 8.0; // distance between stripes
+    let thickness = 1.5; // visual thickness of each stripe
+
+    let top_left = encompass_rect.left_top();
+    let bottom_right = encompass_rect.right_bottom();
+    let width = encompass_rect.width();
+    let height = encompass_rect.height();
+
+    // Cover entire rect diagonally
+    let diag_len = width + height;
+    let step_count = (diag_len / spacing).ceil() as i32;
+
+    // Alpha ramp: 0→1 over [0..0.25], 1 over [0.25..0.75], 1→0 over [0.75..1]
+    let stripe_alpha = |x: f32| -> f32 {
+        let t = ((x - encompass_rect.left()) / width).clamp(0.0, 1.0);
+        if t < 0.25 {
+            (t / 0.25).clamp(0.0, 1.0)
+        } else if t > 0.75 {
+            ((1.0 - t) / 0.25).clamp(0.0, 1.0)
+        } else {
+            1.0
+        }
+    };
+
+    let mut mesh = egui::epaint::Mesh::default();
+
+    for i in 0..step_count {
+        let offset = i as f32 * spacing;
+
+        // Start/end for a 45° stripe before clamping
+        let mut start = egui::pos2(top_left.x + offset, top_left.y);
+        let mut end = egui::pos2(top_left.x, top_left.y + offset);
+
+        // Clamp to rect bounds by sliding ends to the box
+        if start.x > bottom_right.x {
+            let dx = start.x - bottom_right.x;
+            start.x = bottom_right.x;
+            start.y += dx;
+        }
+        if end.y > bottom_right.y {
+            let dy = end.y - bottom_right.y;
+            end.y = bottom_right.y;
+            end.x += dy;
+        }
+
+        // Quick reject
+        if !encompass_rect.intersects(egui::Rect::from_two_pos(start, end)) {
+            continue;
+        }
+
+        // Build a thin quad for the stripe with per-vertex color (horizontal alpha)
+        let dir = (end - start).normalized();
+        if !dir.is_finite() {
+            continue;
+        }
+        let n = egui::Vec2::new(-dir.y, dir.x); // perpendicular
+        let half = 0.5 * thickness;
+
+        // Four corners of the stripe quad
+        let v0 = start - n * half;
+        let v1 = start + n * half;
+        let v2 = end + n * half;
+        let v3 = end - n * half;
+
+        // Alpha based on horizontal position
+        let a0 = stripe_alpha(v0.x);
+        let a1 = stripe_alpha(v1.x);
+        let a2 = stripe_alpha(v2.x);
+        let a3 = stripe_alpha(v3.x);
+
+        let c0 = stripe_base.gamma_multiply(a0);
+        let c1 = stripe_base.gamma_multiply(a1);
+        let c2 = stripe_base.gamma_multiply(a2);
+        let c3 = stripe_base.gamma_multiply(a3);
+
+        let idx = mesh.vertices.len() as u32;
+        mesh.vertices.extend_from_slice(&[
+            egui::epaint::Vertex {
+                pos: v0,
+                uv: Default::default(),
+                color: c0,
+            },
+            egui::epaint::Vertex {
+                pos: v1,
+                uv: Default::default(),
+                color: c1,
+            },
+            egui::epaint::Vertex {
+                pos: v2,
+                uv: Default::default(),
+                color: c2,
+            },
+            egui::epaint::Vertex {
+                pos: v3,
+                uv: Default::default(),
+                color: c3,
+            },
+        ]);
+        mesh.indices
+            .extend_from_slice(&[idx, idx + 1, idx + 2, idx, idx + 2, idx + 3]);
+    }
+
+    painter.add(egui::Shape::mesh(mesh));
 }
 fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
     use egui::epaint::{Mesh, Vertex};
