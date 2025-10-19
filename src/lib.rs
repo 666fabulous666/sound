@@ -20,6 +20,7 @@ pub const MAX_FPS: f64 = 60.0;
 pub const MAX_FPS: f64 = 120.0;
 const TREE_DEPTH_WIDTH: f32 = 10.0;
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
+    ("Unicorns", include_str!("../assets/Unicorns.json")),
     ("Afro Q-Bit", include_str!("../assets/AfroQBit.json")),
     ("Blue Jinn", include_str!("../assets/Blue Jinn.json")),
     (
@@ -30,7 +31,6 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         "Spins of Birds",
         include_str!("../assets/SpinsOfBirds.json"),
     ),
-    // ("Classic Groove", include_str!("../assets/groove.json")),
 ];
 pub fn layout_left() -> Layout {
     Layout::left_to_right(egui::Align::Min)

@@ -10,9 +10,9 @@ use crate::{
             hover_texts::{
                 ASYM_DETUNE_TEXT, DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT,
                 DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
-                GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_EVOL_TEXT,
-                POW_FACT_TEXT, RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT, REPEAT_TEXT,
-                SHUFFLE_TEXT, SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT,
+                GROOVE_OFFSET_TEXT, HARMONISE_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT,
+                POW_FACT_EVOL_TEXT, POW_FACT_TEXT, RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT,
+                REPEAT_TEXT, SHUFFLE_TEXT, SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT,
                 UNISSON_DETUNE_TEXT, VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT,
                 VOICE_LAYERS_TEXT,
             },
@@ -80,7 +80,7 @@ impl GuiApp {
                     let mut edited_seq = false;
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
-                            navigation(ui, &mut action, &mut edited_seq, track_node_mut);
+                            navigation(ui, &mut action, track_node_mut);
                             if let Some(seq_mut) = track_node_mut.as_seq_mut() {
                                 ui.heading(format!("Sequence {:?}", sel));
 
@@ -914,6 +914,7 @@ impl GuiApp {
                                         let mut changed = false;
                                         let mut interval = seq_mut.interval.clone();
                                         let mut shuffle = seq_mut.shuffle;
+                                        let mut harmonise = seq_mut.harmonise;
                                         if let Interval::RDTempered(
                                             ref mut nb_rd_steps,
                                             ref mut tones,
@@ -972,12 +973,17 @@ impl GuiApp {
                                             changed |= ui
                                                 .checkbox(&mut shuffle, "Shuffle")
                                                 .on_hover_text(SHUFFLE_TEXT)
-                                                .changed()
+                                                .changed();
+                                            changed |= ui
+                                                .checkbox(&mut harmonise, "Harmonise")
+                                                .on_hover_text(HARMONISE_TEXT)
+                                                .changed();
                                         }
                                         if changed {
                                             seq_mut.interval = interval;
                                             seq_mut.shuffle = shuffle;
-                                            edited_seq ^= true;
+                                            seq_mut.harmonise = harmonise;
+                                            edited_seq = true;
                                         }
                                     }
                                 });

@@ -217,7 +217,7 @@ impl GuiApp {
                             }
                         }
 
-                        // notes rendering (unchanged)
+                        // notes rendering
                         self.score
                             .notes
                             .iter()
@@ -283,7 +283,7 @@ impl GuiApp {
 
                         let bar_color = col.lerp_to_gamma(text_color, 0.5);
 
-                        // repeat bars (unchanged)
+                        // repeat bars
                         let rep_loop_len = seq.loop_len * seq.repeat as f64;
                         let bar_pos =
                             rep_loop_len + playhead - (self.now()).rem_euclid(rep_loop_len);

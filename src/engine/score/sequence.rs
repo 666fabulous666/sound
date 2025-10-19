@@ -59,6 +59,8 @@ pub struct Sequence {
     pub spacial: f64,
     #[serde(default = "default_tolerance")]
     pub tolerance: (Time, Time),
+    #[serde(default = "default_harmonise")]
+    pub harmonise: bool,
     #[serde(default = "default_repeat")]
     pub repeat: usize,
     #[serde(default = "default_accents")]
@@ -99,6 +101,7 @@ impl Sequence {
             normalization: default_normalization(),
             shuffle: default_shuffle(),
             name: format!("seq {}", token.to_string()),
+            harmonise: default_harmonise(),
         }
     }
     pub fn draw(
@@ -166,7 +169,7 @@ impl Sequence {
                             .sum::<f64>()),
             })
             .for_each(|n| {
-                let to_push = n.draw(&notes_buffer, rng);
+                let to_push = n.draw(&notes_buffer, rng, self.harmonise);
                 if let Some(NotesGroup { notes, .. }) = notes_buffer
                     .iter_mut()
                     .find(|NotesGroup { token, .. }| *token == self.token)

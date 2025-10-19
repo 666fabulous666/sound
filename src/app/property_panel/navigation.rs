@@ -76,12 +76,7 @@ fn first_child_variant(mods: Modifiers) -> (&'static str, Action) {
     }
 }
 
-pub fn navigation(
-    ui: &mut egui::Ui,
-    action: &mut Action,
-    edited_seq: &mut bool,
-    track_node_mut: &mut TrackNode,
-) {
+pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut TrackNode) {
     // Buttons row
     ui.horizontal_wrapped(|ui| {
         // Mute / Unmute

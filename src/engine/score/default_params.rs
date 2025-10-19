@@ -46,6 +46,10 @@ pub fn default_tolerance() -> (Time, Time) {
     (Time(1.0), Time(0.0))
 }
 
+pub fn default_harmonise() -> bool {
+    false
+}
+
 pub fn default_beat_offset() -> usize {
     0
 }

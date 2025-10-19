@@ -147,3 +147,4 @@ pub const SHUFFLE_TEXT: &str = concat!(
     "generated other one (see tolerance for\n",
     "more settings about this point.",
 );
+pub const HARMONISE_TEXT: &str = concat!("Generates the notes to decrease entropy.\n",);
