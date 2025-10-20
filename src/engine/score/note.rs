@@ -1,6 +1,3 @@
-use std::iter::once;
-
-use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 
@@ -50,7 +47,7 @@ impl Note {
 
                 let degree = if harmonise {
                     (0..12)
-                        .min_by_key(|d| tension(others.iter().cloned().chain(once(*d))))
+                        .min_by_key(|d| tension(others.iter().cloned(), *d))
                         .unwrap()
                 } else {
                     (0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12
@@ -65,29 +62,26 @@ impl Note {
         }
     }
 }
-fn tension(ns: impl Iterator<Item = i32> + Clone) -> u32 {
-    ns.tuple_combinations()
-        .map(|(n1, n2)| tension2(n1, n2))
-        .sum()
+fn tension(ns: impl Iterator<Item = i32> + Clone, d: i32) -> u32 {
+    ns.into_iter().map(|n| tension2(n, d)).sum()
 }
 fn tension2(n1: i32, n2: i32) -> u32 {
     let d = dist12(n1, n2);
     match d {
-        // 0 => 10,
-        // 1 => 11,
-        // 2 => 9,
-        // 3 => 4,
-        // 4 => 3,
-        // 5 => 0,
-        // 6 => 8,
-        // _ => unreachable!(),
-        0 => 100,
-        1 => 101,
-        2 => 99,
-        3 => 50,
-        4 => 45,
+        0 => 10,
+        1 => 11,
+        2 => 9,
+        3 => 4,
+        4 => 3,
         5 => 0,
-        6 => 98,
+        6 => 8,
+        // 0 => 125,
+        // 1 => 101,
+        // 2 => 99,
+        // 3 => 50,
+        // 4 => 45,
+        // 5 => 0,
+        // 6 => 98,
         _ => unreachable!(),
     }
 }
