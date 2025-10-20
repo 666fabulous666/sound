@@ -880,6 +880,16 @@ impl GuiApp {
                                     }
                                 });
                                 ui.collapsing("Harmony", |ui| {
+                                    let mut harmonise = seq_mut.harmonise;
+                                    if ui
+                                        .checkbox(&mut harmonise, "Harmonise")
+                                        .on_hover_text(HARMONISE_TEXT)
+                                        .changed()
+                                    {
+                                        seq_mut.harmonise = harmonise;
+                                        edited_seq = true
+                                    }
+                                    ui.separator();
                                     {
                                         ui.horizontal(|ui| {
                                             let mut tmp_tolerance = seq_mut.tolerance.clone();
@@ -914,7 +924,6 @@ impl GuiApp {
                                         let mut changed = false;
                                         let mut interval = seq_mut.interval.clone();
                                         let mut shuffle = seq_mut.shuffle;
-                                        let mut harmonise = seq_mut.harmonise;
                                         if let Interval::RDTempered(
                                             ref mut nb_rd_steps,
                                             ref mut tones,
@@ -931,58 +940,58 @@ impl GuiApp {
                                                     changed = true;
                                                 };
                                             });
-                                            // nb_rd_steps
-                                            ui.horizontal(|ui| {
-                                                ui.label("Variation steps:")
-                                                    .on_hover_text(VARIATION_STEPS_TEXT);
-                                                if ui
-                                                    .add(egui::Slider::new(nb_rd_steps, 0..=16))
-                                                    .changed()
-                                                {
-                                                    changed = true;
-                                                };
-                                            });
-                                            ui.label("Variation intervals:")
-                                                .on_hover_text(VARIATION_INTERVALS_TEXT);
-                                            ui.horizontal_wrapped(|ui| {
-                                                for tone in -11..=11 {
-                                                    let mut selected = tones.contains(&tone);
-
+                                            if !harmonise {
+                                                // nb_rd_steps
+                                                ui.horizontal(|ui| {
+                                                    ui.label("Variation steps:")
+                                                        .on_hover_text(VARIATION_STEPS_TEXT);
                                                     if ui
-                                                        .checkbox(&mut selected, tone.to_string())
+                                                        .add(egui::Slider::new(nb_rd_steps, 0..=16))
                                                         .changed()
                                                     {
-                                                        if selected {
-                                                            if !tones.contains(&tone) {
-                                                                tones.push(tone);
-                                                                tones.sort_unstable();
+                                                        changed = true;
+                                                    };
+                                                });
+                                                ui.label("Variation intervals:")
+                                                    .on_hover_text(VARIATION_INTERVALS_TEXT);
+                                                ui.horizontal_wrapped(|ui| {
+                                                    for tone in -11..=11 {
+                                                        let mut selected = tones.contains(&tone);
+
+                                                        if ui
+                                                            .checkbox(
+                                                                &mut selected,
+                                                                tone.to_string(),
+                                                            )
+                                                            .changed()
+                                                        {
+                                                            if selected {
+                                                                if !tones.contains(&tone) {
+                                                                    tones.push(tone);
+                                                                    tones.sort_unstable();
+                                                                }
+                                                            } else {
+                                                                if let Some(pos) = tones
+                                                                    .iter()
+                                                                    .position(|&v| v == tone)
+                                                                {
+                                                                    tones.remove(pos);
+                                                                }
                                                             }
-                                                        } else {
-                                                            if let Some(pos) = tones
-                                                                .iter()
-                                                                .position(|&v| v == tone)
-                                                            {
-                                                                tones.remove(pos);
-                                                            }
+                                                            changed = !tones.is_empty();
                                                         }
-                                                        changed = !tones.is_empty();
                                                     }
-                                                }
-                                            });
+                                                });
+                                            }
                                             ui.separator();
                                             changed |= ui
                                                 .checkbox(&mut shuffle, "Shuffle")
                                                 .on_hover_text(SHUFFLE_TEXT)
                                                 .changed();
-                                            changed |= ui
-                                                .checkbox(&mut harmonise, "Harmonise")
-                                                .on_hover_text(HARMONISE_TEXT)
-                                                .changed();
                                         }
                                         if changed {
                                             seq_mut.interval = interval;
                                             seq_mut.shuffle = shuffle;
-                                            seq_mut.harmonise = harmonise;
                                             edited_seq = true;
                                         }
                                     }
