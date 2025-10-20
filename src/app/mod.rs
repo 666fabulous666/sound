@@ -352,6 +352,42 @@ impl GuiApp {
         self.score.track_root.push_child(node);
     }
 
+    /// Replace the root with `node`.
+    /// - Draws `node` first (recursively) using the same base-volume logic as `new_node`.
+    /// - Ensures the root remains a `Group` by wrapping a lone `Seq` if needed.
+    pub fn replace_root_with(&mut self, mut node: TrackNode) {
+        let now = self.now();
+
+        // Base volume used when drawing this node (mirrors `new_node`)
+        let base_volume = match &node {
+            TrackNode::Group { volume, .. } => *volume * GLOBAL_VOLUME,
+            TrackNode::Seq(_) => GLOBAL_VOLUME,
+        };
+
+        // Draw the (possibly nested) node into current notes
+        node.draw_node(
+            &mut self.score.notes,
+            &mut self.rng,
+            now,
+            /*anticipate=*/ true,
+            base_volume,
+        );
+
+        // Keep invariant: root is a Group
+        self.score.track_root = match node {
+            TrackNode::Group { .. } => node,
+            seq @ TrackNode::Seq(_) => TrackNode::Group {
+                id: self.score.last_token.next(),
+                name: String::new(),
+                muted: false,
+                volume: 1.0,
+                spacial: 0.5,
+                collapsed: false,
+                children: vec![seq],
+            },
+        };
+    }
+
     // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.
     fn clone_node(&mut self, path: &[usize]) {
         if path.is_empty() {

@@ -47,7 +47,7 @@ impl GuiApp {
         use crate::{Token, TokenGen};
 
         self.new_score();
-        self.new_node(state.seqs);
+        self.replace_root_with(state.seqs);
         self.score_mut().last_token = TokenGen(
             self.score
                 .track_root
