@@ -8,8 +8,8 @@
     <title>synth (web)</title>
     
 <script type="module">
-import init, * as bindings from '/sound/synth-b7e67dc65add3a22.js';
-const wasm = await init({ module_or_path: '/sound/synth-b7e67dc65add3a22_bg.wasm' });
+import init, * as bindings from '/sound/synth-26558d904f3930f0.js';
+const wasm = await init({ module_or_path: '/sound/synth-26558d904f3930f0_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -73,7 +73,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         touch-action: none;         /* better pointer behavior on mobile */
       }
     </style>
-  <link rel="modulepreload" href="/sound/synth-b7e67dc65add3a22.js" crossorigin="anonymous" integrity="sha384-PhqFpFMCztVnXFRcMtAY3PwGDbmkHCS/+ndDq7DYEt27Rr+qIweQKDMXc0j/zXGb"><link rel="preload" href="/sound/synth-b7e67dc65add3a22_bg.wasm" crossorigin="anonymous" integrity="sha384-WS/0BrKlpz3oOhVzurlbUP/n5waeQIXhU/kxs1LIKOFE78agpIcfz6fjWoDYr8Cn" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/sound/synth-26558d904f3930f0.js" crossorigin="anonymous" integrity="sha384-zsxLuCnLIQNTAbOc1YN56lhKl0Fe3xIr2UJb1YpGT12rM9JxOyFwH2dHM1RTklbU"><link rel="preload" href="/sound/synth-26558d904f3930f0_bg.wasm" crossorigin="anonymous" integrity="sha384-5FZRKyvToPxPZqxj6yzuDD7SNouIjlDUeoUthdYEUnX7MreZ2ta9XEjRzjmtWCQ9" as="fetch" type="application/wasm"></head>
   <body>
     <canvas id="the_canvas_id"></canvas>
   </body>
