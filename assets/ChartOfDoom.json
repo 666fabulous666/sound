@@ -58,6 +58,26 @@
                     1
                   ],
                   "proba": 1.0,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -96,7 +116,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 8,
                   "name": "seq 8"
                 }
@@ -142,6 +162,26 @@
                     1
                   ],
                   "proba": 1.0,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -180,7 +220,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 33,
                   "name": "seq 8"
                 }
@@ -237,7 +277,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.48,
+                  "proba": 0.8,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -276,7 +336,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 4,
                   "name": "seq 2"
                 }
@@ -322,6 +382,26 @@
                     8
                   ],
                   "proba": 0.66,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -360,7 +440,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 2,
                   "name": "seq 2"
                 }
@@ -405,7 +485,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.13,
+                  "proba": 0.8500000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -444,7 +544,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 24,
                   "name": "seq 2"
                 }
@@ -489,7 +589,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.41,
+                  "proba": 0.76,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -528,7 +648,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 5,
                   "name": "seq 2"
                 }
@@ -574,6 +694,26 @@
                     8
                   ],
                   "proba": 0.8300000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 1.0,
                   "mute": false,
@@ -612,7 +752,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 25,
                   "name": "seq 2"
                 }
@@ -658,6 +798,26 @@
                     8
                   ],
                   "proba": 0.6200000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.95,
                   "mute": false,
@@ -696,7 +856,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 6,
                   "name": "seq 2"
                 }
@@ -741,7 +901,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.27,
+                  "proba": 0.6400000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.95,
                   "mute": false,
@@ -780,7 +960,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 26,
                   "name": "seq 2"
                 }
@@ -826,6 +1006,26 @@
                     8
                   ],
                   "proba": 0.5700000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.7200000000000001,
                   "mute": false,
@@ -864,7 +1064,7 @@
                     ]
                   ],
                   "shuffle": true,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 7,
                   "name": "seq 2"
                 }
@@ -921,7 +1121,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.9199999999999999,
+                  "proba": 0.92,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 2.0,
                   "mute": false,
@@ -960,7 +1180,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2637.9,
+                  "not_generate_until": 405.9,
                   "token": 13,
                   "name": "seq 13"
                 }
@@ -1006,8 +1226,28 @@
                     8
                   ],
                   "proba": 0.34,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
-                  "volume": 1.6500000000000001,
+                  "volume": 1.65,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
@@ -1044,7 +1284,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2636.15,
+                  "not_generate_until": 404.15,
                   "token": 32,
                   "name": "seq 13"
                 }
@@ -1090,6 +1330,26 @@
                     8
                   ],
                   "proba": 0.34,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 0.67,
                   "mute": false,
@@ -1128,7 +1388,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 17,
                   "name": "seq 13"
                 }
@@ -1174,6 +1434,26 @@
                     8
                   ],
                   "proba": 0.8300000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 0.35000000000000003,
                   "mute": false,
@@ -1212,7 +1492,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2637.4,
+                  "not_generate_until": 405.4,
                   "token": 14,
                   "name": "seq 13"
                 }
@@ -1258,6 +1538,26 @@
                     8
                   ],
                   "proba": 0.8300000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 0.35000000000000003,
                   "mute": false,
@@ -1296,7 +1596,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2637.4,
+                  "not_generate_until": 405.4,
                   "token": 16,
                   "name": "seq 13"
                 }
@@ -1316,7 +1616,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1354,7 +1654,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.5,
+                  "proba": 0.76,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 0,
                   "volume": 0.4,
                   "mute": false,
@@ -1375,7 +1695,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.5,
                   "tolerance": [
                     1.0,
@@ -1393,7 +1713,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 18,
                   "name": "seq 18"
                 }
@@ -1401,7 +1721,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1439,6 +1759,26 @@
                     8
                   ],
                   "proba": 0.8,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 1.28,
                   "mute": false,
@@ -1459,7 +1799,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.5,
                   "tolerance": [
                     1.0,
@@ -1477,7 +1817,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 19,
                   "name": "seq 18"
                 }
@@ -1485,7 +1825,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1523,7 +1863,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.5,
+                  "proba": 0.76,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.35000000000000003,
                   "mute": false,
@@ -1544,7 +1904,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.5,
                   "tolerance": [
                     1.0,
@@ -1562,7 +1922,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 20,
                   "name": "seq 18"
                 }
@@ -1570,7 +1930,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1608,7 +1968,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.27,
+                  "proba": 0.6900000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.25,
                   "mute": false,
@@ -1629,7 +2009,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.8,
                   "tolerance": [
                     1.0,
@@ -1647,7 +2027,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 22,
                   "name": "seq 18"
                 }
@@ -1655,7 +2035,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1692,7 +2072,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.41,
+                  "proba": 0.73,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.58,
                   "mute": false,
@@ -1713,7 +2113,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.27,
                   "tolerance": [
                     1.0,
@@ -1731,7 +2131,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 21,
                   "name": "seq 18"
                 }
@@ -1739,7 +2139,7 @@
               {
                 "Seq": {
                   "t_min": 0.0,
-                  "t_max": 4.0,
+                  "t_max": 2.0,
                   "chorus": {
                     "voices": 1,
                     "delta": 0.02,
@@ -1776,7 +2176,27 @@
                     1,
                     8
                   ],
-                  "proba": 0.41,
+                  "proba": 0.6900000000000001,
+                  "harmoniser": [
+                    [
+                      10,
+                      11,
+                      11,
+                      4,
+                      3,
+                      0,
+                      8
+                    ],
+                    [
+                      1,
+                      2,
+                      2,
+                      0,
+                      0,
+                      0,
+                      3
+                    ]
+                  ],
                   "beat_offset": 2,
                   "volume": 0.8500000000000001,
                   "mute": false,
@@ -1797,7 +2217,7 @@
                     1.0,
                     0.0
                   ],
-                  "loop_len": 4.0,
+                  "loop_len": 2.0,
                   "spacial": 0.78,
                   "tolerance": [
                     1.0,
@@ -1815,7 +2235,7 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 2635.9,
+                  "not_generate_until": 403.9,
                   "token": 27,
                   "name": "seq 18"
                 }

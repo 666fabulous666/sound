@@ -902,6 +902,7 @@ impl GuiApp {
                                     }
                                 });
                                 ui.collapsing("Harmony", |ui| {
+                                    ui.checkbox(&mut seq_mut.glide, "Glide");
                                     let mut harmonise = seq_mut.harmonise;
                                     if ui
                                         .checkbox(&mut harmonise, "Harmonise")

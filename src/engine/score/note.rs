@@ -1,4 +1,4 @@
-use rand::seq::SliceRandom;
+use rand::{seq::SliceRandom, Rng};
 use serde::Deserialize;
 
 use super::Interval;
@@ -10,6 +10,7 @@ pub struct Note {
     pub time: Time,
     pub duration: Time,
     pub interval: Interval,
+    pub glide: Option<Interval>,
     pub volume: f64,
 }
 impl Note {
@@ -65,6 +66,7 @@ impl Note {
 
                 Self {
                     interval: Interval::Tempered(degree, *octave),
+                    glide: self.glide.clone(),
                     ..*self
                 }
             }

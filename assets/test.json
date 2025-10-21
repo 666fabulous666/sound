@@ -1,0 +1,761 @@
+{
+  "seqs": {
+    "Group": {
+      "id": 1,
+      "name": "Root",
+      "muted": false,
+      "volume": 1.0,
+      "spacial": 0.5,
+      "collapsed": false,
+      "children": [
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 5,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              2
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 2,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 4,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                3,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              2
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 3,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 3,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                2,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              4
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": true,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 4,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 5,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                2,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                -1
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              2
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": true,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 5,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 6,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                2,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                -1
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              2
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": true,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 6,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 5,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                2,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                -1
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              4
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": true,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": true,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 7,
+            "name": "seq 2"
+          }
+        },
+        {
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 16.0,
+            "chorus": {
+              "voices": 4,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "inclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "exclusions": {
+              "Rd": {
+                "amount": 5,
+                "length": 10
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                2,
+                [
+                  -7,
+                  0,
+                  7
+                ],
+                -2
+              ]
+            },
+            "wave_type": "Sine",
+            "time_quantum": [
+              1,
+              2
+            ],
+            "proba": 1.0,
+            "harmoniser": [
+              [
+                10,
+                11,
+                11,
+                4,
+                3,
+                0,
+                8
+              ],
+              [
+                1,
+                2,
+                2,
+                0,
+                0,
+                0,
+                3
+              ]
+            ],
+            "beat_offset": 0,
+            "volume": 1.0,
+            "glide": false,
+            "mute": false,
+            "normalization": 0.4142069808095242,
+            "attack_decay": [
+              4.0,
+              0.3333
+            ],
+            "bend": [
+              0.0,
+              32.0
+            ],
+            "vibrato": [
+              0.0,
+              12.0
+            ],
+            "pow_fact": [
+              1.0,
+              0.0
+            ],
+            "loop_len": 16.0,
+            "spacial": 0.5,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": true,
+            "repeat": 1,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "not_generate_until": 239.9,
+            "token": 8,
+            "name": "seq 2"
+          }
+        }
+      ]
+    }
+  },
+  "delays": [
+    [
+      31.0,
+      128.0,
+      745.0
+    ],
+    [
+      33.0,
+      61.0,
+      503.0
+    ]
+  ]
+}

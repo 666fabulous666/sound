@@ -46,6 +46,8 @@ pub struct Sequence {
     pub beat_offset: usize,
     #[serde(default = "default_volume")]
     pub volume: f64,
+    #[serde(default = "default_glide")]
+    pub glide: bool,
     #[serde(default = "default_mute")]
     pub mute: bool,
     #[serde(default = "default_normalization")]
@@ -109,6 +111,7 @@ impl Sequence {
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
             proba: default_proba(),
+            glide: default_glide(),
         }
     }
     pub fn draw(
@@ -160,61 +163,63 @@ impl Sequence {
         if self.shuffle {
             tmp.shuffle(rng);
         }
-        tmp.into_iter()
-            .map(|(t, d)| Note {
-                time: t + seq_start,
-                duration: *d,
-                interval: self.interval.clone(),
-                volume: volume / self.normalization
-                    * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
-                    / (self.accents.0
-                        + self
-                            .accents
-                            .1
-                            .iter()
-                            .map(|a| ((t + seq_start) * *a).as_secs().fract())
-                            .sum::<f64>()),
+        let tmp = tmp.into_iter().map(|(t, d)| Note {
+            time: t + seq_start,
+            duration: *d,
+            interval: self.interval.clone(),
+            glide: None,
+            volume: volume / self.normalization
+                * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
+                / (self.accents.0
+                    + self
+                        .accents
+                        .1
+                        .iter()
+                        .map(|a| ((t + seq_start) * *a).as_secs().fract())
+                        .sum::<f64>()),
+        });
+        let tmp: Vec<Note> = tmp
+            .map(|n| n.draw(&notes_buffer, rng, self.harmonise, self.harmoniser))
+            .flat_map(|to_push| {
+                (0..self.repeat).map(move |i| {
+                    let tmp = to_push.clone();
+                    Note {
+                        time: tmp.time + self.loop_len * i as f64,
+                        ..tmp
+                    }
+                })
             })
-            .for_each(|n| {
-                let to_push = n.draw(&notes_buffer, rng, self.harmonise, self.harmoniser);
-                if let Some(NotesGroup { notes, .. }) = notes_buffer
-                    .iter_mut()
-                    .find(|NotesGroup { token, .. }| *token == self.token)
-                {
-                    for p in (0..self.repeat).map(|i| {
-                        let tmp = to_push.clone();
-                        Note {
-                            time: tmp.time + self.loop_len * i as f64,
-                            ..tmp
-                        }
-                    }) {
-                        notes.push(p);
-                    }
-                    // v.push(to_push);
-                } else {
-                    for p in (0..self.repeat).map(|i| {
-                        let tmp = to_push.clone();
-                        Note {
-                            time: tmp.time + self.loop_len * i as f64,
-                            ..tmp
-                        }
-                    }) {
-                        notes_buffer.push(NotesGroup {
-                            token: self.token,
-                            bend: self.bend,
-                            vibrato: self.vibrato,
-                            notes: vec![p],
-                            wave_type: self.wave_type.clone(),
-                            chorus: self.chorus.clone(),
-                            attack_decay: self.attack_decay,
-                            pow_fact: self.pow_fact,
-                            spacial: self.spacial,
-                            volume: self.volume,
-                            tolerance: self.tolerance,
-                        });
-                    }
-                }
+            .collect();
+        let tmp = if self.glide {
+            let mut tmp = tmp;
+            for i in 0..tmp.len() - 1 {
+                let next_interval = tmp[i + 1].interval.clone();
+                tmp[i].glide = Some(next_interval);
+            }
+            tmp
+        } else {
+            tmp
+        };
+        if let Some(NotesGroup { notes, .. }) = notes_buffer
+            .iter_mut()
+            .find(|NotesGroup { token, .. }| *token == self.token)
+        {
+            notes.extend(tmp);
+        } else {
+            notes_buffer.push(NotesGroup {
+                token: self.token,
+                bend: self.bend,
+                vibrato: self.vibrato,
+                notes: tmp,
+                wave_type: self.wave_type.clone(),
+                chorus: self.chorus.clone(),
+                attack_decay: self.attack_decay,
+                pow_fact: self.pow_fact,
+                spacial: self.spacial,
+                volume: self.volume,
+                tolerance: self.tolerance,
             });
+        }
     }
 
     /// Core drawing for a single sequence.

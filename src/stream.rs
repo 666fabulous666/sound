@@ -61,6 +61,7 @@ pub fn stream(
                                 * generate_wave(
                                     wave_type,
                                     freq0 * note.interval.compute(),
+                                    note.glide.as_ref().map(|g| freq0 * g.compute()),
                                     t,
                                     note.duration,
                                     *attack_decay,

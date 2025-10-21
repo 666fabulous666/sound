@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     engine::score::ChorusParams,
     sign_f,
-    time_freq::{Freq, Time},
+    time_freq::{DivByFreq, Freq, Time},
 };
 pub mod drums;
 
@@ -43,6 +43,7 @@ impl ToString for &WaveType {
 pub fn generate_wave(
     wave_type: &WaveType,
     freq: Freq,
+    freq_glide: Option<Freq>,
     time: Time,
     duration: Time,
     attack_decay: (f64, f64),
@@ -52,6 +53,11 @@ pub fn generate_wave(
     pow_fact: (f64, Freq),
 ) -> f64 {
     let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
+    let time = if let Some(fg) = freq_glide {
+        glide_mid(freq, fg, duration, time)
+    } else {
+        time
+    };
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     let p = pow_fact.0 * (pow_fact.1 * time).exp2();
     let disto = |x: f64| x.powf(p);
@@ -68,10 +74,8 @@ pub fn generate_wave(
         WaveType::Sine => t.sin(),
         WaveType::Square => {
             if t % (2.0 * PI) < PI {
-                // 0.25
                 1.0
             } else {
-                // -0.25
                 -1.0
             }
         }
@@ -82,7 +86,6 @@ pub fn generate_wave(
         WaveType::Sawtooth => {
             let t = t / (2.0 * PI);
             t - (0.5 + t).floor()
-            // 0.5 * (t - (0.5 + t).floor())
         }
         _ => unreachable!(),
     };
@@ -97,8 +100,6 @@ pub fn generate_wave(
             let asym_pow_k = chorus.asym.powi(k as i32);
             let tmp1 = f(phase * delta1.powi(k as i32));
             let tmp2 = f(phase / delta2.powi(k as i32));
-            // let tmp1 = tmp1.signum() * tmp1.abs().min(1.0).powf(p);
-            // let tmp2 = tmp2.signum() * tmp2.abs().min(1.0).powf(p);
             let tmp1 = sign_f(tmp1, disto);
             let tmp2 = sign_f(tmp2, disto);
             let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
@@ -160,4 +161,42 @@ pub fn hash_f64_to_minus1_1(x: f64) -> f64 {
 
     // Map [0,1) -> [-1,1)
     2.0 * u01 - 1.0
+}
+
+/// Polynomial time mapping for a frequency glide:
+/// p(t) = t + ((f2 - f1) / (2 * d * f1)) * t²
+///
+/// f1: start frequency (Hz)
+/// f2: end frequency (Hz)
+/// d:  glide duration (seconds)
+/// t:  current time (seconds)
+pub fn help_glide(f1: Freq, f2: Freq, d: Time, t: Time) -> Time {
+    t + t * ((f2 - f1) * t) / (d * f1 * 2.0)
+}
+
+/// Middle-only glide time-warp:
+/// - [0, d/3]:      f_inst = f1  (p'(t) = 1)
+/// - [d/3, 2d/3]:   linear glide f1 -> f2 (p'(t) ramps linearly)
+/// - [2d/3, d]:     f_inst = f2  (p'(t) = f2/f1)
+///
+/// Returns p(t) so your sample is: (2.0*PI*f1*glide_mid(f1,f2,d,t)).sin()
+pub fn glide_mid(f1: Freq, f2: Freq, d: Time, t: Time) -> Time {
+    let third = d / 3.0;
+
+    if t <= third {
+        // Constant f1: p(t) = t
+        t
+    } else if t <= third * 2.0 {
+        // Middle third: quadratic time-warp giving linear freq ramp
+        // p(t) = t + k * (t - d/3)^2, with k = 3(f2 - f1) / (2 d f1)
+        let k = (f2 - f1) * 3.0 / (d * 2.0 * f1);
+        let tau = t - third;
+        t + tau * (k * tau)
+    } else {
+        // Last third: keep instantaneous freq = f2  => p'(t) = f2/f1
+        // p(t) = p(2d/3) + (t - 2d/3) * (f2/f1)
+        let k = (f2 - f1) * 3.0 / (d * 2.0 * f1);
+        let p_2thirds = third * 2.0 + third * (third * k); // p at 2d/3
+        p_2thirds + (t - third * 2.0) * (f2 / f1)
+    }
 }
