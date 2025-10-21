@@ -40,6 +40,8 @@ pub struct Sequence {
     pub time_quantum: (usize, usize),
     #[serde(default = "default_proba")]
     pub proba: f64,
+    #[serde(default = "default_harmoniser")]
+    pub harmoniser: [[u32; 7]; 2],
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize,
     #[serde(default = "default_volume")]
@@ -105,6 +107,7 @@ impl Sequence {
             shuffle: default_shuffle(),
             name: format!("seq {}", token.to_string()),
             harmonise: default_harmonise(),
+            harmoniser: default_harmoniser(),
             proba: default_proba(),
         }
     }
@@ -173,7 +176,7 @@ impl Sequence {
                             .sum::<f64>()),
             })
             .for_each(|n| {
-                let to_push = n.draw(&notes_buffer, rng, self.harmonise);
+                let to_push = n.draw(&notes_buffer, rng, self.harmonise, self.harmoniser);
                 if let Some(NotesGroup { notes, .. }) = notes_buffer
                     .iter_mut()
                     .find(|NotesGroup { token, .. }| *token == self.token)

@@ -2,7 +2,7 @@ pub mod hover_texts;
 mod navigation;
 use std::fmt::Display;
 
-use egui::{RichText, ScrollArea, Slider, TextEdit};
+use egui::{Grid, RichText, ScrollArea, Slider, TextEdit};
 
 use crate::{
     app::{
@@ -1004,6 +1004,77 @@ impl GuiApp {
                                                         }
                                                     }
                                                 });
+                                            } else {
+                                                ui.collapsing("Harmoniser", |ui| {
+                                                    let mut harmoniser = seq_mut.harmoniser; // [[u32;7];2]
+                                                    let mut changed = false;
+
+                                                    ui.label(
+                                                        RichText::new(
+                                                            "Weights per interval (0..=6)",
+                                                        )
+                                                        .weak(),
+                                                    );
+                                                    ui.add_space(4.0);
+
+                                                    Grid::new("harmoniser_grid_inverted")
+                                                        .striped(true)
+                                                        .num_columns(3) // interval label + 2 modes
+                                                        .show(ui, |ui| {
+                                                            // Header
+                                                            ui.label(
+                                                                RichText::new("Interval").weak(),
+                                                            );
+                                                            ui.label(
+                                                                RichText::new("Overlapping").weak(),
+                                                            );
+                                                            ui.label(
+                                                                RichText::new("Non-overlapping")
+                                                                    .weak(),
+                                                            );
+                                                            ui.end_row();
+
+                                                            // Rows: one per interval
+                                                            for i in 0..=6 {
+                                                                ui.label(format!("{i}"));
+                                                                for j in 0..=1 {
+                                                                    let r = u32_cell(
+                                                                        ui,
+                                                                        &mut harmoniser[j][i],
+                                                                        0..=32,
+                                                                        0,
+                                                                    );
+                                                                    if r.changed() {
+                                                                        changed = true;
+                                                                    }
+                                                                }
+                                                                ui.end_row();
+                                                            }
+                                                        });
+
+                                                    ui.horizontal_wrapped(|ui| {
+                                                        if ui.button("Reset all to 16").clicked() {
+                                                            harmoniser = [[16; 7]; 2];
+                                                            changed = true;
+                                                        }
+                                                        if ui.button("Reset defaults").clicked() {
+                                                            harmoniser = default_harmoniser();
+                                                            changed = true;
+                                                        }
+                                                        if ui.button("Copy Overlapping to Non-overlapping").clicked() {
+                                                            harmoniser[1] = harmoniser[0];
+                                                            changed = true;
+                                                        }
+                                                        if ui.button("Copy Non-overlapping to Overlapping").clicked() {
+                                                            harmoniser[0] = harmoniser[1];
+                                                            changed = true;
+                                                        }
+                                                    });
+
+                                                    if changed {
+                                                        seq_mut.harmoniser = harmoniser;
+                                                    }
+                                                });
                                             }
                                             ui.separator();
                                             changed |= ui
@@ -1274,6 +1345,28 @@ where
         });
     if resp.secondary_clicked() {
         *value = reset_to;
+        resp.mark_changed();
+    }
+    resp
+}
+/// Small helper: u32 slider with right-click reset to `reset_to`.
+fn u32_cell(
+    ui: &mut egui::Ui,
+    v: &mut u32,
+    range: std::ops::RangeInclusive<u32>,
+    reset_to: u32,
+) -> egui::Response {
+    let mut resp = ui
+        .add(
+            egui::Slider::new(v, range)
+                .clamping(egui::SliderClamping::Edits)
+                .step_by(1.0)
+                .show_value(true),
+        )
+        .on_hover_text("Right-click to reset");
+    if resp.secondary_clicked() {
+        *v = reset_to;
+        // mark as changed so caller can detect it
         resp.mark_changed();
     }
     resp

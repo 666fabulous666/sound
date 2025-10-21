@@ -18,6 +18,7 @@ impl Note {
         context: &[NotesGroup],
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
+        harmoniser: [[u32; 7]; 2],
     ) -> Self {
         match &self.interval {
             Interval::RDTempered(n_rd_steps, base, octave) => {
@@ -56,7 +57,7 @@ impl Note {
 
                 let degree = if harmonise {
                     (0..12)
-                        .min_by_key(|d| tension(others.iter().cloned(), *d))
+                        .min_by_key(|d| tension(others.iter().cloned(), *d, harmoniser))
                         .unwrap()
                 } else {
                     (0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12
@@ -71,33 +72,37 @@ impl Note {
         }
     }
 }
-fn tension(ns: impl Iterator<Item = (i32, bool)> + Clone, d: i32) -> u32 {
+fn tension(
+    ns: impl Iterator<Item = (i32, bool)> + Clone,
+    d: i32,
+    harmoniser: [[u32; 7]; 2],
+) -> u32 {
     ns.into_iter()
-        .map(|(n, overlap)| tension2(n, d, overlap))
+        .map(|(n, overlap)| tension2(n, d, overlap, harmoniser))
         .sum()
 }
-fn tension2(n1: i32, n2: i32, overlap: bool) -> u32 {
+fn tension2(n1: i32, n2: i32, overlap: bool, harmoniser: [[u32; 7]; 2]) -> u32 {
     let d = dist12(n1, n2);
     if overlap {
         match d {
-            0 => 10,
-            1 => 11,
-            2 => 11,
-            3 => 4,
-            4 => 3,
-            5 => 0,
-            6 => 8,
+            0 => harmoniser[0][0],
+            1 => harmoniser[0][1],
+            2 => harmoniser[0][2],
+            3 => harmoniser[0][3],
+            4 => harmoniser[0][4],
+            5 => harmoniser[0][5],
+            6 => harmoniser[0][6],
             _ => unreachable!(),
         }
     } else {
         match d {
-            0 => 1,
-            1 => 2,
-            2 => 2,
-            3 => 0,
-            4 => 0,
-            5 => 0,
-            6 => 3,
+            0 => harmoniser[1][0],
+            1 => harmoniser[1][1],
+            2 => harmoniser[1][2],
+            3 => harmoniser[1][3],
+            4 => harmoniser[1][4],
+            5 => harmoniser[1][5],
+            6 => harmoniser[1][6],
             _ => unreachable!(),
         }
     }
