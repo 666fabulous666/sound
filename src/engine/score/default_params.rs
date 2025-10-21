@@ -77,6 +77,9 @@ pub fn default_loop_len() -> Time {
 pub fn default_time_quantum() -> (usize, usize) {
     (1, 8)
 }
+pub fn default_proba() -> f64 {
+    1.0
+}
 pub fn default_tempo() -> f64 {
     60.0
 }

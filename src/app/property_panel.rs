@@ -164,6 +164,28 @@ impl GuiApp {
                                             }
                                         }
                                     });
+                                    ui.horizontal(|ui| {
+                                        let mut proba = seq_mut.proba;
+
+                                        let proba_resp = slider_with_reset(
+                                            ui,
+                                            &mut proba,
+                                            0.0..=1.0,
+                                            "proba",
+                                            None,
+                                            default_proba(),
+                                            false,
+                                        )
+                                        .on_hover_ui(|ui| {
+                                            ui.label(
+                                                egui::RichText::new("Right-click to reset").weak(),
+                                            );
+                                        });
+
+                                        if proba_resp.changed() || proba_resp.secondary_clicked() {
+                                            seq_mut.proba = proba.clamp(0.0, 1.0);
+                                        }
+                                    });
                                 }
 
                                 ui.separator();
@@ -1204,7 +1226,15 @@ impl GuiApp {
                     if edited_seq {
                         if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                let sequence = self.score.track_root.get_mut(&sel).unwrap().clone();
+                                let mut sequence =
+                                    self.score.track_root.get_mut(&sel).unwrap().clone();
+                                if let Some(Sequence {
+                                    ref mut not_generate_until,
+                                    ..
+                                }) = sequence.as_seq_mut()
+                                {
+                                    *not_generate_until = None;
+                                }
                                 self.edit_node_at(sequence, &sel);
                             }
                         }

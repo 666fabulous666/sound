@@ -3,6 +3,7 @@ use std::iter::once;
 use itertools::Itertools;
 use rand::seq::index::sample;
 use rand::seq::SliceRandom;
+use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -37,6 +38,8 @@ pub struct Sequence {
     pub wave_type: WaveType,
     #[serde(default = "default_time_quantum")]
     pub time_quantum: (usize, usize),
+    #[serde(default = "default_proba")]
+    pub proba: f64,
     #[serde(default = "default_beat_offset")]
     pub beat_offset: usize,
     #[serde(default = "default_volume")]
@@ -102,6 +105,7 @@ impl Sequence {
             shuffle: default_shuffle(),
             name: format!("seq {}", token.to_string()),
             harmonise: default_harmonise(),
+            proba: default_proba(),
         }
     }
     pub fn draw(
@@ -231,7 +235,9 @@ impl Sequence {
             .as_ref()
             .map_or(true, |until| now >= *until)
         {
-            self.draw(notes, rng, start, volume);
+            if rng.gen_bool(self.proba) {
+                self.draw(notes, rng, start, volume);
+            }
             self.not_generate_until =
                 Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);
         }

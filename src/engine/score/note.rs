@@ -78,71 +78,28 @@ fn tension(ns: impl Iterator<Item = (i32, bool)> + Clone, d: i32) -> u32 {
 }
 fn tension2(n1: i32, n2: i32, overlap: bool) -> u32 {
     let d = dist12(n1, n2);
-    match d {
-        // 0 => 10,
-        // 1 => 11,
-        // 2 => 9,
-        // 3 => 4,
-        // 4 => 3,
-        // 5 => 0,
-        // 6 => 8,
-        0 => {
-            if overlap {
-                1
-            } else {
-                10
-            }
+    if overlap {
+        match d {
+            0 => 10,
+            1 => 11,
+            2 => 11,
+            3 => 4,
+            4 => 3,
+            5 => 0,
+            6 => 8,
+            _ => unreachable!(),
         }
-        1 => {
-            if overlap {
-                11
-            } else {
-                3
-            }
+    } else {
+        match d {
+            0 => 1,
+            1 => 2,
+            2 => 2,
+            3 => 0,
+            4 => 0,
+            5 => 0,
+            6 => 3,
+            _ => unreachable!(),
         }
-        2 => {
-            if overlap {
-                9
-            } else {
-                2
-            }
-        }
-        3 => {
-            if overlap {
-                3
-            } else {
-                5
-            }
-        }
-        4 => {
-            if overlap {
-                3
-            } else {
-                4
-            }
-        }
-        5 => {
-            if overlap {
-                0
-            } else {
-                3
-            }
-        }
-        6 => {
-            if overlap {
-                8
-            } else {
-                6
-            }
-        }
-        // 0 => 125,
-        // 1 => 101,
-        // 2 => 99,
-        // 3 => 50,
-        // 4 => 45,
-        // 5 => 0,
-        // 6 => 98,
-        _ => unreachable!(),
     }
 }
 fn dist12(n1: i32, n2: i32) -> i32 {
