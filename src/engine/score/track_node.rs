@@ -235,7 +235,6 @@ impl TrackNode {
                         ch.draw_node(notes, rng, now, anticipate, volume * node_volume);
                     }
                 }
-                // *not_generate_until = min_length.map(|min_length| min_length - GENERATE_EARLY);
             }
         }
     }
