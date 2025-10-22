@@ -295,6 +295,8 @@ impl Score {
             spacial: 0.5,
             collapsed: false,
             children: vec![node],
+            proba: 1.0,
+            not_generate_until: None,
         };
 
         // 3) Insert group back at the same position

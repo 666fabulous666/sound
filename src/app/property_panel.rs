@@ -1133,6 +1133,7 @@ impl GuiApp {
                                         name,
                                         collapsed,
                                         volume,
+                                        proba,
                                         ..
                                     } => {
                                         // Name field
@@ -1169,7 +1170,9 @@ impl GuiApp {
                                         }
 
                                         // Group volume
-                                        ui.add(Slider::new(volume, 0.0..=2.0).text("Volume"));
+                                        ui.add(Slider::new(volume, 0.0..=5.0).text("Volume"));
+                                        // Group proba
+                                        ui.add(Slider::new(proba, 0.0..=1.0).text("Proba"));
                                     }
                                     TrackNode::Seq(_) => unreachable!(),
                                 }

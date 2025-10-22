@@ -1,4 +1,6 @@
+use crate::{engine::score::default_proba, GENERATE_EARLY};
 use core::marker::PhantomData;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -13,10 +15,14 @@ pub enum TrackNode {
         id: Token,
         name: String,
         muted: bool,
+        #[serde(default = "default_proba")]
+        proba: f64,
         volume: f64,  // mix gain multiplier (>= 0.0)
         spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
         collapsed: bool,
         children: Vec<TrackNode>,
+        #[serde(default)]
+        not_generate_until: Option<Time>,
     },
     Seq(Sequence),
 }
@@ -53,6 +59,8 @@ impl TrackNode {
             spacial: 0.5,
             collapsed: false,
             children: Vec::new(),
+            proba: 1.0,
+            not_generate_until: None,
         }
     }
 
@@ -212,12 +220,22 @@ impl TrackNode {
                 children,
                 muted,
                 volume,
+                proba,
+                not_generate_until,
                 ..
             } => {
-                let volume = if *muted { 0.0 } else { *volume };
-                for ch in children {
-                    ch.draw_node(notes, rng, now, anticipate, volume * node_volume);
+                let volume = if *muted || !rng.gen_bool(*proba) {
+                    0.0
+                } else {
+                    *volume
+                };
+                if not_generate_until.map_or(true, |until| now >= until) {
+                    if rng.gen_bool(*proba) {}
+                    for ch in children {
+                        ch.draw_node(notes, rng, now, anticipate, volume * node_volume);
+                    }
                 }
+                // *not_generate_until = min_length.map(|min_length| min_length - GENERATE_EARLY);
             }
         }
     }

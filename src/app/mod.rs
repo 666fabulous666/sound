@@ -108,6 +108,8 @@ where
             spacial: 0.5,
             collapsed: false,
             children,
+            proba: 1.0,
+            not_generate_until: None,
         },
         SequencesCompat::Seqs(seqs) => TrackNode::Group {
             id: Token(0),
@@ -117,6 +119,8 @@ where
             spacial: 0.5,
             collapsed: false,
             children: seqs.into_iter().map(TrackNode::Seq).collect(),
+            proba: 1.0,
+            not_generate_until: None,
         },
     })
 }
@@ -384,6 +388,8 @@ impl GuiApp {
                 spacial: 0.5,
                 collapsed: false,
                 children: vec![seq],
+                proba: 1.0,
+                not_generate_until: None,
             },
         };
     }
