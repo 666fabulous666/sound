@@ -84,6 +84,7 @@ impl Interval {
 pub struct NotesGroup {
     pub attack_decay: (f64, f64),
     pub lp_attack_decay: (f64, f64),
+    pub cutoff_multiplier: f64,
     pub bend: (f64, f64),
     pub chorus: ChorusParams,
     pub notes: Vec<Note>,

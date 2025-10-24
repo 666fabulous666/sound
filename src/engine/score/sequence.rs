@@ -56,6 +56,8 @@ pub struct Sequence {
     pub attack_decay: (f64, f64),
     #[serde(default = "default_attack_decay")]
     pub lp_attack_decay: (f64, f64),
+    #[serde(default = "default_cutoff_multiplier")]
+    pub cutoff_multiplier: f64,
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     #[serde(default = "default_vibrato")]
@@ -115,6 +117,7 @@ impl Sequence {
             harmoniser: default_harmoniser(),
             proba: default_proba(),
             glide: default_glide(),
+            cutoff_multiplier: default_cutoff_multiplier(),
         }
     }
     pub fn draw(
@@ -195,9 +198,11 @@ impl Sequence {
             .collect();
         let tmp = if self.glide {
             let mut tmp = tmp;
-            for i in 0..tmp.len() - 1 {
-                let next_interval = tmp[i + 1].interval.clone();
-                tmp[i].glide = Some(next_interval);
+            if tmp.len() > 1 {
+                for i in 0..tmp.len() - 1 {
+                    let next_interval = tmp[i + 1].interval.clone();
+                    tmp[i].glide = Some(next_interval);
+                }
             }
             tmp
         } else {
@@ -222,6 +227,7 @@ impl Sequence {
                 spacial: self.spacial,
                 volume: self.volume,
                 tolerance: self.tolerance,
+                cutoff_multiplier: self.cutoff_multiplier,
             });
         }
     }

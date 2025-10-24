@@ -13,6 +13,9 @@ pub fn default_pow_fact() -> (f64, Freq) {
 pub fn default_attack_decay() -> (f64, f64) {
     (4.0, 0.3333)
 }
+pub fn default_cutoff_multiplier() -> f64 {
+    4.0
+}
 
 pub fn default_drum_attack_decay() -> (f64, f64) {
     (5.0, 0.5)

@@ -222,6 +222,7 @@ impl GuiApp {
                                     let mut decay = seq_mut.attack_decay.1;
                                     let mut lp_attack = seq_mut.lp_attack_decay.0;
                                     let mut lp_decay = seq_mut.lp_attack_decay.1;
+                                    let mut lp_cutoff_multiplier = seq_mut.cutoff_multiplier;
 
                                     let def = if DRUM_WAVES.contains(&seq_mut.wave_type) {
                                         default_drum_attack_decay()
@@ -265,6 +266,15 @@ impl GuiApp {
                                         def.1,
                                         true,
                                     );
+                                    let lp_cutoff_multiplier_resp = slider_with_reset(
+                                        ui,
+                                        &mut lp_cutoff_multiplier,
+                                        0.01..=100.0,
+                                        "Lowpass cutoff muliplier",
+                                        None,
+                                        def.1,
+                                        true,
+                                    );
 
                                     let changed = attack_resp.changed()
                                         || attack_resp.secondary_clicked()
@@ -273,11 +283,14 @@ impl GuiApp {
                                         || lp_attack_resp.changed()
                                         || lp_attack_resp.secondary_clicked()
                                         || lp_decay_resp.changed()
-                                        || lp_decay_resp.secondary_clicked();
+                                        || lp_decay_resp.secondary_clicked()
+                                        || lp_cutoff_multiplier_resp.changed()
+                                        || lp_cutoff_multiplier_resp.secondary_clicked();
 
                                     if changed {
                                         seq_mut.attack_decay = (attack, decay);
                                         seq_mut.lp_attack_decay = (lp_attack, lp_decay);
+                                        seq_mut.cutoff_multiplier = lp_cutoff_multiplier;
                                         rescale_envelope(seq_mut);
 
                                         if let Some(ng) = self
@@ -288,6 +301,7 @@ impl GuiApp {
                                         {
                                             ng.attack_decay = seq_mut.attack_decay;
                                             ng.lp_attack_decay = seq_mut.lp_attack_decay;
+                                            ng.cutoff_multiplier = seq_mut.cutoff_multiplier;
                                         }
                                     }
                                 });

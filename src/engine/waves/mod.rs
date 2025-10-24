@@ -48,6 +48,7 @@ pub fn generate_wave(
     duration: Time,
     attack_decay: (f64, f64),
     lp_attack_decay: (f64, f64),
+    cutoff_multiplier: f64,
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
@@ -117,7 +118,12 @@ pub fn generate_wave(
         / (freq / Freq(440.0)).sqrt();
     let tmp = vol_envelope * sum_of_waves;
     let lp_envelope = envelope(lp_attack_decay.0, lp_attack_decay.1, duration)(time).min(1.0);
-    lowpass_step_cutoff(tmp, memory, freq * 12.0 * lp_envelope, sample_rate)
+    lowpass_step_cutoff(
+        tmp,
+        memory,
+        freq * cutoff_multiplier * lp_envelope,
+        sample_rate,
+    )
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {
