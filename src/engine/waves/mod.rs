@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     engine::score::ChorusParams,
     sign_f,
-    time_freq::{DivByFreq, Freq, Time},
+    time_freq::{Freq, Time},
 };
 pub mod drums;
 
@@ -47,12 +47,15 @@ pub fn generate_wave(
     time: Time,
     duration: Time,
     attack_decay: (f64, f64),
+    lp_attack_decay: (f64, f64),
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
     pow_fact: (f64, Freq),
+    memory: &mut f64,
+    sample_rate: Freq,
 ) -> f64 {
-    let envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
+    let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let time = if let Some(fg) = freq_glide {
         glide_mid(freq, fg, duration, time)
     } else {
@@ -62,11 +65,13 @@ pub fn generate_wave(
     let p = pow_fact.0 * (pow_fact.1 * time).exp2();
     let disto = |x: f64| x.powf(p);
     match wave_type {
-        WaveType::HiHat => return envelope * sign_f(drums::hi_hat(bend_vib_time), disto),
-        WaveType::Kick => return envelope * sign_f(drums::kick(bend_vib_time), disto),
-        WaveType::Snare => return envelope * sign_f(drums::snare(bend_vib_time), disto),
-        WaveType::Ride => return envelope * sign_f(drums::ride(bend_vib_time), disto),
-        WaveType::Darbuka => return envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto),
+        WaveType::HiHat => return vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto),
+        WaveType::Kick => return vol_envelope * sign_f(drums::kick(bend_vib_time), disto),
+        WaveType::Snare => return vol_envelope * sign_f(drums::snare(bend_vib_time), disto),
+        WaveType::Ride => return vol_envelope * sign_f(drums::ride(bend_vib_time), disto),
+        WaveType::Darbuka => {
+            return vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto)
+        }
         _ => {}
     }
     let f = |t: f64| match wave_type {
@@ -110,7 +115,9 @@ pub fn generate_wave(
         .sum::<f64>()
         / norm.sqrt()
         / (freq / Freq(440.0)).sqrt();
-    envelope * sum_of_waves
+    let tmp = vol_envelope * sum_of_waves;
+    let lp_envelope = envelope(lp_attack_decay.0, lp_attack_decay.1, duration)(time).min(1.0);
+    lowpass_step_cutoff(tmp, memory, freq * 12.0 * lp_envelope, sample_rate)
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {
@@ -199,4 +206,36 @@ pub fn glide_mid(f1: Freq, f2: Freq, d: Time, t: Time) -> Time {
         let p_2thirds = third * 2.0 + third * (third * k); // p at 2d/3
         p_2thirds + (t - third * 2.0) * (f2 / f1)
     }
+}
+
+/// One step of a 1-pole low-pass filter with a frequency cutoff.
+///
+/// Arguments:
+/// - `x`:        current raw sample
+/// - `memory`:   previous output sample (will be updated in place)
+/// - `cutoff`:   desired cutoff frequency in Hz
+/// - `sample_rate`: audio sample rate in Hz
+///
+/// Returns the filtered sample y[n].
+///
+/// Behavior:
+/// - higher `cutoff`  -> brighter, follows input more quickly
+/// - lower `cutoff`   -> darker, slower/smoother
+/// - very low cutoff  -> almost DC (holdy / laggy)
+///
+/// This is stable for 0 < cutoff < sample_rate/2.
+pub fn lowpass_step_cutoff(x: f64, memory: &mut f64, cutoff: Freq, sample_rate: Freq) -> f64 {
+    // Convert to Hz as f64
+    let fc = cutoff.as_hz().max(0.0);
+    let fs = sample_rate.as_hz().max(1.0); // avoid div-by-zero
+
+    // Compute smoothing coeff alpha
+    // alpha = 1 - exp(-2π fc / fs)
+    let alpha = 1.0 - (-2.0 * std::f64::consts::PI * fc / fs).exp();
+
+    // Do the standard 1-pole low-pass update:
+    // y[n] = alpha*x[n] + (1-alpha)*y[n-1]
+    *memory = alpha * x + (1.0 - alpha) * *memory;
+
+    *memory
 }

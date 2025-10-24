@@ -220,6 +220,8 @@ impl GuiApp {
                                 ui.collapsing("Envelope", |ui| {
                                     let mut attack = seq_mut.attack_decay.0;
                                     let mut decay = seq_mut.attack_decay.1;
+                                    let mut lp_attack = seq_mut.lp_attack_decay.0;
+                                    let mut lp_decay = seq_mut.lp_attack_decay.1;
 
                                     let def = if DRUM_WAVES.contains(&seq_mut.wave_type) {
                                         default_drum_attack_decay()
@@ -245,14 +247,37 @@ impl GuiApp {
                                         def.1,
                                         true,
                                     );
+                                    let lp_attack_resp = slider_with_reset(
+                                        ui,
+                                        &mut lp_attack,
+                                        0.01..=100.0,
+                                        "Lowpass Attack",
+                                        None,
+                                        def.0,
+                                        true,
+                                    );
+                                    let lp_decay_resp = slider_with_reset(
+                                        ui,
+                                        &mut lp_decay,
+                                        0.01..=100.0,
+                                        "Lowpass Decay",
+                                        None,
+                                        def.1,
+                                        true,
+                                    );
 
                                     let changed = attack_resp.changed()
                                         || attack_resp.secondary_clicked()
                                         || decay_resp.changed()
-                                        || decay_resp.secondary_clicked();
+                                        || decay_resp.secondary_clicked()
+                                        || lp_attack_resp.changed()
+                                        || lp_attack_resp.secondary_clicked()
+                                        || lp_decay_resp.changed()
+                                        || lp_decay_resp.secondary_clicked();
 
                                     if changed {
                                         seq_mut.attack_decay = (attack, decay);
+                                        seq_mut.lp_attack_decay = (lp_attack, lp_decay);
                                         rescale_envelope(seq_mut);
 
                                         if let Some(ng) = self
@@ -262,6 +287,7 @@ impl GuiApp {
                                             .find(|ng| ng.token == seq_mut.token)
                                         {
                                             ng.attack_decay = seq_mut.attack_decay;
+                                            ng.lp_attack_decay = seq_mut.lp_attack_decay;
                                         }
                                     }
                                 });

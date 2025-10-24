@@ -45,7 +45,7 @@ pub fn sign_f<T: num_traits::Signed>(arg: T, f: impl Fn(T) -> T) -> T {
     arg.signum() * f(arg.abs())
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Token(usize);
 
 impl Deref for Token {

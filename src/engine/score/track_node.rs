@@ -1,4 +1,4 @@
-use crate::{engine::score::default_proba, GENERATE_EARLY};
+use crate::engine::score::default_proba;
 use core::marker::PhantomData;
 use rand::Rng;
 use serde::{Deserialize, Serialize};

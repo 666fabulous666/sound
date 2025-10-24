@@ -1,7 +1,10 @@
 use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
-use std::sync::{atomic::AtomicU64, Arc};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicU64, Arc},
+};
 
 use crate::{
     engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
@@ -27,6 +30,7 @@ pub fn stream(
     // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
+        let mut lp_memories = HashMap::new();
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
             let delays = delays.load();
@@ -47,13 +51,18 @@ pub fn stream(
                     wave_type,
                     chorus,
                     attack_decay,
+                    lp_attack_decay,
                     pow_fact,
                     spacial,
                     volume,
+                    token,
                     ..
                 } in note_groups.iter()
                 {
-                    for note in notes_from_seq {
+                    for note in notes_from_seq.iter() {
+                        let mut memory = lp_memories
+                            .entry((token.clone(), (1024.0 * note.time.as_secs()) as u32)) // FIXME: not a valid key
+                            .or_insert(0.0);
                         if note.time < now && now <= note.time + note.duration {
                             let t = now - note.time;
                             let volume = volume * note.volume;
@@ -65,10 +74,13 @@ pub fn stream(
                                     t,
                                     note.duration,
                                     *attack_decay,
+                                    *lp_attack_decay,
                                     *bend,
                                     *vibrato,
                                     chorus,
                                     *pow_fact,
+                                    &mut memory,
+                                    sample_rate,
                                 );
                             dry_left += (1.0 - spacial) * dry;
                             dry_right += spacial * dry;

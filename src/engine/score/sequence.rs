@@ -54,6 +54,8 @@ pub struct Sequence {
     pub normalization: f64,
     #[serde(default = "default_attack_decay")]
     pub attack_decay: (f64, f64),
+    #[serde(default = "default_attack_decay")]
+    pub lp_attack_decay: (f64, f64),
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     #[serde(default = "default_vibrato")]
@@ -94,6 +96,7 @@ impl Sequence {
             volume: default_volume(),
             mute: default_mute(),
             attack_decay: default_attack_decay(),
+            lp_attack_decay: default_attack_decay(),
             token,
             not_generate_until: None,
             bend: default_bend(),
@@ -214,6 +217,7 @@ impl Sequence {
                 wave_type: self.wave_type.clone(),
                 chorus: self.chorus.clone(),
                 attack_decay: self.attack_decay,
+                lp_attack_decay: self.lp_attack_decay,
                 pow_fact: self.pow_fact,
                 spacial: self.spacial,
                 volume: self.volume,

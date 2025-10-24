@@ -1,4 +1,4 @@
-use rand::{seq::SliceRandom, Rng};
+use rand::seq::SliceRandom;
 use serde::Deserialize;
 
 use super::Interval;
