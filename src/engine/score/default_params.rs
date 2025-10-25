@@ -53,8 +53,12 @@ pub fn default_harmonise() -> bool {
     false
 }
 
-pub fn default_beat_offset() -> usize {
+pub fn default_beat_offset() -> i32 {
     0
+}
+
+pub fn default_tension() -> usize {
+    1
 }
 
 pub fn default_volume() -> f64 {

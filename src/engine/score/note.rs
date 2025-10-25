@@ -1,3 +1,4 @@
+use itertools::{Combinations, Itertools};
 use rand::seq::SliceRandom;
 use serde::Deserialize;
 
@@ -12,6 +13,7 @@ pub struct Note {
     pub interval: Interval,
     pub glide: Option<Interval>,
     pub volume: f64,
+    pub tension: usize,
 }
 impl Note {
     pub fn draw(
@@ -20,7 +22,8 @@ impl Note {
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
         harmoniser: [[u32; 7]; 2],
-    ) -> Self {
+        step_as_time: Time,
+    ) -> Vec<Self> {
         match &self.interval {
             Interval::RDTempered(n_rd_steps, base, octave) => {
                 let others = context
@@ -57,20 +60,33 @@ impl Note {
                 let seed = others.choose(rng).unwrap_or(&(0, false)).0;
 
                 let degree = if harmonise {
-                    (0..12)
-                        .min_by_key(|d| tension(others.iter().cloned(), *d, harmoniser))
-                        .unwrap()
+                    let tmp = (-11..12i32)
+                        .combinations(self.tension)
+                        .min_by_key(|d| {
+                            tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
+                        })
+                        .unwrap();
+                    tmp
+                    // tmp.take(self.tension).collect_vec()
+                    // (0..12)
+                    //     .min_by_key(|d| tension(others.iter().cloned(), *d, harmoniser))
+                    //     .unwrap()
                 } else {
-                    (0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12
+                    vec![(0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12]
                 };
 
-                Self {
-                    interval: Interval::Tempered(degree, *octave),
-                    glide: self.glide.clone(),
-                    ..*self
-                }
+                degree
+                    .iter()
+                    .enumerate()
+                    .map(|(n, d)| Self {
+                        interval: Interval::Tempered(*d, *octave),
+                        glide: self.glide.clone(),
+                        time: self.time + (step_as_time * 0.1 * n as f64), // WARNING: hardcoded arpegio
+                        ..*self
+                    })
+                    .collect_vec()
             }
-            _ => self.clone(),
+            _ => vec![self.clone()],
         }
     }
 }
@@ -82,6 +98,35 @@ fn tension(
     ns.into_iter()
         .map(|(n, overlap)| tension2(n, d, overlap, harmoniser))
         .sum()
+}
+fn tension_family(
+    ns: impl IntoIterator<Item = (i32, bool)>,
+    c: impl IntoIterator<Item = i32>,
+    harmoniser: [[u32; 7]; 2],
+) -> u32 {
+    // Collect combinations so we can reuse them
+    let combo_vals: Vec<i32> = c.into_iter().collect();
+
+    // --- 1. sum tensions between ns and c ---
+    let mut total = ns
+        .into_iter()
+        .map(|(n, overlap)| {
+            combo_vals
+                .iter()
+                .copied()
+                .map(|d| tension2(n, d, overlap, harmoniser))
+                .sum::<u32>()
+        })
+        .sum::<u32>();
+
+    // --- 2. sum pairwise tensions within c itself ---
+    for i in 0..combo_vals.len() {
+        for j in (i + 1)..combo_vals.len() {
+            total += tension2(combo_vals[i], combo_vals[j], true, harmoniser);
+        }
+    }
+
+    total
 }
 fn tension2(n1: i32, n2: i32, overlap: bool, harmoniser: [[u32; 7]; 2]) -> u32 {
     let d = dist12(n1, n2);

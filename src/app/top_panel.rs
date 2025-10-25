@@ -100,6 +100,7 @@ impl GuiApp {
                                 })
                                 .clicked();
                         }
+                        ui.label(format!("{:.1}s", self.now().as_secs()));
                     });
                     if !self.show_start {
                         ui.separator();

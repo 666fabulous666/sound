@@ -17,7 +17,7 @@ pub fn stream(
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<Vec<NotesGroup>>>,
-    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>), // FIXME: should be dynamically shared with the callback
+    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
     delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
@@ -65,7 +65,7 @@ pub fn stream(
                             .entry((token.clone(), (1024.0 * note.time.as_secs()) as u32)) // FIXME: not a valid key
                             .or_insert(0.0);
                         if note.time < now && now <= note.time + note.duration {
-                            let t = now - note.time;
+                            let t = (now - note.time).rem_euclid(note.duration);
                             let volume = volume * note.volume;
                             let dry = volume
                                 * generate_wave(

@@ -1128,6 +1128,9 @@ impl GuiApp {
                                             seq_mut.shuffle = shuffle;
                                             edited_seq = true;
                                         }
+                                        if ui.add(egui::Slider::new(&mut seq_mut.tension, 0..=12).text("Tension")).changed() {
+                                            edited_seq = true;
+                                            }
                                     }
                                 });
                                 ui.collapsing("Accents", |ui| {

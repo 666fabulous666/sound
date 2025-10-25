@@ -43,7 +43,7 @@ pub struct Sequence {
     #[serde(default = "default_harmoniser")]
     pub harmoniser: [[u32; 7]; 2],
     #[serde(default = "default_beat_offset")]
-    pub beat_offset: usize,
+    pub beat_offset: i32,
     #[serde(default = "default_volume")]
     pub volume: f64,
     #[serde(default = "default_glide")]
@@ -78,6 +78,8 @@ pub struct Sequence {
     pub accents: (f64, Vec<f64>),
     #[serde(default = "default_shuffle")]
     pub shuffle: bool,
+    #[serde(default = "default_tension")]
+    pub tension: usize,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
     #[serde(default = "default_name")]
@@ -118,6 +120,7 @@ impl Sequence {
             proba: default_proba(),
             glide: default_glide(),
             cutoff_multiplier: default_cutoff_multiplier(),
+            tension: Default::default(),
         }
     }
     pub fn draw(
@@ -149,28 +152,34 @@ impl Sequence {
         .into_iter()
         .collect_vec();
         let step_as_time = Time(self.time_quantum.0 as f64 / self.time_quantum.1 as f64);
-        let ts =
-            (0..32768) // FIXME: do better
-                .filter(|i| inclusions.iter().any(|p| (i - self.beat_offset) % p == 0))
-                .filter(|i| {
-                    exclusions
-                        .iter()
-                        .all(|s| (i + 1 - self.beat_offset) % s != 0)
-                })
-                .map(|i| self.t_min + step_as_time * i as f64)
-                .take_while(|t| *t < self.t_max.min(self.loop_len));
-        let ds = ts
+        let ts = (0..32768) // FIXME: do better
+            .filter(|i| {
+                inclusions
+                    .iter()
+                    .any(|p| (i - self.beat_offset) % (*p as i32) == 0)
+            })
+            .filter(|i| {
+                exclusions
+                    .iter()
+                    .all(|s| (i + 1 - self.beat_offset) % (*s as i32) != 0)
+            })
+            .map(|i| self.t_min + step_as_time * i as f64)
+            .take_while(|t| *t < self.t_max.min(self.loop_len))
+            .collect_vec();
+        let mut ds = ts
             .clone()
+            .into_iter()
             .chain(once(self.t_max))
             .tuple_windows()
             .map(|(t1, t2)| t2 - t1)
             .collect::<Vec<_>>();
-        let mut tmp = ts.zip(ds.iter()).collect::<Vec<_>>();
+        ds.last_mut().map(|d| *d * 3.0); // WARNING: harcoded 3.0 ...
+        let mut tmp = ts.into_iter().zip(ds.iter()).collect::<Vec<_>>();
         if self.shuffle {
             tmp.shuffle(rng);
         }
-        let tmp = tmp.into_iter().map(|(t, d)| Note {
-            time: t + seq_start,
+        let tmp = tmp.into_iter().enumerate().map(|(n, (t, d))| Note {
+            time: t + seq_start, // + Time(1e-3 * ((7.3 * n as f64) % 5.0)),
             duration: *d,
             interval: self.interval.clone(),
             glide: None,
@@ -183,16 +192,29 @@ impl Sequence {
                         .iter()
                         .map(|a| ((t + seq_start) * *a).as_secs().fract())
                         .sum::<f64>()),
+            tension: self.tension,
         });
         let tmp: Vec<Note> = tmp
-            .map(|n| n.draw(&notes_buffer, rng, self.harmonise, self.harmoniser))
+            .map(|n| {
+                n.draw(
+                    &notes_buffer,
+                    rng,
+                    self.harmonise,
+                    self.harmoniser,
+                    step_as_time,
+                )
+            })
             .flat_map(|to_push| {
-                (0..self.repeat).map(move |i| {
-                    let tmp = to_push.clone();
-                    Note {
-                        time: tmp.time + self.loop_len * i as f64,
-                        ..tmp
-                    }
+                (0..self.repeat).flat_map(move |i| {
+                    // let tmp = to_push.clone();
+                    to_push
+                        .clone()
+                        .iter()
+                        .map(move |tmp| Note {
+                            time: tmp.time + self.loop_len * i as f64,
+                            ..tmp.clone()
+                        })
+                        .collect::<Vec<_>>()
                 })
             })
             .collect();
