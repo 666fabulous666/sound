@@ -27,6 +27,7 @@ impl Note {
         harmonise: bool,
         harmoniser: [[u32; 7]; 2],
         step_as_time: Time,
+        arpegio: f64,
     ) -> Vec<Self> {
         match &self.interval {
             Interval::RDTempered(n_rd_steps, base, octave) => {
@@ -95,7 +96,7 @@ impl Note {
                     .map(|(n, d)| Self {
                         interval: Interval::Tempered(*d, *octave),
                         glide: self.glide.clone(),
-                        time: self.time + (step_as_time * 0.1 * n as f64), // arpeggio offset
+                        time: self.time + (step_as_time * arpegio * n as f64),
                         ..*self
                     })
                     .collect::<Vec<_>>();

@@ -1,6 +1,7 @@
 use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
+use egui::emath::Numeric;
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicU64, Arc},
@@ -8,7 +9,7 @@ use std::{
 
 use crate::{
     engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
-    time_freq::{DivByFreq, Freq},
+    time_freq::{DivByFreq, Freq, Time},
     REVERB_BUFFER_LEN,
 };
 
@@ -60,11 +61,16 @@ pub fn stream(
                     ..
                 } in note_groups.iter()
                 {
-                    for note in notes_from_seq.iter() {
+                    for (i, note) in notes_from_seq.iter().enumerate() {
                         let mut memory = lp_memories
-                            .entry((token.clone(), (1024.0 * note.time.as_secs()) as u32)) // FIXME: not a valid key
+                            .entry((
+                                token.clone(),
+                                (1024.0 * note.time.as_secs()) as u32,
+                                i,
+                                (1024.0 * note.duration.as_secs()) as u32,
+                            )) // FIXME: not a valid key
                             .or_insert(0.0);
-                        if note.time < now && now <= note.time + note.duration {
+                        if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
                             let volume = 0.1 * volume * note.volume;
                             let dry = volume

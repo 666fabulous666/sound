@@ -68,6 +68,8 @@ pub struct Sequence {
     pub loop_len: Time,
     #[serde(default = "default_spacial")]
     pub spacial: f64,
+    #[serde(default = "default_arpegio")]
+    pub arpegio: f64,
     #[serde(default = "default_tolerance")]
     pub tolerance: (Time, Time),
     #[serde(default = "default_harmonise")]
@@ -124,6 +126,7 @@ impl Sequence {
             cutoff_multiplier: default_cutoff_multiplier(),
             chord: default_tension(),
             random_chord: default_random_chord(),
+            arpegio: default_arpegio(),
         }
     }
     pub fn draw(
@@ -208,6 +211,7 @@ impl Sequence {
                     self.harmonise,
                     self.harmoniser,
                     step_as_time,
+                    self.arpegio,
                 )
             })
             .flat_map(|to_push| {

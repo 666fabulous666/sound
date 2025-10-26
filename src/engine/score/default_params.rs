@@ -45,6 +45,10 @@ pub fn default_spacial() -> f64 {
     0.5
 }
 
+pub fn default_arpegio() -> f64 {
+    0.0
+}
+
 pub fn default_tolerance() -> (Time, Time) {
     (Time(1.0), Time(0.0))
 }

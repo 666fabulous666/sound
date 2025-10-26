@@ -151,13 +151,14 @@ pub fn generate_wave(
         / norm.sqrt()
         / (freq / Freq(440.0)).sqrt();
     let tmp = vol_envelope * sum_of_waves;
-    lowpass_step_cutoff_refgain(
-        tmp,
-        memory,
-        freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
-        freq,
-        sample_rate,
-    )
+    tmp
+    // lowpass_step_cutoff_refgain(
+    //     tmp,
+    //     memory,
+    //     freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
+    //     freq,
+    //     sample_rate,
+    // )
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {
