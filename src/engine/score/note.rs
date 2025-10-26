@@ -1,5 +1,7 @@
+use std::iter::once;
+
 use itertools::{Combinations, Itertools};
-use rand::seq::SliceRandom;
+use rand::{seq::SliceRandom, Rng};
 use serde::Deserialize;
 
 use super::Interval;
@@ -14,11 +16,13 @@ pub struct Note {
     pub glide: Option<Interval>,
     pub volume: f64,
     pub tension: usize,
+    pub random_chord: bool,
 }
 impl Note {
     pub fn draw(
         &self,
         context: &[NotesGroup],
+        self_ctx: &mut Vec<Note>,
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
         harmoniser: [[u32; 7]; 2],
@@ -26,9 +30,10 @@ impl Note {
     ) -> Vec<Self> {
         match &self.interval {
             Interval::RDTempered(n_rd_steps, base, octave) => {
-                let others = context
+                // 1. Collect contextual notes from external context
+                let mut others = context
                     .iter()
-                    .map(
+                    .flat_map(
                         |NotesGroup {
                              notes, tolerance, ..
                          }| {
@@ -41,13 +46,13 @@ impl Note {
                                 .map(|n| {
                                     (
                                         n,
+                                        // true overlap only if timing overlaps
                                         self.time < n.time + n.duration
                                             && n.time < self.time + self.duration,
                                     )
                                 })
                         },
                     )
-                    .flatten()
                     .filter_map(|(n, overlap)| {
                         if let Interval::Tempered(d, _) = n.interval {
                             Some((d, overlap))
@@ -57,34 +62,47 @@ impl Note {
                     })
                     .collect::<Vec<_>>();
 
+                // 2. Add notes from self_ctx (always non-overlapping)
+                for n in self_ctx.iter() {
+                    if let Interval::Tempered(d, _) = n.interval {
+                        others.push((d, false));
+                    }
+                }
+
+                // 3. Choose seed degree
                 let seed = others.choose(rng).unwrap_or(&(0, false)).0;
 
+                // 4. Compute new degrees
                 let degree = if harmonise {
-                    let tmp = (-11..12i32)
-                        .combinations(self.tension)
+                    (-11..12i32)
+                        .combinations(if self.random_chord {
+                            rng.gen_range(1..=self.tension)
+                        } else {
+                            self.tension
+                        })
                         .min_by_key(|d| {
                             tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
                         })
-                        .unwrap();
-                    tmp
-                    // tmp.take(self.tension).collect_vec()
-                    // (0..12)
-                    //     .min_by_key(|d| tension(others.iter().cloned(), *d, harmoniser))
-                    //     .unwrap()
+                        .unwrap()
                 } else {
                     vec![(0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12]
                 };
 
-                degree
+                // 5. Build new notes and push into self_ctx
+                let new_notes = degree
                     .iter()
                     .enumerate()
                     .map(|(n, d)| Self {
                         interval: Interval::Tempered(*d, *octave),
                         glide: self.glide.clone(),
-                        time: self.time + (step_as_time * 0.1 * n as f64), // WARNING: hardcoded arpegio
+                        time: self.time + (step_as_time * 0.1 * n as f64), // arpeggio offset
                         ..*self
                     })
-                    .collect_vec()
+                    .collect::<Vec<_>>();
+
+                self_ctx.extend(new_notes.iter().cloned());
+
+                new_notes
             }
             _ => vec![self.clone()],
         }

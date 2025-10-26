@@ -60,6 +60,9 @@ pub fn default_beat_offset() -> i32 {
 pub fn default_tension() -> usize {
     1
 }
+pub fn default_random_chord() -> bool {
+    false
+}
 
 pub fn default_volume() -> f64 {
     1.0

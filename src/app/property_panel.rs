@@ -966,7 +966,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.tolerance.0 = tmp_tolerance.0;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                             ui.label(",");
                                             if ui
@@ -977,7 +977,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.tolerance.1 = tmp_tolerance.1;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                             ui.label("->");
                                         });
@@ -1128,7 +1128,10 @@ impl GuiApp {
                                             seq_mut.shuffle = shuffle;
                                             edited_seq = true;
                                         }
-                                        if ui.add(egui::Slider::new(&mut seq_mut.tension, 0..=12).text("Tension")).changed() {
+                                        if ui.add(egui::Slider::new(&mut seq_mut.chord, 1..=12).text("Chord")).changed() {
+                                            edited_seq = true;
+                                            }
+                                        if ui.add(egui::Checkbox::new(&mut seq_mut.random_chord, "Random skip chord notes")).changed() {
                                             edited_seq = true;
                                             }
                                     }

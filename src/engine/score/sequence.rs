@@ -79,7 +79,9 @@ pub struct Sequence {
     #[serde(default = "default_shuffle")]
     pub shuffle: bool,
     #[serde(default = "default_tension")]
-    pub tension: usize,
+    pub chord: usize,
+    #[serde(default = "default_random_chord")]
+    pub random_chord: bool,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
     #[serde(default = "default_name")]
@@ -120,7 +122,8 @@ impl Sequence {
             proba: default_proba(),
             glide: default_glide(),
             cutoff_multiplier: default_cutoff_multiplier(),
-            tension: Default::default(),
+            chord: default_tension(),
+            random_chord: default_random_chord(),
         }
     }
     pub fn draw(
@@ -192,12 +195,15 @@ impl Sequence {
                         .iter()
                         .map(|a| ((t + seq_start) * *a).as_secs().fract())
                         .sum::<f64>()),
-            tension: self.tension,
+            tension: self.chord,
+            random_chord: self.random_chord,
         });
+        let mut self_ctx = vec![];
         let tmp: Vec<Note> = tmp
             .map(|n| {
                 n.draw(
                     &notes_buffer,
+                    &mut self_ctx,
                     rng,
                     self.harmonise,
                     self.harmoniser,
