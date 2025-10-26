@@ -18,7 +18,7 @@ use crate::{
     shortcuts::*,
     texts::README_MD,
     time_freq::Time,
-    Token, GLOBAL_VOLUME, GROOVE_DEFAULTS,
+    Token, GROOVE_DEFAULTS,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -349,7 +349,7 @@ impl GuiApp {
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
         let volume = match self.score.track_root {
-            TrackNode::Group { volume, .. } => volume * GLOBAL_VOLUME,
+            TrackNode::Group { volume, .. } => volume,
             TrackNode::Seq(_) => unreachable!(),
         };
         node.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
@@ -364,8 +364,8 @@ impl GuiApp {
 
         // Base volume used when drawing this node (mirrors `new_node`)
         let base_volume = match &node {
-            TrackNode::Group { volume, .. } => *volume * GLOBAL_VOLUME,
-            TrackNode::Seq(_) => GLOBAL_VOLUME,
+            TrackNode::Group { volume, .. } => *volume,
+            TrackNode::Seq(_) => 1.0,
         };
 
         // Draw the (possibly nested) node into current notes

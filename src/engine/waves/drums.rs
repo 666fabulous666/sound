@@ -3,7 +3,6 @@ use std::f64::consts::PI;
 use crate::{
     sign_f,
     time_freq::{DivByFreq, Freq, Time},
-    GLOBAL_VOLUME,
 };
 
 /// A simple xorshift64* pseudo‐random number generator
@@ -156,7 +155,7 @@ pub fn drum(freq: Freq, time: Time, params: DrumParams) -> f64 {
                 Layer::basic(Time(0.05), 5.0)(time, freq),
                 Layer::noise(Time(0.01), 0.5)(time, freq),
             ],
-            |x| (0.25 * x).tanh() / GLOBAL_VOLUME,
+            |x| (0.25 * x).tanh(),
         ),
         DrumParams::Snare => mix_env_layers(
             time,

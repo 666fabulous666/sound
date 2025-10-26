@@ -66,7 +66,7 @@ pub fn stream(
                             .or_insert(0.0);
                         if note.time < now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
-                            let volume = volume * note.volume;
+                            let volume = 0.1 * volume * note.volume;
                             let dry = volume
                                 * generate_wave(
                                     wave_type,
