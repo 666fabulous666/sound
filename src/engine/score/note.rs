@@ -17,6 +17,7 @@ pub struct Note {
     pub volume: f64,
     pub tension: usize,
     pub random_chord: bool,
+    pub reverse_prob: f64,
 }
 impl Note {
     pub fn draw(
@@ -41,15 +42,18 @@ impl Note {
                             notes
                                 .iter()
                                 .filter(|n| {
-                                    self.time < n.time + n.duration + tolerance.0
-                                        && n.time < self.time + self.duration + tolerance.1
+                                    // self.time < n.time + n.duration + tolerance.0
+                                    //     && n.time < self.time + self.duration + tolerance.1
+                                    self.time < n.time + tolerance.0
+                                        && n.time < self.time + tolerance.1
                                 })
                                 .map(|n| {
                                     (
                                         n,
                                         // true overlap only if timing overlaps
-                                        self.time < n.time + n.duration
-                                            && n.time < self.time + self.duration,
+                                        // self.time < n.time + n.duration
+                                        //     && n.time < self.time + self.duration,
+                                        (self.time - n.time).as_secs().abs(),
                                     )
                                 })
                         },
@@ -66,15 +70,17 @@ impl Note {
                 // 2. Add notes from self_ctx (always non-overlapping)
                 for n in self_ctx.iter() {
                     if let Interval::Tempered(d, _) = n.interval {
-                        others.push((d, false));
+                        // others.push((d, false));
+                        others.push((d, (self.time - n.time).as_secs().powi(2)));
                     }
                 }
 
                 // 3. Choose seed degree
-                let seed = others.choose(rng).unwrap_or(&(0, false)).0;
+                // let seed = others.choose(rng).unwrap_or(&(0, false)).0;
+                let seed = others.choose(rng).unwrap_or(&(0, 0.0)).0;
 
                 // 4. Compute new degrees
-                let degree = if harmonise {
+                let mut degree = if harmonise {
                     (-11..12i32)
                         .combinations(if self.random_chord {
                             rng.gen_range(1..=self.tension)
@@ -88,6 +94,11 @@ impl Note {
                 } else {
                     vec![(0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12]
                 };
+                // degree.shuffle(rng);
+                if rng.gen_bool(self.reverse_prob) {
+                    // let degree = degree.into_iter().rev().collect_vec();
+                    degree.reverse();
+                }
 
                 // 5. Build new notes and push into self_ctx
                 let new_notes = degree
@@ -119,7 +130,8 @@ fn tension(
         .sum()
 }
 fn tension_family(
-    ns: impl IntoIterator<Item = (i32, bool)>,
+    // ns: impl IntoIterator<Item = (i32, bool)>,
+    ns: impl IntoIterator<Item = (i32, f64)>,
     c: impl IntoIterator<Item = i32>,
     harmoniser: [[u32; 7]; 2],
 ) -> u32 {
@@ -133,7 +145,8 @@ fn tension_family(
             combo_vals
                 .iter()
                 .copied()
-                .map(|d| tension2(n, d, overlap, harmoniser))
+                // .map(|d| tension2(n, d, overlap, harmoniser))
+                .map(|d| (16 * tension2(n, d, true, harmoniser)) / (overlap as u32 + 1))
                 .sum::<u32>()
         })
         .sum::<u32>();

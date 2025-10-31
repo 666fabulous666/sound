@@ -84,6 +84,8 @@ pub struct Sequence {
     pub chord: usize,
     #[serde(default = "default_random_chord")]
     pub random_chord: bool,
+    #[serde(default = "default_reverse_prob")]
+    pub reverse_prob: f64,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
     #[serde(default = "default_name")]
@@ -127,6 +129,7 @@ impl Sequence {
             chord: default_tension(),
             random_chord: default_random_chord(),
             arpegio: default_arpegio(),
+            reverse_prob: default_reverse_prob(),
         }
     }
     pub fn draw(
@@ -200,6 +203,7 @@ impl Sequence {
                         .sum::<f64>()),
             tension: self.chord,
             random_chord: self.random_chord,
+            reverse_prob: self.reverse_prob,
         });
         let mut self_ctx = vec![];
         let tmp: Vec<Note> = tmp

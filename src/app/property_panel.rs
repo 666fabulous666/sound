@@ -1134,6 +1134,9 @@ impl GuiApp {
                                         if ui.add(egui::Slider::new(&mut seq_mut.arpegio, -4.0..=4.0).text("Arpegio")).changed() {
                                             edited_seq = true;
                                             }
+                                        if ui.add(egui::Slider::new(&mut seq_mut.reverse_prob, 0.0..=1.0).text("Reverse prob")).changed() {
+                                            edited_seq = true;
+                                            }
                                         if ui.add(egui::Checkbox::new(&mut seq_mut.random_chord, "Random skip chord notes")).changed() {
                                             edited_seq = true;
                                             }

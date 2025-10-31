@@ -66,8 +66,8 @@ pub fn stream(
                             .entry((
                                 token.clone(),
                                 (1024.0 * note.time.as_secs()) as u32,
-                                i,
-                                (1024.0 * note.duration.as_secs()) as u32,
+                                // i,
+                                // (1024.0 * note.duration.as_secs()) as u32,
                             )) // FIXME: not a valid key
                             .or_insert(0.0);
                         if note.time <= now && now <= note.time + note.duration {

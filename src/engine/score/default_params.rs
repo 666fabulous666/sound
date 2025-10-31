@@ -97,6 +97,9 @@ pub fn default_time_quantum() -> (usize, usize) {
 pub fn default_proba() -> f64 {
     1.0
 }
+pub fn default_reverse_prob() -> f64 {
+    0.0
+}
 pub fn default_tempo() -> f64 {
     60.0
 }
