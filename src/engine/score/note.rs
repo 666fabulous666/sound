@@ -1,6 +1,4 @@
-use std::iter::once;
-
-use itertools::{Combinations, Itertools};
+use itertools::Itertools;
 use rand::{seq::SliceRandom, Rng};
 use serde::Deserialize;
 
@@ -119,15 +117,6 @@ impl Note {
             _ => vec![self.clone()],
         }
     }
-}
-fn tension(
-    ns: impl Iterator<Item = (i32, bool)> + Clone,
-    d: i32,
-    harmoniser: [[u32; 7]; 2],
-) -> u32 {
-    ns.into_iter()
-        .map(|(n, overlap)| tension2(n, d, overlap, harmoniser))
-        .sum()
 }
 fn tension_family(
     // ns: impl IntoIterator<Item = (i32, bool)>,

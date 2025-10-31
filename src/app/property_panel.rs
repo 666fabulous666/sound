@@ -4,31 +4,24 @@ mod navigation;
 mod rhythm;
 
 use egui::{Grid, RichText, ScrollArea, Slider, TextEdit};
-use helpers::{rescale_envelope, slider_with_reset, u32_cell};
+use helpers::{slider_with_reset, u32_cell};
 
 use crate::{
     app::{
         property_panel::{
             hover_texts::{
-                ASYM_DETUNE_TEXT, DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT,
-                DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
-                GROOVE_OFFSET_TEXT, HARMONISE_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT,
-                POW_FACT_EVOL_TEXT, POW_FACT_TEXT, RANDOM_EXCLUSION_TEXT, RANDOM_INCLUSION_TEXT,
-                REPEAT_TEXT, SHUFFLE_TEXT, SYM_DETUNE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT,
-                UNISSON_DETUNE_TEXT, VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT,
-                VOICE_LAYERS_TEXT,
+                GROOVE_OFFSET_TEXT, HARMONISE_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_TEXT,
+                REPEAT_TEXT, SHUFFLE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT, UNISSON_DETUNE_TEXT,
+                VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT,
             },
             navigation::navigation,
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
-    engine::score::{
-        default_params::*, sequence::Sequence, track_node::TrackNode, ChorusParams, DetRythm,
-        Interval, RdRythm, Rythm,
-    },
-    layout_left, rescale_factor,
+    engine::score::{default_params::*, sequence::Sequence, track_node::TrackNode, Interval},
+    layout_left,
     shortcuts::*,
-    time_freq::{Freq, Time},
+    time_freq::Time,
     Token,
 };
 
@@ -315,196 +308,18 @@ impl GuiApp {
                                     }
                                     ui.separator();
                                     {
-                                        ui.label("Rythm inclusions:");
-                                        let mut tmp_inclusions = seq_mut.inclusions.clone();
-                                        if let Rythm::Rd(_) = tmp_inclusions {
-                                            if ui
-                                                .button("Use deterministic inclusion generators")
-                                                .clicked()
-                                            {
-                                                seq_mut.inclusions =
-                                                    Rythm::Det(DetRythm::default());
-                                                edited_seq = true;
-                                            }
-                                        } else {
-                                            if ui
-                                                .button("Use random inclusion generators")
-                                                .clicked()
-                                            {
-                                                seq_mut.inclusions = Rythm::Rd(RdRythm::default());
-                                                edited_seq = true;
-                                            }
-                                        }
-                                        match tmp_inclusions {
-                                            Rythm::Rd(ref mut rd_rythm) => {
-                                                ui.vertical(|ui| {
-                                                    ui.label("Random inclusion generators:")
-                                                        .on_hover_text(RANDOM_INCLUSION_TEXT);
-                                                    ui.horizontal(|ui| {
-                                                        ui.label("n:");
-                                                        if ui
-                                                            .add(
-                                                                egui::DragValue::new(
-                                                                    &mut rd_rythm.amount,
-                                                                )
-                                                                .range(0..=rd_rythm.length),
-                                                            )
-                                                            .changed()
-                                                        {
-                                                            if let Rythm::Rd(
-                                                                ref mut edited_rd_rythm,
-                                                            ) = seq_mut.inclusions
-                                                            {
-                                                                edited_rd_rythm.amount = rd_rythm
-                                                                    .amount
-                                                                    .min(rd_rythm.length);
-                                                                edited_seq = true;
-                                                            }
-                                                        };
-                                                        ui.label("N:");
-                                                        if ui
-                                                            .add(
-                                                                egui::DragValue::new(
-                                                                    &mut rd_rythm.length,
-                                                                )
-                                                                .range(rd_rythm.amount..=512),
-                                                            )
-                                                            .changed()
-                                                        {
-                                                            if let Rythm::Rd(
-                                                                ref mut edited_rd_rythm,
-                                                            ) = seq_mut.inclusions
-                                                            {
-                                                                edited_rd_rythm.length = rd_rythm
-                                                                    .length
-                                                                    .max(rd_rythm.amount);
-                                                                edited_seq = true;
-                                                            }
-                                                        };
-                                                    });
-                                                });
-                                            }
-                                            Rythm::Det(det_rythm) => {
-                                                ui.vertical(|ui| {
-                                                    ui.label("Deterministic inclusion generators:")
-                                                        .on_hover_text(
-                                                            DETERMINISTIC_INCLUSION_TEXT,
-                                                        );
-                                                    let mut gens = det_rythm.generators;
-                                                    let old_val = gens.clone();
-                                                    Self::edit_vec(ui, &mut gens, 2, layout_left());
-                                                    if gens != old_val {
-                                                        // TODO: do better
-                                                        if let Rythm::Det(
-                                                            ref mut edited_det_rythm,
-                                                        ) = seq_mut.inclusions
-                                                        {
-                                                            edited_det_rythm.generators = gens
-                                                                .into_iter()
-                                                                .filter(|g| *g > 0)
-                                                                .collect();
-                                                            edited_seq = true;
-                                                        }
-                                                    }
-                                                });
-                                            }
+                                        if rhythm::inclusion_section(ui, seq_mut, |ui, gens, default_val| {
+                                            Self::edit_vec(ui, gens, default_val, layout_left());
+                                        }) {
+                                            edited_seq = true;
                                         }
                                     }
                                     ui.separator();
                                     {
-                                        let mut tmp_exclusions = seq_mut.exclusions.clone();
-                                        if let Rythm::Rd(_) = tmp_exclusions {
-                                            ui.label("Rythm exclusions:");
-                                            if ui
-                                                .button("Use deterministic exclusion generators")
-                                                .clicked()
-                                            {
-                                                seq_mut.exclusions =
-                                                    Rythm::Det(DetRythm::default());
-                                                edited_seq = true;
-                                            }
-                                        } else {
-                                            if ui
-                                                .button("Use random exclusion generators")
-                                                .clicked()
-                                            {
-                                                seq_mut.exclusions = Rythm::Rd(RdRythm::default());
-                                                edited_seq = true;
-                                            }
-                                        }
-                                        match tmp_exclusions {
-                                            Rythm::Rd(ref mut rd_rythm) => {
-                                                ui.vertical(|ui| {
-                                                    ui.label("Random exclusion generators:")
-                                                        .on_hover_text(RANDOM_EXCLUSION_TEXT);
-                                                    ui.horizontal(|ui| {
-                                                        ui.label("n:");
-                                                        if ui
-                                                            .add(
-                                                                egui::DragValue::new(
-                                                                    &mut rd_rythm.amount,
-                                                                )
-                                                                .range(0..=512),
-                                                            )
-                                                            .changed()
-                                                        {
-                                                            if let Rythm::Rd(
-                                                                ref mut edited_rd_rythm,
-                                                            ) = seq_mut.exclusions
-                                                            {
-                                                                edited_rd_rythm.amount = rd_rythm
-                                                                    .amount
-                                                                    .min(rd_rythm.length);
-                                                                edited_seq = true;
-                                                            }
-                                                        };
-                                                        ui.label("N:");
-                                                        if ui
-                                                            .add(
-                                                                egui::DragValue::new(
-                                                                    &mut rd_rythm.length,
-                                                                )
-                                                                .range(0..=512),
-                                                            )
-                                                            .changed()
-                                                        {
-                                                            if let Rythm::Rd(
-                                                                ref mut edited_rd_rythm,
-                                                            ) = seq_mut.exclusions
-                                                            {
-                                                                edited_rd_rythm.length = rd_rythm
-                                                                    .length
-                                                                    .max(rd_rythm.amount);
-                                                                edited_seq = true;
-                                                            }
-                                                        };
-                                                    });
-                                                });
-                                            }
-                                            Rythm::Det(det_rythm) => {
-                                                ui.vertical(|ui| {
-                                                    ui.label("Deterministic exclusion generators:")
-                                                        .on_hover_text(
-                                                            DETERMINISTIC_EXCLUSION_TEXT,
-                                                        );
-                                                    let mut gens = det_rythm.generators;
-                                                    let old_val = gens.clone();
-                                                    Self::edit_vec(ui, &mut gens, 2, layout_left());
-                                                    if gens != old_val {
-                                                        // TODO: do better
-                                                        if let Rythm::Det(
-                                                            ref mut edited_det_rythm,
-                                                        ) = seq_mut.exclusions
-                                                        {
-                                                            edited_det_rythm.generators = gens
-                                                                .into_iter()
-                                                                .filter(|g| *g > 1)
-                                                                .collect();
-                                                            edited_seq = true;
-                                                        }
-                                                    }
-                                                });
-                                            }
+                                        if rhythm::exclusion_section(ui, seq_mut, |ui, gens, default_val| {
+                                            Self::edit_vec(ui, gens, default_val, layout_left());
+                                        }) {
+                                            edited_seq = true;
                                         }
                                         ui.separator();
                                         ui.horizontal(|ui| {

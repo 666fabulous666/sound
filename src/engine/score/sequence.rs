@@ -187,7 +187,7 @@ impl Sequence {
         if self.shuffle {
             tmp.shuffle(rng);
         }
-        let tmp = tmp.into_iter().enumerate().map(|(n, (t, d))| Note {
+        let tmp = tmp.into_iter().map(|(t, d)| Note {
             time: t + seq_start, // + Time(1e-3 * ((7.3 * n as f64) % 5.0)),
             duration: *d,
             interval: self.interval.clone(),

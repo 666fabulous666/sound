@@ -1,7 +1,6 @@
 use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
-use egui::emath::Numeric;
 use std::{
     collections::HashMap,
     sync::{atomic::AtomicU64, Arc},
@@ -9,7 +8,7 @@ use std::{
 
 use crate::{
     engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
-    time_freq::{DivByFreq, Freq, Time},
+    time_freq::{DivByFreq, Freq},
     REVERB_BUFFER_LEN,
 };
 
@@ -61,7 +60,7 @@ pub fn stream(
                     ..
                 } in note_groups.iter()
                 {
-                    for (i, note) in notes_from_seq.iter().enumerate() {
+                    for note in notes_from_seq.iter() {
                         let mut memory = lp_memories
                             .entry((
                                 token.clone(),

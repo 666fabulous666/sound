@@ -1,6 +1,10 @@
 use egui::{Response, Ui};
 use std::fmt::Display;
 
+use super::hover_texts::{
+    ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT,
+    DETUNE_WEIGHTING_TEXT, POW_FACT_EVOL_TEXT, SYM_DETUNE_TEXT, VOICE_LAYERS_TEXT,
+};
 use crate::{
     engine::score::{default_params::*, sequence::Sequence, ChorusParams, NotesGroup},
     rescale_factor,
@@ -323,7 +327,9 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().voices,
         false,
-    );
+    )
+    .on_hover_text(VOICE_LAYERS_TEXT);
+
     let delta_resp = slider_with_reset(
         ui,
         delta,
@@ -332,7 +338,9 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().delta,
         true,
-    );
+    )
+    .on_hover_text(DETUNE_TEXT);
+
     let delta_shift_resp = slider_with_reset(
         ui,
         delta_shift,
@@ -341,7 +349,9 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().delta_shift,
         false,
-    );
+    )
+    .on_hover_text(DETUNE_SHIFT_TEXT);
+
     let time_dep_resp = slider_with_reset(
         ui,
         time_dep,
@@ -350,9 +360,12 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().time_dependency,
         false,
-    );
+    )
+    .on_hover_text(DETUNE_TIME_DEP_TEXT);
 
-    ui.label("Weighting (around f₀)");
+    ui.label("Weighting (around f₀)")
+        .on_hover_text(DETUNE_WEIGHTING_TEXT);
+
     let sym_resp = slider_with_reset(
         ui,
         sym,
@@ -361,7 +374,9 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().sym,
         false,
-    );
+    )
+    .on_hover_text(SYM_DETUNE_TEXT);
+
     let asym_resp = slider_with_reset(
         ui,
         asym,
@@ -370,7 +385,8 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesGroup])
         None,
         ChorusParams::default().asym,
         false,
-    );
+    )
+    .on_hover_text(ASYM_DETUNE_TEXT);
 
     let changed = voices_resp.changed()
         || voices_resp.secondary_clicked()
@@ -423,7 +439,8 @@ pub fn power_factor_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut [NotesG
         None,
         def_evol_disp,
         false,
-    );
+    )
+    .on_hover_text(POW_FACT_EVOL_TEXT);
 
     if initial_resp.changed() || initial_resp.secondary_clicked() {
         seq_pow.0 = initial;

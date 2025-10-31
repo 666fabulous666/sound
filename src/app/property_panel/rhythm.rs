@@ -1,9 +1,6 @@
 use egui::Ui;
 
-use crate::{
-    engine::score::{sequence::Sequence, DetRythm, RdRythm, Rythm},
-    layout_left,
-};
+use crate::engine::score::{sequence::Sequence, DetRythm, RdRythm, Rythm};
 
 use super::hover_texts::{
     DETERMINISTIC_EXCLUSION_TEXT, DETERMINISTIC_INCLUSION_TEXT, RANDOM_EXCLUSION_TEXT,
@@ -11,7 +8,11 @@ use super::hover_texts::{
 };
 
 /// Handle the inclusion generators UI and return whether edited
-pub fn inclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&mut Ui, &mut Vec<usize>, usize)) -> bool {
+pub fn inclusion_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    edit_vec_fn: impl Fn(&mut Ui, &mut Vec<usize>, usize),
+) -> bool {
     let mut edited = false;
     ui.label("Rythm inclusions:");
 
@@ -39,10 +40,7 @@ pub fn inclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&
                 ui.horizontal(|ui| {
                     ui.label("n:");
                     if ui
-                        .add(
-                            egui::DragValue::new(&mut rd_rythm.amount)
-                                .range(0..=rd_rythm.length),
-                        )
+                        .add(egui::DragValue::new(&mut rd_rythm.amount).range(0..=rd_rythm.length))
                         .changed()
                     {
                         if let Rythm::Rd(ref mut edited_rd_rythm) = seq.inclusions {
@@ -53,8 +51,7 @@ pub fn inclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&
                     ui.label("N:");
                     if ui
                         .add(
-                            egui::DragValue::new(&mut rd_rythm.length)
-                                .range(rd_rythm.amount..=512),
+                            egui::DragValue::new(&mut rd_rythm.length).range(rd_rythm.amount..=512),
                         )
                         .changed()
                     {
@@ -75,8 +72,7 @@ pub fn inclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&
                 edit_vec_fn(ui, &mut gens, 2);
                 if gens != old_val {
                     if let Rythm::Det(ref mut edited_det_rythm) = seq.inclusions {
-                        edited_det_rythm.generators =
-                            gens.into_iter().filter(|g| *g > 0).collect();
+                        edited_det_rythm.generators = gens.into_iter().filter(|g| *g > 0).collect();
                         edited = true;
                     }
                 }
@@ -88,7 +84,11 @@ pub fn inclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&
 }
 
 /// Handle the exclusion generators UI and return whether edited
-pub fn exclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&mut Ui, &mut Vec<usize>, usize)) -> bool {
+pub fn exclusion_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    edit_vec_fn: impl Fn(&mut Ui, &mut Vec<usize>, usize),
+) -> bool {
     let mut edited = false;
     let mut tmp_exclusions = seq.exclusions.clone();
 
@@ -146,8 +146,7 @@ pub fn exclusion_section(ui: &mut Ui, seq: &mut Sequence, edit_vec_fn: impl Fn(&
                 edit_vec_fn(ui, &mut gens, 2);
                 if gens != old_val {
                     if let Rythm::Det(ref mut edited_det_rythm) = seq.exclusions {
-                        edited_det_rythm.generators =
-                            gens.into_iter().filter(|g| *g > 1).collect();
+                        edited_det_rythm.generators = gens.into_iter().filter(|g| *g > 1).collect();
                         edited = true;
                     }
                 }
