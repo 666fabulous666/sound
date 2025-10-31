@@ -8,9 +8,7 @@ mod top_panel;
 use crate::{
     engine::{
         score::{
-            default_params::{default_delays, default_tempo},
-            sequence::Sequence,
-            track_node::TrackNode,
+            default_params::default_delays, sequence::Sequence, track_node::TrackNode, Interval,
             NotesGroup, Score,
         },
         waves::WaveType,
@@ -58,7 +56,6 @@ const DRUM_WAVES: [WaveType; 5] = [
 ];
 
 pub struct GuiApp {
-    tempo: f64,
     score: Score,
     clock: Arc<AtomicU64>,
     rng: ThreadRng,
@@ -136,7 +133,6 @@ pub struct GuiState {
 impl GuiApp {
     pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
         let app = Self {
-            tempo: default_tempo(),
             selected: None,
             stream: None,
             shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
@@ -527,6 +523,94 @@ impl GuiApp {
         self.score
             .notes
             .retain(|NotesGroup { token, .. }| *token != tk);
+    }
+
+    /// Recalculate volume for all NotesGroup entries belonging to sequences
+    /// that are descendants of the node at `path`.
+    /// Used when Group volume changes to immediately affect audio without regeneration.
+    fn update_descendant_volumes(&mut self, path: &[usize]) {
+        // Collect all (token, sequence_path, base_volume) tuples from sequences under this path
+        let seq_info: Vec<(Token, Vec<usize>, f64)> = {
+            let mut out = Vec::new();
+
+            fn collect_recursive(
+                node: &TrackNode,
+                current_path: &mut Vec<usize>,
+                base_path: &[usize],
+                out: &mut Vec<(Token, Vec<usize>, f64)>,
+            ) {
+                match node {
+                    TrackNode::Seq(seq) => {
+                        let mut full_path = base_path.to_vec();
+                        full_path.extend_from_slice(current_path);
+                        out.push((seq.token, full_path, seq.volume));
+                    }
+                    TrackNode::Group { children, .. } => {
+                        for (i, child) in children.iter().enumerate() {
+                            current_path.push(i);
+                            collect_recursive(child, current_path, base_path, out);
+                            current_path.pop();
+                        }
+                    }
+                }
+            }
+
+            if let Some(node) = self.score.track_root.get(path) {
+                let mut current = Vec::new();
+                collect_recursive(node, &mut current, path, &mut out);
+            }
+            out
+        };
+
+        // Compute the new volumes for each token (before mutating notes)
+        let volume_updates: Vec<(Token, f64)> = seq_info
+            .iter()
+            .filter_map(|(token, seq_path, seq_volume)| {
+                self.score
+                    .volume_chain_product(seq_path)
+                    .map(|volume_chain| {
+                        // volume_chain includes the sequence's own volume, so divide it out
+                        let group_chain = volume_chain / seq_volume.max(f64::MIN_POSITIVE);
+                        let new_volume = seq_volume * group_chain;
+                        (*token, new_volume)
+                    })
+            })
+            .collect();
+
+        // Apply the updates to NotesGroup entries
+        for ng in self.score.notes.iter_mut() {
+            if let Some((_, new_volume)) = volume_updates.iter().find(|(tk, _)| *tk == ng.token) {
+                ng.volume = *new_volume;
+            }
+        }
+    }
+
+    /// Update interval octaves for all notes in NotesGroup belonging to a sequence token.
+    /// Used when octave changes to immediately shift notes without regeneration.
+    fn update_sequence_octaves(&mut self, token: Token, octave_shift: i32) {
+        if let Some(ng) = self.score.notes.iter_mut().find(|ng| ng.token == token) {
+            for note in ng.notes.iter_mut() {
+                match &mut note.interval {
+                    Interval::Tempered(_degree, octave) => {
+                        *octave += octave_shift;
+                    }
+                    Interval::RDTempered(_, _, octave) => {
+                        *octave += octave_shift;
+                    }
+                }
+                // Also shift glide target if present
+                if let Some(glide) = &mut note.glide {
+                    match glide {
+                        Interval::Tempered(_, octave) => {
+                            *octave += octave_shift;
+                        }
+                        Interval::RDTempered(_, _, octave) => {
+                            *octave += octave_shift;
+                        }
+                    }
+                }
+            }
+        }
     }
     #[cfg(target_arch = "wasm32")]
     fn poll_loaded_state(&mut self) {

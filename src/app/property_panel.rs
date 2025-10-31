@@ -1,8 +1,10 @@
+pub mod helpers;
 pub mod hover_texts;
 mod navigation;
-use std::fmt::Display;
+mod rhythm;
 
 use egui::{Grid, RichText, ScrollArea, Slider, TextEdit};
+use helpers::{rescale_envelope, slider_with_reset, u32_cell};
 
 use crate::{
     app::{
@@ -24,10 +26,10 @@ use crate::{
         default_params::*, sequence::Sequence, track_node::TrackNode, ChorusParams, DetRythm,
         Interval, RdRythm, Rythm,
     },
-    layout_left,
-    rescale_factor,
+    layout_left, rescale_factor,
     shortcuts::*,
-    time_freq::{Freq, Time}, // range_slider::*,
+    time_freq::{Freq, Time},
+    Token,
 };
 
 #[derive(Clone)]
@@ -78,6 +80,8 @@ impl GuiApp {
                 ScrollArea::vertical().show(ui, |ui| {
                     let mut action = Action::None;
                     let mut edited_seq = false;
+                    let mut group_volume_changed = false; // Track if Group volume changed
+                    let mut octave_update: Option<(Token, i32)> = None; // (token, octave_shift)
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
@@ -86,83 +90,21 @@ impl GuiApp {
 
                                 {
                                     ui.horizontal(|ui| {
-                                        let vol_resp = slider_with_reset(
+                                        helpers::volume_control(
                                             ui,
                                             &mut seq_mut.volume,
-                                            0.0..=2.0,
-                                            "Volume",
-                                            Some("+ / - (Shift×10)"),
-                                            default_volume(),
-                                            false,
-                                        )
-                                        .on_hover_ui(|ui| {
-                                            ui.label(
-                                                egui::RichText::new("Hold + / - to change").weak(),
-                                            );
-                                        });
-
-                                        let kb_changed = ui.ctx().input(|i| {
-                                            let step = if i.modifiers.shift { 0.5 } else { 0.05 };
-                                            let mut changed = false;
-                                            if i.key_down(egui::Key::Plus) {
-                                                *&mut seq_mut.volume =
-                                                    (*&mut seq_mut.volume + step).min(32.0);
-                                                changed = true;
-                                            }
-                                            if i.key_down(egui::Key::Minus) {
-                                                *&mut seq_mut.volume =
-                                                    (*&mut seq_mut.volume - step).max(0.0);
-                                                changed = true;
-                                            }
-                                            changed
-                                        });
-
-                                        if vol_resp.changed()
-                                            || vol_resp.secondary_clicked()
-                                            || kb_changed
-                                        {
-                                            // *vol = *vol_after_kb;
-                                            if let Some(ng) = self
-                                                .score
-                                                .notes
-                                                .iter_mut()
-                                                .find(|ng| ng.token == seq_mut.token)
-                                            {
-                                                ng.volume = *&mut seq_mut.volume;
-                                            }
-                                        }
+                                            &mut self.score.notes,
+                                            seq_mut.token,
+                                        );
                                     });
 
                                     ui.horizontal(|ui| {
-                                        let mut pan = seq_mut.spacial;
-
-                                        let pan_resp = slider_with_reset(
+                                        helpers::spacial_control(
                                             ui,
-                                            &mut pan,
-                                            0.0..=1.0,
-                                            "Stereo",
-                                            None,
-                                            default_spacial(),
-                                            false,
-                                        )
-                                        .on_hover_ui(|ui| {
-                                            ui.label("0.5 is centered");
-                                            ui.label(
-                                                egui::RichText::new("Right-click to reset").weak(),
-                                            );
-                                        });
-
-                                        if pan_resp.changed() || pan_resp.secondary_clicked() {
-                                            seq_mut.spacial = pan.clamp(0.0, 1.0);
-                                            if let Some(ng) = self
-                                                .score
-                                                .notes
-                                                .iter_mut()
-                                                .find(|ng| ng.token == seq_mut.token)
-                                            {
-                                                ng.spacial = seq_mut.spacial;
-                                            }
-                                        }
+                                            &mut seq_mut.spacial,
+                                            &mut self.score.notes,
+                                            seq_mut.token,
+                                        );
                                     });
                                     ui.horizontal(|ui| {
                                         let mut proba = seq_mut.proba;
@@ -184,6 +126,7 @@ impl GuiApp {
 
                                         if proba_resp.changed() || proba_resp.secondary_clicked() {
                                             seq_mut.proba = proba.clamp(0.0, 1.0);
+                                            edited_seq = true;
                                         }
                                     });
                                 }
@@ -218,366 +161,30 @@ impl GuiApp {
                                 });
 
                                 ui.collapsing("Envelope", |ui| {
-                                    let mut attack = seq_mut.attack_decay.0;
-                                    let mut decay = seq_mut.attack_decay.1;
-                                    let mut lp_attack = seq_mut.lp_attack_decay.0;
-                                    let mut lp_decay = seq_mut.lp_attack_decay.1;
-                                    let mut lp_cutoff_multiplier = seq_mut.cutoff_multiplier;
-
-                                    let def = if DRUM_WAVES.contains(&seq_mut.wave_type) {
-                                        default_drum_attack_decay()
-                                    } else {
-                                        default_attack_decay()
-                                    };
-
-                                    let attack_resp = slider_with_reset(
+                                    let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
+                                    helpers::envelope_section(
                                         ui,
-                                        &mut attack,
-                                        0.01..=100.0,
-                                        "Attack",
-                                        None,
-                                        def.0,
-                                        true,
+                                        seq_mut,
+                                        &mut self.score.notes,
+                                        is_drum,
                                     );
-                                    let decay_resp = slider_with_reset(
-                                        ui,
-                                        &mut decay,
-                                        0.01..=100.0,
-                                        "Decay",
-                                        None,
-                                        def.1,
-                                        true,
-                                    );
-                                    let lp_attack_resp = slider_with_reset(
-                                        ui,
-                                        &mut lp_attack,
-                                        0.01..=100.0,
-                                        "Lowpass Attack",
-                                        None,
-                                        def.0,
-                                        true,
-                                    );
-                                    let lp_decay_resp = slider_with_reset(
-                                        ui,
-                                        &mut lp_decay,
-                                        0.01..=100.0,
-                                        "Lowpass Decay",
-                                        None,
-                                        def.1,
-                                        true,
-                                    );
-                                    let lp_cutoff_multiplier_resp = slider_with_reset(
-                                        ui,
-                                        &mut lp_cutoff_multiplier,
-                                        0.01..=100.0,
-                                        "Lowpass cutoff muliplier",
-                                        None,
-                                        def.1,
-                                        true,
-                                    );
-
-                                    let changed = attack_resp.changed()
-                                        || attack_resp.secondary_clicked()
-                                        || decay_resp.changed()
-                                        || decay_resp.secondary_clicked()
-                                        || lp_attack_resp.changed()
-                                        || lp_attack_resp.secondary_clicked()
-                                        || lp_decay_resp.changed()
-                                        || lp_decay_resp.secondary_clicked()
-                                        || lp_cutoff_multiplier_resp.changed()
-                                        || lp_cutoff_multiplier_resp.secondary_clicked();
-
-                                    if changed {
-                                        seq_mut.attack_decay = (attack, decay);
-                                        seq_mut.lp_attack_decay = (lp_attack, lp_decay);
-                                        seq_mut.cutoff_multiplier = lp_cutoff_multiplier;
-                                        rescale_envelope(seq_mut);
-
-                                        if let Some(ng) = self
-                                            .score
-                                            .notes
-                                            .iter_mut()
-                                            .find(|ng| ng.token == seq_mut.token)
-                                        {
-                                            ng.attack_decay = seq_mut.attack_decay;
-                                            ng.lp_attack_decay = seq_mut.lp_attack_decay;
-                                            ng.cutoff_multiplier = seq_mut.cutoff_multiplier;
-                                        }
-                                    }
                                 });
 
                                 ui.collapsing("Bend", |ui| {
-                                    let seq_bend = &mut seq_mut.bend;
-                                    let mut ng_bend_opt = self
-                                        .score
-                                        .notes
-                                        .iter_mut()
-                                        .find(|ng| ng.token == seq_mut.token)
-                                        .map(|ng| &mut ng.bend);
-                                    let mut mag_disp = seq_bend.0 * 1e4;
-                                    let mut speed = seq_bend.1;
-                                    let mag_resp = slider_with_reset(
-                                        ui,
-                                        &mut mag_disp,
-                                        -200.0..=200.0,
-                                        "Magnitude",
-                                        None,
-                                        default_bend().0 * 1e4,
-                                        false,
-                                    );
-                                    let speed_resp = slider_with_reset(
-                                        ui,
-                                        &mut speed,
-                                        1.0..=1000.0,
-                                        "Speed",
-                                        None,
-                                        default_bend().1,
-                                        true,
-                                    );
-                                    if mag_resp.changed() {
-                                        seq_bend.0 = mag_disp * 1e-4;
-                                        if let Some(b) = ng_bend_opt.as_deref_mut() {
-                                            b.0 = seq_bend.0;
-                                        }
-                                    }
-                                    if speed_resp.changed() {
-                                        seq_bend.1 = speed;
-                                        if let Some(b) = ng_bend_opt.as_deref_mut() {
-                                            b.1 = seq_bend.1;
-                                        }
-                                    }
+                                    helpers::bend_section(ui, seq_mut, &mut self.score.notes);
                                 });
                                 ui.collapsing("Vibrato", |ui| {
-                                    let token = seq_mut.token;
-                                    let seq_vibr = &mut seq_mut.vibrato;
-                                    let mut ng_vibr_opt = self
-                                        .score
-                                        .notes
-                                        .iter_mut()
-                                        .find(|ng| ng.token == token)
-                                        .map(|ng| &mut ng.vibrato);
-                                    let mut mag_disp = seq_vibr.0 * 1e6;
-                                    let mut freq = seq_vibr.1;
-                                    let mag_resp = slider_with_reset(
-                                        ui,
-                                        &mut mag_disp,
-                                        0.0..=1000.0,
-                                        "Magnitude",
-                                        None,
-                                        default_vibrato().0 * 1e6,
-                                        false,
-                                    );
-
-                                    let fq_resp = slider_with_reset(
-                                        ui,
-                                        &mut freq,
-                                        Freq(1.0)..=Freq(100.0),
-                                        "Frequency",
-                                        None,
-                                        default_vibrato().1,
-                                        true,
-                                    );
-                                    let mag_changed =
-                                        mag_resp.changed() || mag_resp.secondary_clicked();
-                                    let fq_changed =
-                                        fq_resp.changed() || fq_resp.secondary_clicked();
-
-                                    if mag_changed {
-                                        seq_vibr.0 = mag_disp * 1e-6;
-                                        if let Some(v) = ng_vibr_opt.as_deref_mut() {
-                                            v.0 = seq_vibr.0;
-                                        }
-                                    }
-                                    if fq_changed {
-                                        seq_vibr.1 = freq;
-                                        if let Some(v) = ng_vibr_opt.as_deref_mut() {
-                                            v.1 = seq_vibr.1;
-                                        }
-                                    }
+                                    helpers::vibrato_section(ui, seq_mut, &mut self.score.notes);
                                 });
                                 if !DRUM_WAVES.contains(&seq_mut.wave_type) {
                                     let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
-                                        let token = seq_mut.token;
-                                        let seq_chorus = &mut seq_mut.chorus;
-                                        let mut ng_chorus_opt = self
-                                            .score
-                                            .notes
-                                            .iter_mut()
-                                            .find(|ng| ng.token == token)
-                                            .map(|ng| &mut ng.chorus);
-
-                                        let voices = &mut seq_chorus.voices;
-                                        let delta = &mut seq_chorus.delta;
-                                        let delta_shift = &mut seq_chorus.delta_shift;
-                                        let time_dep = &mut seq_chorus.time_dependency;
-                                        let sym = &mut seq_chorus.sym;
-                                        let asym = &mut seq_chorus.asym;
-
-                                        let voices_resp = slider_with_reset(
-                                            ui,
-                                            voices,
-                                            1..=10,
-                                            "Voice layers",
-                                            None,
-                                            ChorusParams::default().voices,
-                                            false,
-                                        )
-                                        .on_hover_text(VOICE_LAYERS_TEXT);
-
-                                        let delta_resp = slider_with_reset(
-                                            ui,
-                                            delta,
-                                            0.0..=1.0,
-                                            "Detune (Δf)",
-                                            None,
-                                            ChorusParams::default().delta,
-                                            true,
-                                        )
-                                        .on_hover_text(DETUNE_TEXT);
-
-                                        let delta_shift_resp = slider_with_reset(
-                                            ui,
-                                            delta_shift,
-                                            -1.0..=1.0,
-                                            "Detune shift",
-                                            None,
-                                            ChorusParams::default().delta_shift,
-                                            false,
-                                        )
-                                        .on_hover_text(DETUNE_SHIFT_TEXT);
-
-                                        let time_dep_resp = slider_with_reset(
-                                            ui,
-                                            time_dep,
-                                            Freq(-5.0)..=Freq(5.0),
-                                            "Detune over time",
-                                            None,
-                                            ChorusParams::default().time_dependency,
-                                            false,
-                                        )
-                                        .on_hover_text(DETUNE_TIME_DEP_TEXT);
-
-                                        ui.label("Weighting (around f₀)")
-                                            .on_hover_text(DETUNE_WEIGHTING_TEXT);
-
-                                        let sym_resp = slider_with_reset(
-                                            ui,
-                                            sym,
-                                            -2.0..=2.0,
-                                            "Even",
-                                            None,
-                                            ChorusParams::default().sym,
-                                            false,
-                                        )
-                                        .on_hover_text(SYM_DETUNE_TEXT);
-
-                                        let asym_resp = slider_with_reset(
-                                            ui,
-                                            asym,
-                                            -2.0..=2.0,
-                                            "Odd",
-                                            None,
-                                            ChorusParams::default().asym,
-                                            false,
-                                        )
-                                        .on_hover_text(ASYM_DETUNE_TEXT);
-
-                                        let changed = voices_resp.changed()
-                                            || voices_resp.secondary_clicked()
-                                            || delta_resp.changed()
-                                            || delta_resp.secondary_clicked()
-                                            || delta_shift_resp.changed()
-                                            || delta_shift_resp.secondary_clicked()
-                                            || time_dep_resp.changed()
-                                            || time_dep_resp.secondary_clicked()
-                                            || sym_resp.changed()
-                                            || sym_resp.secondary_clicked()
-                                            || asym_resp.changed()
-                                            || asym_resp.secondary_clicked();
-
-                                        if changed {
-                                            seq_chorus.voices = *voices;
-                                            seq_chorus.delta = *delta;
-                                            seq_chorus.delta_shift = *delta_shift;
-                                            seq_chorus.time_dependency = *time_dep;
-                                            seq_chorus.sym = *sym;
-                                            seq_chorus.asym = *asym;
-
-                                            if let Some(ch) = ng_chorus_opt.as_deref_mut() {
-                                                ch.voices = seq_chorus.voices;
-                                                ch.delta = seq_chorus.delta;
-                                                ch.delta_shift = seq_chorus.delta_shift;
-                                                ch.time_dependency = seq_chorus.time_dependency;
-                                                ch.sym = seq_chorus.sym;
-                                                ch.asym = seq_chorus.asym;
-                                            }
-                                        }
+                                        helpers::chorus_section(ui, seq_mut, &mut self.score.notes);
                                     });
                                     header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);
                                 };
 
                                 let header = ui.collapsing("Power factor", |ui| {
-                                    let token = seq_mut.token;
-                                    let seq_pow = &mut seq_mut.pow_fact;
-                                    let mut ng_pow_opt = self
-                                        .score
-                                        .notes
-                                        .iter_mut()
-                                        .find(|ng| ng.token == token)
-                                        .map(|ng| &mut ng.pow_fact);
-
-                                    let mut initial = seq_pow.0;
-
-                                    let mut evol_disp = Freq(
-                                        seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt(),
-                                    );
-
-                                    let def = default_pow_fact();
-                                    let def_evol_disp =
-                                        Freq(def.1.as_hz().signum() * def.1.as_hz().abs().sqrt());
-
-                                    let initial_resp = slider_with_reset(
-                                        ui,
-                                        &mut initial,
-                                        0.0..=1000.0,
-                                        "Initial value",
-                                        None,
-                                        def.0,
-                                        true,
-                                    );
-
-                                    let evol_resp = slider_with_reset(
-                                        ui,
-                                        &mut evol_disp,
-                                        Freq(-10.0)..=Freq(10.0),
-                                        "Evolution",
-                                        None,
-                                        def_evol_disp,
-                                        false,
-                                    )
-                                    .on_hover_text(POW_FACT_EVOL_TEXT);
-
-                                    let initial_changed =
-                                        initial_resp.changed() || initial_resp.secondary_clicked();
-                                    let evol_changed =
-                                        evol_resp.changed() || evol_resp.secondary_clicked();
-
-                                    if initial_changed {
-                                        seq_pow.0 = initial;
-                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
-                                            p.0 = seq_pow.0;
-                                        }
-                                    }
-                                    if evol_changed {
-                                        seq_pow.1 = Freq(
-                                            evol_disp.as_hz().signum()
-                                                * evol_disp.as_hz()
-                                                * evol_disp.as_hz(),
-                                        );
-                                        if let Some(p) = ng_pow_opt.as_deref_mut() {
-                                            p.1 = seq_pow.1;
-                                        }
-                                    }
+                                    helpers::power_factor_section(ui, seq_mut, &mut self.score.notes);
                                 });
                                 header.header_response.on_hover_text(POW_FACT_TEXT);
                                 ui.collapsing("Rythm", |ui| {
@@ -594,7 +201,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.time_quantum.0 = tmp_quantum.0;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                             ui.label("/");
                                             if ui
@@ -605,7 +212,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.time_quantum.1 = tmp_quantum.1;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                         });
                                     }
@@ -642,14 +249,14 @@ impl GuiApp {
                                                 {
                                                     seq_mut.t_min =
                                                         step * (Time(t_min) / step).round();
-                                                    edited_seq ^= true;
+                                                    edited_seq = true;
                                                 }
                                                 if (Time(t_max) - seq_mut.t_max).as_secs().abs()
                                                     > f64::EPSILON
                                                 {
                                                     seq_mut.t_max =
                                                         step * (Time(t_max) / step).round();
-                                                    edited_seq ^= true;
+                                                    edited_seq = true;
                                                 }
                                             },
                                         );
@@ -702,7 +309,7 @@ impl GuiApp {
 
                                                 seq_mut.t_min = Time(new_min);
                                                 seq_mut.t_max = Time(new_max);
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             }
                                         }
                                     }
@@ -717,7 +324,7 @@ impl GuiApp {
                                             {
                                                 seq_mut.inclusions =
                                                     Rythm::Det(DetRythm::default());
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             }
                                         } else {
                                             if ui
@@ -725,7 +332,7 @@ impl GuiApp {
                                                 .clicked()
                                             {
                                                 seq_mut.inclusions = Rythm::Rd(RdRythm::default());
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             }
                                         }
                                         match tmp_inclusions {
@@ -751,7 +358,7 @@ impl GuiApp {
                                                                 edited_rd_rythm.amount = rd_rythm
                                                                     .amount
                                                                     .min(rd_rythm.length);
-                                                                edited_seq ^= true;
+                                                                edited_seq = true;
                                                             }
                                                         };
                                                         ui.label("N:");
@@ -771,7 +378,7 @@ impl GuiApp {
                                                                 edited_rd_rythm.length = rd_rythm
                                                                     .length
                                                                     .max(rd_rythm.amount);
-                                                                edited_seq ^= true;
+                                                                edited_seq = true;
                                                             }
                                                         };
                                                     });
@@ -796,7 +403,7 @@ impl GuiApp {
                                                                 .into_iter()
                                                                 .filter(|g| *g > 0)
                                                                 .collect();
-                                                            edited_seq ^= true;
+                                                            edited_seq = true;
                                                         }
                                                     }
                                                 });
@@ -814,7 +421,7 @@ impl GuiApp {
                                             {
                                                 seq_mut.exclusions =
                                                     Rythm::Det(DetRythm::default());
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             }
                                         } else {
                                             if ui
@@ -822,7 +429,7 @@ impl GuiApp {
                                                 .clicked()
                                             {
                                                 seq_mut.exclusions = Rythm::Rd(RdRythm::default());
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             }
                                         }
                                         match tmp_exclusions {
@@ -848,7 +455,7 @@ impl GuiApp {
                                                                 edited_rd_rythm.amount = rd_rythm
                                                                     .amount
                                                                     .min(rd_rythm.length);
-                                                                edited_seq ^= true;
+                                                                edited_seq = true;
                                                             }
                                                         };
                                                         ui.label("N:");
@@ -868,7 +475,7 @@ impl GuiApp {
                                                                 edited_rd_rythm.length = rd_rythm
                                                                     .length
                                                                     .max(rd_rythm.amount);
-                                                                edited_seq ^= true;
+                                                                edited_seq = true;
                                                             }
                                                         };
                                                     });
@@ -893,7 +500,7 @@ impl GuiApp {
                                                                 .into_iter()
                                                                 .filter(|g| *g > 1)
                                                                 .collect();
-                                                            edited_seq ^= true;
+                                                            edited_seq = true;
                                                         }
                                                     }
                                                 });
@@ -912,7 +519,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.beat_offset = tmp_beat_offset;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                         });
                                         ui.horizontal(|ui| {
@@ -927,7 +534,7 @@ impl GuiApp {
                                                 loop_len = loop_len.max(Time(0.0));
                                                 seq_mut.loop_len = loop_len.max(Time(0.0));
                                                 seq_mut.t_max = seq_mut.t_max.min(loop_len);
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                             let mut repeat = seq_mut.repeat.clone();
                                             ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
@@ -936,7 +543,7 @@ impl GuiApp {
                                             );
                                             if slider.changed() {
                                                 seq_mut.repeat = repeat;
-                                                edited_seq ^= true;
+                                                edited_seq = true;
                                             };
                                         });
                                     }
@@ -985,6 +592,7 @@ impl GuiApp {
 
                                     {
                                         let mut changed = false;
+                                        let mut octave_changed = false;
                                         let mut interval = seq_mut.interval.clone();
                                         let mut shuffle = seq_mut.shuffle;
                                         if let Interval::RDTempered(
@@ -993,16 +601,26 @@ impl GuiApp {
                                             ref mut octave,
                                         ) = interval
                                         {
-                                            // octave
+                                            // octave (aesthetic - update existing notes immediately)
+                                            let old_octave = *octave;
                                             ui.horizontal(|ui| {
                                                 ui.label("Octave:").on_hover_text(OCTAVE_TEXT);
                                                 if ui
                                                     .add(egui::Slider::new(octave, -4..=4))
                                                     .changed()
                                                 {
-                                                    changed = true;
+                                                    octave_changed = true;
                                                 };
                                             });
+                                            if octave_changed {
+                                                let octave_shift = *octave - old_octave;
+                                                // Store for deferred update (after mutable borrow is dropped)
+                                                octave_update = Some((seq_mut.token, octave_shift));
+                                                // Also update the sequence's interval
+                                                if let Interval::RDTempered(_, _, ref mut seq_octave) = seq_mut.interval {
+                                                    *seq_octave = *octave;
+                                                }
+                                            }
                                             if !harmonise {
                                                 // nb_rd_steps
                                                 ui.horizontal(|ui| {
@@ -1221,10 +839,22 @@ impl GuiApp {
                                             *collapsed = !*collapsed;
                                         }
 
-                                        // Group volume
-                                        ui.add(Slider::new(volume, 0.0..=5.0).text("Volume"));
-                                        // Group proba
-                                        ui.add(Slider::new(proba, 0.0..=1.0).text("Proba"));
+                                        // Group volume (aesthetic - update NotesGroup immediately)
+                                        if ui
+                                            .add(Slider::new(volume, 0.0..=5.0).text("Volume"))
+                                            .changed()
+                                        {
+                                            // Store for deferred update (after mutable borrow is dropped)
+                                            group_volume_changed = true;
+                                        }
+
+                                        // Group proba (structural - triggers regeneration on release)
+                                        if ui
+                                            .add(Slider::new(proba, 0.0..=1.0).text("Proba"))
+                                            .changed()
+                                        {
+                                            edited_seq = true;
+                                        }
                                     }
                                     TrackNode::Seq(_) => unreachable!(),
                                 }
@@ -1350,19 +980,28 @@ impl GuiApp {
                             }
                         }
                     }
+                    // Apply deferred Group volume change (after mutable borrow is dropped)
+                    if group_volume_changed {
+                        if let Some(sel) = self.selected.clone() {
+                            self.update_descendant_volumes(&sel);
+                        }
+                    }
+
+                    // Apply deferred octave change (after mutable borrow is dropped)
+                    if let Some((token, octave_shift)) = octave_update {
+                        self.update_sequence_octaves(token, octave_shift);
+                    }
+
                     if edited_seq {
                         if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
-                                let mut sequence =
-                                    self.score.track_root.get_mut(&sel).unwrap().clone();
-                                if let Some(Sequence {
-                                    ref mut not_generate_until,
-                                    ..
-                                }) = sequence.as_seq_mut()
-                                {
-                                    *not_generate_until = None;
-                                }
-                                self.edit_node_at(sequence, &sel);
+                                // Clone the node and clear not_generate_until on all sequences within it
+                                let mut node = self.score.track_root.get_mut(&sel).unwrap().clone();
+                                Self::visit_sequences_mut(&mut node, &mut |seq: &mut Sequence| {
+                                    seq.not_generate_until = None;
+                                });
+                                // Regenerate this node and all following sequences in preorder
+                                self.edit_node_at(node, &sel);
                             }
                         }
                     }
@@ -1370,60 +1009,4 @@ impl GuiApp {
                 self.property_panel_width = ui.available_width();
             });
     }
-}
-fn rescale_envelope(e: &mut Sequence) {
-    let a = 1.0 / e.attack_decay.0;
-    let b = 1.0 / e.attack_decay.1;
-    let rescale_factor = rescale_factor(a, b);
-    if rescale_factor.is_normal() {
-        e.normalization = rescale_factor
-    }
-}
-fn slider_with_reset<'a, N>(
-    ui: &mut egui::Ui,
-    value: &'a mut N,
-    range: std::ops::RangeInclusive<N>,
-    label: &str,
-    shortcut: Option<&str>,
-    reset_to: N,
-    log: bool,
-) -> egui::Response
-where
-    N: egui::emath::Numeric + Copy + Display,
-{
-    let mut resp = ui
-        .add(egui::Slider::new(value, range).text(label).logarithmic(log))
-        .on_hover_ui(|ui| {
-            ui.label(egui::RichText::new(format!("Right-click to reset to {}", reset_to)).weak());
-            if let Some(shortcut) = shortcut {
-                ui.label(egui::RichText::new(format!("Shortcut: {}", shortcut)).weak());
-            }
-        });
-    if resp.secondary_clicked() {
-        *value = reset_to;
-        resp.mark_changed();
-    }
-    resp
-}
-/// Small helper: u32 slider with right-click reset to `reset_to`.
-fn u32_cell(
-    ui: &mut egui::Ui,
-    v: &mut u32,
-    range: std::ops::RangeInclusive<u32>,
-    reset_to: u32,
-) -> egui::Response {
-    let mut resp = ui
-        .add(
-            egui::Slider::new(v, range)
-                .clamping(egui::SliderClamping::Edits)
-                .step_by(1.0)
-                .show_value(true),
-        )
-        .on_hover_text("Right-click to reset");
-    if resp.secondary_clicked() {
-        *v = reset_to;
-        // mark as changed so caller can detect it
-        resp.mark_changed();
-    }
-    resp
 }
