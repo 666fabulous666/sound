@@ -100,6 +100,9 @@ pub fn default_proba() -> f64 {
 pub fn default_reverse_prob() -> f64 {
     0.0
 }
+pub fn default_shuffle_prob() -> f64 {
+    0.0
+}
 pub fn default_tempo() -> f64 {
     60.0
 }
@@ -131,6 +134,6 @@ impl Default for RdRythm {
 pub fn default_delays() -> (Vec<f64>, Vec<f64>) {
     (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0])
 }
-pub fn default_harmoniser() -> [[u32; 7]; 2] {
-    [[10, 11, 11, 4, 3, 0, 8], [1, 2, 2, 0, 0, 0, 3]]
+pub fn default_harmoniser() -> [u32; 7] {
+    [10, 11, 11, 4, 3, 0, 8]
 }

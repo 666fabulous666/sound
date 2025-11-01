@@ -16,6 +16,8 @@ pub struct Note {
     pub tension: usize,
     pub random_chord: bool,
     pub reverse_prob: f64,
+    #[serde(default)]
+    pub shuffle_prob: f64,
 }
 impl Note {
     pub fn draw(
@@ -24,7 +26,7 @@ impl Note {
         self_ctx: &mut Vec<Note>,
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
-        harmoniser: [[u32; 7]; 2],
+        harmoniser: [u32; 7],
         step_as_time: Time,
         arpegio: f64,
     ) -> Vec<Self> {
@@ -42,8 +44,10 @@ impl Note {
                                 .filter(|n| {
                                     // self.time < n.time + n.duration + tolerance.0
                                     //     && n.time < self.time + self.duration + tolerance.1
-                                    self.time < n.time + tolerance.0
-                                        && n.time < self.time + tolerance.1
+                                    self.time - n.time < n.duration + tolerance.0
+                                        && n.time - self.time < self.duration + tolerance.1
+                                    // self.time < n.time + tolerance.0
+                                    //     && n.time < self.time + tolerance.1
                                 })
                                 .map(|n| {
                                     (
@@ -51,7 +55,10 @@ impl Note {
                                         // true overlap only if timing overlaps
                                         // self.time < n.time + n.duration
                                         //     && n.time < self.time + self.duration,
-                                        (self.time - n.time).as_secs().abs(),
+                                        // (self.time - n.time).as_secs(),
+                                        (self.time + self.duration - n.time)
+                                            .max(n.time + n.duration - self.time)
+                                            .as_secs(),
                                     )
                                 })
                         },
@@ -86,16 +93,18 @@ impl Note {
                             self.tension
                         })
                         .min_by_key(|d| {
-                            tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
+                            (tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
+                                * 1024.0) as i64
                         })
                         .unwrap()
                 } else {
                     vec![(0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12]
                 };
-                // degree.shuffle(rng);
                 if rng.gen_bool(self.reverse_prob) {
-                    // let degree = degree.into_iter().rev().collect_vec();
                     degree.reverse();
+                }
+                if rng.gen_bool(self.shuffle_prob) {
+                    degree.shuffle(rng);
                 }
 
                 // 5. Build new notes and push into self_ctx
@@ -122,8 +131,8 @@ fn tension_family(
     // ns: impl IntoIterator<Item = (i32, bool)>,
     ns: impl IntoIterator<Item = (i32, f64)>,
     c: impl IntoIterator<Item = i32>,
-    harmoniser: [[u32; 7]; 2],
-) -> u32 {
+    harmoniser: [u32; 7],
+) -> f64 {
     // Collect combinations so we can reuse them
     let combo_vals: Vec<i32> = c.into_iter().collect();
 
@@ -135,45 +144,32 @@ fn tension_family(
                 .iter()
                 .copied()
                 // .map(|d| tension2(n, d, overlap, harmoniser))
-                .map(|d| (16 * tension2(n, d, true, harmoniser)) / (overlap as u32 + 1))
-                .sum::<u32>()
+                .map(|d| tension2(n, d, harmoniser) / (overlap.powi(2) + 1.0))
+                .sum::<f64>()
         })
-        .sum::<u32>();
+        .sum::<f64>();
 
     // --- 2. sum pairwise tensions within c itself ---
     for i in 0..combo_vals.len() {
         for j in (i + 1)..combo_vals.len() {
-            total += tension2(combo_vals[i], combo_vals[j], true, harmoniser);
+            total += tension2(combo_vals[i], combo_vals[j], harmoniser);
         }
     }
 
     total
 }
-fn tension2(n1: i32, n2: i32, overlap: bool, harmoniser: [[u32; 7]; 2]) -> u32 {
+fn tension2(n1: i32, n2: i32, harmoniser: [u32; 7]) -> f64 {
     let d = dist12(n1, n2);
-    if overlap {
-        match d {
-            0 => harmoniser[0][0],
-            1 => harmoniser[0][1],
-            2 => harmoniser[0][2],
-            3 => harmoniser[0][3],
-            4 => harmoniser[0][4],
-            5 => harmoniser[0][5],
-            6 => harmoniser[0][6],
-            _ => unreachable!(),
-        }
-    } else {
-        match d {
-            0 => harmoniser[1][0],
-            1 => harmoniser[1][1],
-            2 => harmoniser[1][2],
-            3 => harmoniser[1][3],
-            4 => harmoniser[1][4],
-            5 => harmoniser[1][5],
-            6 => harmoniser[1][6],
-            _ => unreachable!(),
-        }
-    }
+    (match d {
+        0 => harmoniser[0],
+        1 => harmoniser[1],
+        2 => harmoniser[2],
+        3 => harmoniser[3],
+        4 => harmoniser[4],
+        5 => harmoniser[5],
+        6 => harmoniser[6],
+        _ => unreachable!(),
+    }) as f64
 }
 fn dist12(n1: i32, n2: i32) -> i32 {
     let d = ((n1 - n2) % 12).abs();

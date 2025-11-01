@@ -177,7 +177,11 @@ impl GuiApp {
                                 };
 
                                 let header = ui.collapsing("Power factor", |ui| {
-                                    helpers::power_factor_section(ui, seq_mut, &mut self.score.notes);
+                                    helpers::power_factor_section(
+                                        ui,
+                                        seq_mut,
+                                        &mut self.score.notes,
+                                    );
                                 });
                                 header.header_response.on_hover_text(POW_FACT_TEXT);
                                 ui.collapsing("Rythm", |ui| {
@@ -308,17 +312,35 @@ impl GuiApp {
                                     }
                                     ui.separator();
                                     {
-                                        if rhythm::inclusion_section(ui, seq_mut, |ui, gens, default_val| {
-                                            Self::edit_vec(ui, gens, default_val, layout_left());
-                                        }) {
+                                        if rhythm::inclusion_section(
+                                            ui,
+                                            seq_mut,
+                                            |ui, gens, default_val| {
+                                                Self::edit_vec(
+                                                    ui,
+                                                    gens,
+                                                    default_val,
+                                                    layout_left(),
+                                                );
+                                            },
+                                        ) {
                                             edited_seq = true;
                                         }
                                     }
                                     ui.separator();
                                     {
-                                        if rhythm::exclusion_section(ui, seq_mut, |ui, gens, default_val| {
-                                            Self::edit_vec(ui, gens, default_val, layout_left());
-                                        }) {
+                                        if rhythm::exclusion_section(
+                                            ui,
+                                            seq_mut,
+                                            |ui, gens, default_val| {
+                                                Self::edit_vec(
+                                                    ui,
+                                                    gens,
+                                                    default_val,
+                                                    layout_left(),
+                                                );
+                                            },
+                                        ) {
                                             edited_seq = true;
                                         }
                                         ui.separator();
@@ -432,7 +454,12 @@ impl GuiApp {
                                                 // Store for deferred update (after mutable borrow is dropped)
                                                 octave_update = Some((seq_mut.token, octave_shift));
                                                 // Also update the sequence's interval
-                                                if let Interval::RDTempered(_, _, ref mut seq_octave) = seq_mut.interval {
+                                                if let Interval::RDTempered(
+                                                    _,
+                                                    _,
+                                                    ref mut seq_octave,
+                                                ) = seq_mut.interval
+                                                {
                                                     *seq_octave = *octave;
                                                 }
                                             }
@@ -480,7 +507,7 @@ impl GuiApp {
                                                 });
                                             } else {
                                                 ui.collapsing("Harmoniser", |ui| {
-                                                    let mut harmoniser = seq_mut.harmoniser; // [[u32;7];2]
+                                                    let mut harmoniser = seq_mut.harmoniser;
                                                     let mut changed = false;
 
                                                     ui.label(
@@ -500,27 +527,21 @@ impl GuiApp {
                                                                 RichText::new("Interval").weak(),
                                                             );
                                                             ui.label(
-                                                                RichText::new("Overlapping").weak(),
-                                                            );
-                                                            ui.label(
-                                                                RichText::new("Non-overlapping")
-                                                                    .weak(),
+                                                                RichText::new("Tension").weak(),
                                                             );
                                                             ui.end_row();
 
                                                             // Rows: one per interval
                                                             for i in 0..=6 {
                                                                 ui.label(format!("{i}"));
-                                                                for j in 0..=1 {
-                                                                    let r = u32_cell(
-                                                                        ui,
-                                                                        &mut harmoniser[j][i],
-                                                                        0..=32,
-                                                                        0,
-                                                                    );
-                                                                    if r.changed() {
-                                                                        changed = true;
-                                                                    }
+                                                                let r = u32_cell(
+                                                                    ui,
+                                                                    &mut harmoniser[i],
+                                                                    0..=32,
+                                                                    0,
+                                                                );
+                                                                if r.changed() {
+                                                                    changed = true;
                                                                 }
                                                                 ui.end_row();
                                                             }
@@ -528,19 +549,11 @@ impl GuiApp {
 
                                                     ui.horizontal_wrapped(|ui| {
                                                         if ui.button("Reset all to 16").clicked() {
-                                                            harmoniser = [[16; 7]; 2];
+                                                            harmoniser = [16; 7];
                                                             changed = true;
                                                         }
                                                         if ui.button("Reset defaults").clicked() {
                                                             harmoniser = default_harmoniser();
-                                                            changed = true;
-                                                        }
-                                                        if ui.button("Copy Overlapping to Non-overlapping").clicked() {
-                                                            harmoniser[1] = harmoniser[0];
-                                                            changed = true;
-                                                        }
-                                                        if ui.button("Copy Non-overlapping to Overlapping").clicked() {
-                                                            harmoniser[0] = harmoniser[1];
                                                             changed = true;
                                                         }
                                                     });
@@ -561,18 +574,57 @@ impl GuiApp {
                                             seq_mut.shuffle = shuffle;
                                             edited_seq = true;
                                         }
-                                        if ui.add(egui::Slider::new(&mut seq_mut.chord, 1..=12).text("Chord")).changed() {
+                                        if ui
+                                            .add(
+                                                egui::Slider::new(&mut seq_mut.chord, 1..=12)
+                                                    .text("Chord"),
+                                            )
+                                            .changed()
+                                        {
                                             edited_seq = true;
-                                            }
-                                        if ui.add(egui::Slider::new(&mut seq_mut.arpegio, -4.0..=4.0).text("Arpegio")).changed() {
+                                        }
+                                        if ui
+                                            .add(
+                                                egui::Slider::new(&mut seq_mut.arpegio, -4.0..=4.0)
+                                                    .text("Arpegio"),
+                                            )
+                                            .changed()
+                                        {
                                             edited_seq = true;
-                                            }
-                                        if ui.add(egui::Slider::new(&mut seq_mut.reverse_prob, 0.0..=1.0).text("Reverse prob")).changed() {
+                                        }
+                                        if ui
+                                            .add(
+                                                egui::Slider::new(
+                                                    &mut seq_mut.reverse_prob,
+                                                    0.0..=1.0,
+                                                )
+                                                .text("Reverse prob"),
+                                            )
+                                            .changed()
+                                        {
                                             edited_seq = true;
-                                            }
-                                        if ui.add(egui::Checkbox::new(&mut seq_mut.random_chord, "Random skip chord notes")).changed() {
+                                        }
+                                        if ui
+                                            .add(
+                                                egui::Slider::new(
+                                                    &mut seq_mut.shuffle_prob,
+                                                    0.0..=1.0,
+                                                )
+                                                .text("Shuffle prob"),
+                                            )
+                                            .changed()
+                                        {
                                             edited_seq = true;
-                                            }
+                                        }
+                                        if ui
+                                            .add(egui::Checkbox::new(
+                                                &mut seq_mut.random_chord,
+                                                "Random skip chord notes",
+                                            ))
+                                            .changed()
+                                        {
+                                            edited_seq = true;
+                                        }
                                     }
                                 });
                                 ui.collapsing("Accents", |ui| {
