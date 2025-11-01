@@ -61,6 +61,7 @@ pub fn stream(
                     spacial,
                     volume,
                     token,
+                    lowpass_enabled,
                     ..
                 } in note_groups.iter()
                 {
@@ -90,6 +91,7 @@ pub fn stream(
                                     *vibrato,
                                     chorus,
                                     *pow_fact,
+                                    *lowpass_enabled,
                                     &mut memory,
                                     sample_rate,
                                 );

@@ -103,6 +103,9 @@ pub fn default_reverse_prob() -> f64 {
 pub fn default_shuffle_prob() -> f64 {
     0.0
 }
+pub fn default_lowpass_enabled() -> bool {
+    false
+}
 pub fn default_tempo() -> f64 {
     60.0
 }

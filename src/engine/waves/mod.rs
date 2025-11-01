@@ -53,6 +53,7 @@ pub fn generate_wave(
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
     pow_fact: (f64, Freq),
+    lowpass_enabled: bool,
     memory: &mut f64,
     sample_rate: Freq,
 ) -> f64 {
@@ -68,44 +69,44 @@ pub fn generate_wave(
     let disto = |x: f64| x.powf(p);
     match wave_type {
         WaveType::HiHat => {
-            return lowpass_step_cutoff(
-                vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto),
-                memory,
-                freq * cutoff_multiplier,
-                sample_rate,
-            )
+            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            return if lowpass_enabled {
+                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
+            } else {
+                signal
+            };
         }
         WaveType::Kick => {
-            return lowpass_step_cutoff(
-                vol_envelope * sign_f(drums::kick(bend_vib_time), disto),
-                memory,
-                freq * cutoff_multiplier,
-                sample_rate,
-            )
+            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            return if lowpass_enabled {
+                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
+            } else {
+                signal
+            };
         }
         WaveType::Snare => {
-            return lowpass_step_cutoff(
-                vol_envelope * sign_f(drums::snare(bend_vib_time), disto),
-                memory,
-                freq * cutoff_multiplier,
-                sample_rate,
-            )
+            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            return if lowpass_enabled {
+                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
+            } else {
+                signal
+            };
         }
         WaveType::Ride => {
-            return lowpass_step_cutoff(
-                vol_envelope * sign_f(drums::ride(bend_vib_time), disto),
-                memory,
-                freq * cutoff_multiplier,
-                sample_rate,
-            )
+            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            return if lowpass_enabled {
+                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
+            } else {
+                signal
+            };
         }
         WaveType::Darbuka => {
-            return lowpass_step_cutoff(
-                vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto),
-                memory,
-                freq * cutoff_multiplier,
-                sample_rate,
-            )
+            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            return if lowpass_enabled {
+                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
+            } else {
+                signal
+            };
         }
         _ => {}
     }
@@ -151,14 +152,17 @@ pub fn generate_wave(
         / norm.sqrt()
         / (freq / Freq(440.0)).sqrt();
     let tmp = vol_envelope * sum_of_waves;
-    // tmp
-    lowpass_step_cutoff_refgain(
-        tmp,
-        memory,
-        freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
-        freq,
-        sample_rate,
-    )
+    if lowpass_enabled {
+        lowpass_step_cutoff_refgain(
+            tmp,
+            memory,
+            freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
+            freq,
+            sample_rate,
+        )
+    } else {
+        tmp
+    }
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {

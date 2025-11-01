@@ -165,9 +165,6 @@ pub fn envelope_section(
 ) {
     let mut attack = seq.attack_decay.0;
     let mut decay = seq.attack_decay.1;
-    let mut lp_attack = seq.lp_attack_decay.0;
-    let mut lp_decay = seq.lp_attack_decay.1;
-    let mut lp_cutoff_multiplier = seq.cutoff_multiplier;
 
     let def = if is_drum {
         default_drum_attack_decay()
@@ -177,55 +174,73 @@ pub fn envelope_section(
 
     let attack_resp = slider_with_reset(ui, &mut attack, 0.01..=100.0, "Attack", None, def.0, true);
     let decay_resp = slider_with_reset(ui, &mut decay, 0.01..=100.0, "Decay", None, def.1, true);
-    let lp_attack_resp = slider_with_reset(
-        ui,
-        &mut lp_attack,
-        0.01..=100.0,
-        "Lowpass Attack",
-        None,
-        def.0,
-        true,
-    );
-    let lp_decay_resp = slider_with_reset(
-        ui,
-        &mut lp_decay,
-        0.01..=100.0,
-        "Lowpass Decay",
-        None,
-        def.1,
-        true,
-    );
-    let lp_cutoff_multiplier_resp = slider_with_reset(
-        ui,
-        &mut lp_cutoff_multiplier,
-        0.01..=100.0,
-        "Lowpass cutoff muliplier",
-        None,
-        def.1,
-        true,
-    );
+
+    // Lowpass filter checkbox
+    let lowpass_checkbox = ui.checkbox(&mut seq.lowpass_enabled, "Enable Lowpass Filter");
+
+    let mut lp_changed = false;
+    if seq.lowpass_enabled {
+        let mut lp_attack = seq.lp_attack_decay.0;
+        let mut lp_decay = seq.lp_attack_decay.1;
+        let mut lp_cutoff_multiplier = seq.cutoff_multiplier;
+
+        let lp_attack_resp = slider_with_reset(
+            ui,
+            &mut lp_attack,
+            0.01..=100.0,
+            "Lowpass Attack",
+            None,
+            def.0,
+            true,
+        );
+        let lp_decay_resp = slider_with_reset(
+            ui,
+            &mut lp_decay,
+            0.01..=100.0,
+            "Lowpass Decay",
+            None,
+            def.1,
+            true,
+        );
+        let lp_cutoff_multiplier_resp = slider_with_reset(
+            ui,
+            &mut lp_cutoff_multiplier,
+            0.01..=100.0,
+            "Lowpass cutoff muliplier",
+            None,
+            def.1,
+            true,
+        );
+
+        lp_changed = lp_attack_resp.changed()
+            || lp_attack_resp.secondary_clicked()
+            || lp_decay_resp.changed()
+            || lp_decay_resp.secondary_clicked()
+            || lp_cutoff_multiplier_resp.changed()
+            || lp_cutoff_multiplier_resp.secondary_clicked();
+
+        if lp_changed {
+            seq.lp_attack_decay = (lp_attack, lp_decay);
+            seq.cutoff_multiplier = lp_cutoff_multiplier;
+        }
+    }
 
     let changed = attack_resp.changed()
         || attack_resp.secondary_clicked()
         || decay_resp.changed()
         || decay_resp.secondary_clicked()
-        || lp_attack_resp.changed()
-        || lp_attack_resp.secondary_clicked()
-        || lp_decay_resp.changed()
-        || lp_decay_resp.secondary_clicked()
-        || lp_cutoff_multiplier_resp.changed()
-        || lp_cutoff_multiplier_resp.secondary_clicked();
+        || lowpass_checkbox.changed()
+        || lp_changed;
 
     if changed {
         seq.attack_decay = (attack, decay);
-        seq.lp_attack_decay = (lp_attack, lp_decay);
-        seq.cutoff_multiplier = lp_cutoff_multiplier;
         rescale_envelope(seq);
 
         update_notes_group(notes, seq.token, |ng| {
             ng.attack_decay = seq.attack_decay;
             ng.lp_attack_decay = seq.lp_attack_decay;
             ng.cutoff_multiplier = seq.cutoff_multiplier;
+            ng.lowpass_enabled = seq.lowpass_enabled;
         });
     }
 }

@@ -58,6 +58,8 @@ pub struct Sequence {
     pub lp_attack_decay: (f64, f64),
     #[serde(default = "default_cutoff_multiplier")]
     pub cutoff_multiplier: f64,
+    #[serde(default = "default_lowpass_enabled")]
+    pub lowpass_enabled: bool,
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     #[serde(default = "default_vibrato")]
@@ -133,6 +135,7 @@ impl Sequence {
             arpegio: default_arpegio(),
             reverse_prob: default_reverse_prob(),
             shuffle_prob: default_shuffle_prob(),
+            lowpass_enabled: default_lowpass_enabled(),
         }
     }
     pub fn draw(
@@ -268,6 +271,7 @@ impl Sequence {
                 volume: self.volume,
                 tolerance: self.tolerance,
                 cutoff_multiplier: self.cutoff_multiplier,
+                lowpass_enabled: self.lowpass_enabled,
             });
         }
     }
