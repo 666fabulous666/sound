@@ -33,7 +33,7 @@ pub fn stream(
     // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
-        let mut lp_memories: HashMap<LpMemoryKey, f64> = HashMap::new();
+        let mut lp_memories: HashMap<LpMemoryKey, [f64; 5]> = HashMap::new();
         let mut last_cleanup = crate::time_freq::Time(0.0);
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
@@ -62,18 +62,19 @@ pub fn stream(
                     volume,
                     token,
                     lowpass_enabled,
+                    lp_order,
                     ..
                 } in note_groups.iter()
                 {
                     for note in notes_from_seq.iter() {
-                        let mut memory = lp_memories
+                        let memory = lp_memories
                             .entry((
                                 *token,
                                 note.time,
                                 note.interval.clone(),
                                 note.glide.clone(),
                             ))
-                            .or_insert(0.0);
+                            .or_insert([0.0; 5]);
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
                             let volume = 0.1 * volume * note.volume;
@@ -92,7 +93,8 @@ pub fn stream(
                                     chorus,
                                     *pow_fact,
                                     *lowpass_enabled,
-                                    &mut memory,
+                                    *lp_order,
+                                    memory,
                                     sample_rate,
                                 );
                             dry_left += (1.0 - spacial) * dry;

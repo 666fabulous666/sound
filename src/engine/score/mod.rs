@@ -86,6 +86,7 @@ pub struct NotesGroup {
     pub lp_attack_decay: (f64, f64),
     pub cutoff_multiplier: f64,
     pub lowpass_enabled: bool,
+    pub lp_order: u32,
     pub bend: (f64, f64),
     pub chorus: ChorusParams,
     pub notes: Vec<Note>,

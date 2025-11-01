@@ -60,6 +60,8 @@ pub struct Sequence {
     pub cutoff_multiplier: f64,
     #[serde(default = "default_lowpass_enabled")]
     pub lowpass_enabled: bool,
+    #[serde(default = "default_lp_order")]
+    pub lp_order: u32,
     #[serde(default = "default_bend")]
     pub bend: (f64, f64),
     #[serde(default = "default_vibrato")]
@@ -136,6 +138,7 @@ impl Sequence {
             reverse_prob: default_reverse_prob(),
             shuffle_prob: default_shuffle_prob(),
             lowpass_enabled: default_lowpass_enabled(),
+            lp_order: default_lp_order(),
         }
     }
     pub fn draw(
@@ -272,6 +275,7 @@ impl Sequence {
                 tolerance: self.tolerance,
                 cutoff_multiplier: self.cutoff_multiplier,
                 lowpass_enabled: self.lowpass_enabled,
+                lp_order: self.lp_order,
             });
         }
     }

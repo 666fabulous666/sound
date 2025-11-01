@@ -54,7 +54,8 @@ pub fn generate_wave(
     chorus: &ChorusParams,
     pow_fact: (f64, Freq),
     lowpass_enabled: bool,
-    memory: &mut f64,
+    lp_order: u32,
+    memory: &mut [f64; 5],
     sample_rate: Freq,
 ) -> f64 {
     let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
@@ -69,44 +70,74 @@ pub fn generate_wave(
     let disto = |x: f64| x.powf(p);
     match wave_type {
         WaveType::HiHat => {
-            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
-            return if lowpass_enabled {
-                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
-            } else {
-                signal
-            };
+            let mut signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            if lowpass_enabled {
+                for i in 0..lp_order.min(5) as usize {
+                    signal = lowpass_step_cutoff(
+                        signal,
+                        &mut memory[i],
+                        freq * cutoff_multiplier,
+                        sample_rate,
+                    );
+                }
+            }
+            return signal;
         }
         WaveType::Kick => {
-            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
-            return if lowpass_enabled {
-                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
-            } else {
-                signal
-            };
+            let mut signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            if lowpass_enabled {
+                for i in 0..lp_order.min(5) as usize {
+                    signal = lowpass_step_cutoff(
+                        signal,
+                        &mut memory[i],
+                        freq * cutoff_multiplier,
+                        sample_rate,
+                    );
+                }
+            }
+            return signal;
         }
         WaveType::Snare => {
-            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
-            return if lowpass_enabled {
-                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
-            } else {
-                signal
-            };
+            let mut signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            if lowpass_enabled {
+                for i in 0..lp_order.min(5) as usize {
+                    signal = lowpass_step_cutoff(
+                        signal,
+                        &mut memory[i],
+                        freq * cutoff_multiplier,
+                        sample_rate,
+                    );
+                }
+            }
+            return signal;
         }
         WaveType::Ride => {
-            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
-            return if lowpass_enabled {
-                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
-            } else {
-                signal
-            };
+            let mut signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            if lowpass_enabled {
+                for i in 0..lp_order.min(5) as usize {
+                    signal = lowpass_step_cutoff(
+                        signal,
+                        &mut memory[i],
+                        freq * cutoff_multiplier,
+                        sample_rate,
+                    );
+                }
+            }
+            return signal;
         }
         WaveType::Darbuka => {
-            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
-            return if lowpass_enabled {
-                lowpass_step_cutoff(signal, memory, freq * cutoff_multiplier, sample_rate)
-            } else {
-                signal
-            };
+            let mut signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            if lowpass_enabled {
+                for i in 0..lp_order.min(5) as usize {
+                    signal = lowpass_step_cutoff(
+                        signal,
+                        &mut memory[i],
+                        freq * cutoff_multiplier,
+                        sample_rate,
+                    );
+                }
+            }
+            return signal;
         }
         _ => {}
     }
@@ -151,18 +182,19 @@ pub fn generate_wave(
         .sum::<f64>()
         / norm.sqrt()
         / (freq / Freq(440.0)).sqrt();
-    let tmp = vol_envelope * sum_of_waves;
+    let mut tmp = vol_envelope * sum_of_waves;
     if lowpass_enabled {
-        lowpass_step_cutoff_refgain(
-            tmp,
-            memory,
-            freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
-            freq,
-            sample_rate,
-        )
-    } else {
-        tmp
+        for i in 0..lp_order.min(5) as usize {
+            tmp = lowpass_step_cutoff(
+                tmp,
+                &mut memory[i],
+                freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
+                // freq,
+                sample_rate,
+            );
+        }
     }
+    tmp
 }
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {
@@ -283,56 +315,4 @@ pub fn lowpass_step_cutoff(x: f64, memory: &mut f64, cutoff: Freq, sample_rate: 
     *memory = alpha * x + (1.0 - alpha) * *memory;
 
     *memory
-}
-/// One step of a 1-pole low-pass with:
-///   - cutoff frequency (fc)
-///   - per-sample memory
-///   - *automatic makeup gain* so that a sine at `f_ref` is not attenuated.
-///
-/// Arguments:
-/// - `x`:          current raw sample
-/// - `memory`:     previous filtered sample y[n-1] (will be updated)
-/// - `cutoff`:     low-pass cutoff in Hz
-/// - `f_ref`:      reference frequency in Hz that we want to pass at ~unity gain
-/// - `sample_rate`: fs in Hz
-///
-/// Returns: filtered+gain-compensated sample y'[n].
-///
-/// Notes:
-/// - This can boost low frequencies if `f_ref` is higher than DC.
-/// - Can clip if boost gets large; you may want to soft-limit after.
-pub fn lowpass_step_cutoff_refgain(
-    x: f64,
-    memory: &mut f64,
-    cutoff: Freq,
-    f_ref: Freq,
-    sample_rate: Freq,
-) -> f64 {
-    // Hz as f64
-    let fc = cutoff.as_hz().max(0.0);
-    let fs = sample_rate.as_hz().max(1.0); // avoid div-by-zero
-
-    // standard one-pole coefficient
-    let alpha = 1.0 - (-2.0 * std::f64::consts::PI * fc / fs).exp();
-    let a = 1.0 - alpha; // pole coefficient
-
-    // do the IIR update first (this is the raw low-passed value)
-    *memory = alpha * x + a * *memory;
-    let y = *memory;
-
-    // ----- makeup gain so that |H(jω_ref)| = 1 -----
-
-    // digital radian frequency for the reference tone
-    let w_ref = 2.0 * std::f64::consts::PI * f_ref.as_hz() / fs;
-
-    // magnitude of the one-pole LPF at that ω:
-    // |H| = α / sqrt( 1 - 2 a cos(ω) + a^2 ), where a = 1-α
-    let denom = (1.0 - 2.0 * a * w_ref.cos() + a * a).sqrt();
-    let h_mag = if denom > 0.0 { alpha / denom } else { 1.0 };
-
-    // gain to "undo" that attenuation at f_ref
-    // (if h_mag is tiny, this will blow up, so you may want to clamp)
-    let makeup = if h_mag > 1e-9 { 1.0 / h_mag } else { 1.0 };
-
-    makeup * y
 }

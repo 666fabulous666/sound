@@ -183,6 +183,10 @@ pub fn envelope_section(
         let mut lp_attack = seq.lp_attack_decay.0;
         let mut lp_decay = seq.lp_attack_decay.1;
         let mut lp_cutoff_multiplier = seq.cutoff_multiplier;
+        let mut lp_order = seq.lp_order;
+
+        let lp_order_resp = u32_cell(ui, &mut lp_order, 1..=5, default_lp_order())
+            .on_hover_text("Filter order (1-5): higher order = steeper rolloff");
 
         let lp_attack_resp = slider_with_reset(
             ui,
@@ -212,7 +216,9 @@ pub fn envelope_section(
             true,
         );
 
-        lp_changed = lp_attack_resp.changed()
+        lp_changed = lp_order_resp.changed()
+            || lp_order_resp.secondary_clicked()
+            || lp_attack_resp.changed()
             || lp_attack_resp.secondary_clicked()
             || lp_decay_resp.changed()
             || lp_decay_resp.secondary_clicked()
@@ -220,6 +226,7 @@ pub fn envelope_section(
             || lp_cutoff_multiplier_resp.secondary_clicked();
 
         if lp_changed {
+            seq.lp_order = lp_order;
             seq.lp_attack_decay = (lp_attack, lp_decay);
             seq.cutoff_multiplier = lp_cutoff_multiplier;
         }
@@ -241,6 +248,7 @@ pub fn envelope_section(
             ng.lp_attack_decay = seq.lp_attack_decay;
             ng.cutoff_multiplier = seq.cutoff_multiplier;
             ng.lowpass_enabled = seq.lowpass_enabled;
+            ng.lp_order = seq.lp_order;
         });
     }
 }

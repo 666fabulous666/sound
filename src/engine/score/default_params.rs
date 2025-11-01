@@ -106,6 +106,9 @@ pub fn default_shuffle_prob() -> f64 {
 pub fn default_lowpass_enabled() -> bool {
     false
 }
+pub fn default_lp_order() -> u32 {
+    1
+}
 pub fn default_tempo() -> f64 {
     60.0
 }
