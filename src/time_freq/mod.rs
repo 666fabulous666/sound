@@ -241,6 +241,7 @@ impl Numeric for Freq {
 }
 
 use core::cmp::Ordering;
+use core::hash::{Hash, Hasher};
 
 impl Eq for Time {}
 impl Ord for Time {
@@ -249,10 +250,24 @@ impl Ord for Time {
     }
 }
 
+impl Hash for Time {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the raw bits of the f64 for deterministic hashing
+        self.0.to_bits().hash(state);
+    }
+}
+
 impl Eq for Freq {}
 impl Ord for Freq {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.total_cmp(&other.0)
+    }
+}
+
+impl Hash for Freq {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the raw bits of the f64 for deterministic hashing
+        self.0.to_bits().hash(state);
     }
 }
 

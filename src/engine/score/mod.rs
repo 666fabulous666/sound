@@ -63,7 +63,7 @@ impl ChorusParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub enum Interval {
     /// (degree, octave)
     Tempered(i32, i32),

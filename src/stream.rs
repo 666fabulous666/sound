@@ -7,10 +7,13 @@ use std::{
 };
 
 use crate::{
-    engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
-    time_freq::{DivByFreq, Freq},
-    REVERB_BUFFER_LEN,
+    engine::{reverb::Reverb, score::{Interval, NotesGroup}, waves::generate_wave},
+    time_freq::{DivByFreq, Freq, Time},
+    Token, REVERB_BUFFER_LEN,
 };
+
+// Key for low-pass filter memory: uniquely identifies a note by its sequence, start time, pitch, and glide
+type LpMemoryKey = (Token, Time, Interval, Option<Interval>);
 
 pub fn stream(
     freq0: Freq,
@@ -30,7 +33,8 @@ pub fn stream(
     // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
-        let mut lp_memories = HashMap::new();
+        let mut lp_memories: HashMap<LpMemoryKey, f64> = HashMap::new();
+        let mut last_cleanup = crate::time_freq::Time(0.0);
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
             let delays = delays.load();
@@ -63,11 +67,11 @@ pub fn stream(
                     for note in notes_from_seq.iter() {
                         let mut memory = lp_memories
                             .entry((
-                                token.clone(),
-                                (1024.0 * note.time.as_secs()) as u32,
-                                // i,
-                                // (1024.0 * note.duration.as_secs()) as u32,
-                            )) // FIXME: not a valid key
+                                *token,
+                                note.time,
+                                note.interval.clone(),
+                                note.glide.clone(),
+                            ))
                             .or_insert(0.0);
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
@@ -93,6 +97,14 @@ pub fn stream(
                             dry_right += spacial * dry;
                         }
                     }
+                }
+
+                // Periodic cleanup of old low-pass filter memories to prevent unbounded growth
+                const CLEANUP_INTERVAL: f64 = 10.0;
+                if (now - last_cleanup).as_secs() > CLEANUP_INTERVAL {
+                    let cutoff_time = now - crate::NOTE_LINGER_TIME - Time(5.0);
+                    lp_memories.retain(|(_, note_time, _, _), _| *note_time >= cutoff_time);
+                    last_cleanup = now;
                 }
 
                 let left = reverb_left.process(dry_left, &delays.0);
