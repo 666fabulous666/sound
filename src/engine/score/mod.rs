@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     engine::{
-        score::{note::Note, track_node::TrackNode},
+        score::{note::Note, track_node::{TrackNode, NodeKind}},
         waves::WaveType,
     },
     time_freq::{Freq, Time},
@@ -124,22 +124,19 @@ impl Score {
 
         // Helper: get a node's own volume
         fn node_volume(node: &TrackNode) -> f64 {
-            match node {
-                TrackNode::Group { volume, .. } => *volume,
-                TrackNode::Seq(seq) => seq.volume,
-            }
+            node.volume()
         }
 
         let mut node = &self.track_root;
         let mut product = node_volume(node); // include root
 
         for &idx in path {
-            match node {
-                TrackNode::Group { children, .. } => {
+            match &node.kind {
+                NodeKind::Group { children, .. } => {
                     node = children.get(idx)?;
                     product *= node_volume(node);
                 }
-                TrackNode::Seq(_) => {
+                NodeKind::Seq(_) => {
                     // Tried to go deeper under a Seq: invalid path
                     return None;
                 }
@@ -247,7 +244,7 @@ impl Score {
         let parent_path = &path[..path.len() - 1];
 
         let parent = self.track_root.get_mut(parent_path)?;
-        if let TrackNode::Group { children, .. } = parent {
+        if let NodeKind::Group { children, .. } = &mut parent.kind {
             children.swap(i, i - 1);
             let mut np = path.to_vec();
             *np.last_mut().unwrap() = i - 1;
@@ -265,7 +262,7 @@ impl Score {
         let parent_path = &path[..path.len() - 1];
 
         let parent = self.track_root.get_mut(parent_path)?;
-        if let TrackNode::Group { children, .. } = parent {
+        if let NodeKind::Group { children, .. } = &mut parent.kind {
             if i + 1 >= children.len() {
                 return None;
             }
@@ -291,16 +288,18 @@ impl Score {
         let node = self.track_root.remove_at(path)?;
 
         // 2) Build the group (adapt fields to your TrackNode::Group)
-        let group = TrackNode::Group {
-            id: self.last_token.next(), // or Token(0) if you don't need unique ids
+        let group = TrackNode {
             name,
-            muted: false,
+            proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
-            collapsed: false,
-            children: vec![node],
-            proba: 1.0,
-            not_generate_until: None,
+            kind: NodeKind::Group {
+                id: self.last_token.next(), // or Token(0) if you don't need unique ids
+                muted: false,
+                collapsed: false,
+                children: vec![node],
+                not_generate_until: None,
+            },
         };
 
         // 3) Insert group back at the same position
@@ -345,10 +344,9 @@ impl Score {
         target_before.push(target_idx_before);
 
         // Must be a group
-        let is_group = matches!(
-            self.track_root.get(&target_before),
-            Some(TrackNode::Group { .. })
-        );
+        let is_group = self.track_root.get(&target_before)
+            .map(|node| node.is_group())
+            .unwrap_or(false);
         if !is_group {
             return None;
         }
@@ -364,19 +362,21 @@ impl Score {
         target_after.push(target_idx_after);
 
         // Push moved into that group
-        if let Some(TrackNode::Group { children, .. }) = self.track_root.get_mut(&target_after) {
-            children.push(moved);
-            let new_leaf = children.len() - 1;
-            let mut new_path = target_after;
-            new_path.push(new_leaf);
-            Some(new_path)
-        } else {
-            // Shouldn't happen; best-effort restore
-            let mut restore = parent;
-            restore.push(idx.min(self.track_root.get(&restore)?.child_count()));
-            let _ = self.track_root.insert_at(&restore, moved);
-            None
+        if let Some(target_node) = self.track_root.get_mut(&target_after) {
+            if let NodeKind::Group { children, .. } = &mut target_node.kind {
+                children.push(moved);
+                let new_leaf = children.len() - 1;
+                let mut new_path = target_after;
+                new_path.push(new_leaf);
+                return Some(new_path);
+            }
         }
+
+        // Shouldn't happen; best-effort restore
+        let mut restore = parent;
+        restore.push(idx.min(self.track_root.get(&restore)?.child_count()));
+        let _ = self.track_root.insert_at(&restore, moved);
+        None
     }
 
     /// Move the node at `path` into the previous sibling group.
@@ -433,10 +433,10 @@ impl Score {
 
         // Get mutable access to the parent group's children
         let parent = self.track_root.get_mut(parent_path)?;
-        let TrackNode::Group {
+        let NodeKind::Group {
             children: parent_children,
             ..
-        } = parent
+        } = &mut parent.kind
         else {
             // Parent must be a group/root-group to splice into
             return None;
@@ -448,10 +448,10 @@ impl Score {
         }
 
         // Take the node at `idx`
-        let node = parent_children.remove(idx);
+        let mut node = parent_children.remove(idx);
 
         // Only act if it is a Group
-        if let TrackNode::Group { mut children, .. } = node {
+        if let NodeKind::Group { children, .. } = &mut node.kind {
             if children.is_empty() {
                 // Nothing to splice; group was empty
                 return None;

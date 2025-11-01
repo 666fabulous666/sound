@@ -3,7 +3,7 @@ pub mod hover_texts;
 mod navigation;
 mod rhythm;
 
-use egui::{Grid, RichText, ScrollArea, Slider, TextEdit};
+use egui::{Grid, RichText, ScrollArea, TextEdit};
 use helpers::{slider_with_reset, u32_cell};
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
-    engine::score::{default_params::*, sequence::Sequence, track_node::TrackNode, Interval},
+    engine::score::{default_params::*, sequence::Sequence, track_node::NodeKind, Interval},
     layout_left,
     shortcuts::*,
     time_freq::Time,
@@ -78,51 +78,108 @@ impl GuiApp {
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
-                            if let Some(seq_mut) = track_node_mut.as_seq_mut() {
+
+                            // Show heading based on variant
+                            if track_node_mut.is_group() {
+                                ui.heading(format!("Group {:?}", sel));
+                            } else {
                                 ui.heading(format!("Sequence {:?}", sel));
+                            }
 
-                                {
-                                    ui.horizontal(|ui| {
-                                        helpers::volume_control(
-                                            ui,
-                                            &mut seq_mut.volume,
-                                            &mut self.score.notes,
-                                            seq_mut.token,
-                                        );
-                                    });
+                            // === COMMON SECTION (shown for both Groups and Sequences) ===
 
-                                    ui.horizontal(|ui| {
-                                        helpers::spacial_control(
-                                            ui,
-                                            &mut seq_mut.spacial,
-                                            &mut self.score.notes,
-                                            seq_mut.token,
-                                        );
-                                    });
-                                    ui.horizontal(|ui| {
-                                        let mut proba = seq_mut.proba;
+                            // Name field (common)
+                            ui.horizontal(|ui| {
+                                ui.label("Name:");
+                                let is_group = track_node_mut.is_group();
+                                let name = track_node_mut.name_mut();
+                                let resp = ui.add(
+                                    TextEdit::singleline(name)
+                                        .hint_text(if is_group { "Group name…" } else { "Sequence name…" })
+                                        .desired_width(200.0),
+                                );
+                                if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                    ui.memory_mut(|m| m.surrender_focus(resp.id));
+                                }
+                            });
 
-                                        let proba_resp = slider_with_reset(
-                                            ui,
-                                            &mut proba,
-                                            0.0..=1.0,
-                                            "proba",
-                                            None,
-                                            default_proba(),
-                                            false,
-                                        )
-                                        .on_hover_ui(|ui| {
-                                            ui.label(
-                                                egui::RichText::new("Right-click to reset").weak(),
-                                            );
-                                        });
+                            // Volume control (common)
+                            let token_for_volume = if let Some(seq) = track_node_mut.as_seq() {
+                                Some(seq.token)
+                            } else {
+                                None
+                            };
 
-                                        if proba_resp.changed() || proba_resp.secondary_clicked() {
-                                            seq_mut.proba = proba.clamp(0.0, 1.0);
-                                            edited_seq = true;
-                                        }
+                            ui.horizontal(|ui| {
+                                let volume = track_node_mut.volume_mut();
+                                if let Some(token) = token_for_volume {
+                                    // For sequences, use the helper that updates NotesGroup
+                                    helpers::volume_control(ui, volume, &mut self.score.notes, token);
+                                } else {
+                                    // For groups, use simple slider
+                                    if slider_with_reset(
+                                        ui,
+                                        volume,
+                                        0.0..=5.0,
+                                        "Volume",
+                                        Some("+ / - (Shift×10)"),
+                                        default_volume(),
+                                        false,
+                                    ).changed() {
+                                        group_volume_changed = true;
+                                    }
+                                }
+                            });
+
+                            // Spacial control (common)
+                            ui.horizontal(|ui| {
+                                let spacial = track_node_mut.spacial_mut();
+                                if let Some(token) = token_for_volume {
+                                    // For sequences, use the helper that updates NotesGroup
+                                    helpers::spacial_control(ui, spacial, &mut self.score.notes, token);
+                                } else {
+                                    // For groups, use simple slider
+                                    slider_with_reset(
+                                        ui,
+                                        spacial,
+                                        0.0..=1.0,
+                                        "Stereo",
+                                        None,
+                                        default_spacial(),
+                                        false,
+                                    ).on_hover_ui(|ui| {
+                                        ui.label("0.5 is centered");
+                                        ui.label(egui::RichText::new("Right-click to reset").weak());
                                     });
                                 }
+                            });
+
+                            // Proba control (common)
+                            ui.horizontal(|ui| {
+                                let proba = track_node_mut.proba_mut();
+                                let proba_resp = slider_with_reset(
+                                    ui,
+                                    proba,
+                                    0.0..=1.0,
+                                    "Proba",
+                                    None,
+                                    default_proba(),
+                                    false,
+                                ).on_hover_ui(|ui| {
+                                    ui.label(egui::RichText::new("Right-click to reset").weak());
+                                });
+
+                                if proba_resp.changed() || proba_resp.secondary_clicked() {
+                                    *proba = proba.clamp(0.0, 1.0);
+                                    edited_seq = true;
+                                }
+                            });
+
+                            ui.separator();
+
+                            // === TYPE-SPECIFIC SECTION ===
+                            if let Some(seq_mut) = track_node_mut.as_seq_mut() {
+                                // Sequence-specific controls
 
                                 ui.separator();
                                 ui.horizontal(|ui| {
@@ -664,31 +721,9 @@ impl GuiApp {
                                     }
                                 });
                             } else {
-                                ui.heading(format!("Group {:?}", sel));
-                                match track_node_mut {
-                                    TrackNode::Group {
-                                        name,
-                                        collapsed,
-                                        volume,
-                                        proba,
-                                        ..
-                                    } => {
-                                        // Name field
-                                        ui.horizontal(|ui| {
-                                            ui.label("Name:");
-                                            let resp = ui.add(
-                                                TextEdit::singleline(name)
-                                                    .hint_text("Group name…")
-                                                    .desired_width(200.0),
-                                            );
-                                            // Optional: commit on Enter
-                                            if resp.lost_focus()
-                                                && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                                            {
-                                                ui.memory_mut(|m| m.surrender_focus(resp.id));
-                                            }
-                                        });
-
+                                // Group-specific controls
+                                match &mut track_node_mut.kind {
+                                    NodeKind::Group { collapsed, .. } => {
                                         // Collapse / expand
                                         if ui
                                             .button(if *collapsed {
@@ -705,25 +740,8 @@ impl GuiApp {
                                         {
                                             *collapsed = !*collapsed;
                                         }
-
-                                        // Group volume (aesthetic - update NotesGroup immediately)
-                                        if ui
-                                            .add(Slider::new(volume, 0.0..=5.0).text("Volume"))
-                                            .changed()
-                                        {
-                                            // Store for deferred update (after mutable borrow is dropped)
-                                            group_volume_changed = true;
-                                        }
-
-                                        // Group proba (structural - triggers regeneration on release)
-                                        if ui
-                                            .add(Slider::new(proba, 0.0..=1.0).text("Proba"))
-                                            .changed()
-                                        {
-                                            edited_seq = true;
-                                        }
                                     }
-                                    TrackNode::Seq(_) => unreachable!(),
+                                    NodeKind::Seq(_) => unreachable!(),
                                 }
                             }
                         }

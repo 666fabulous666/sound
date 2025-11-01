@@ -8,7 +8,7 @@ mod top_panel;
 use crate::{
     engine::{
         score::{
-            default_params::default_delays, sequence::Sequence, track_node::TrackNode, Interval,
+            default_params::default_delays, sequence::Sequence, track_node::{TrackNode, NodeKind}, Interval,
             NotesGroup, Score,
         },
         waves::WaveType,
@@ -97,27 +97,31 @@ where
     let compat = SequencesCompat::deserialize(de)?;
     Ok(match compat {
         SequencesCompat::Root(root) => root,
-        SequencesCompat::Nodes(children) => TrackNode::Group {
-            id: Token(0), // placeholder if Group needs an id
+        SequencesCompat::Nodes(children) => TrackNode {
             name: "Root".into(),
-            muted: false,
+            proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
-            collapsed: false,
-            children,
-            proba: 1.0,
-            not_generate_until: None,
+            kind: NodeKind::Group {
+                id: Token(0), // placeholder if Group needs an id
+                muted: false,
+                collapsed: false,
+                children,
+                not_generate_until: None,
+            },
         },
-        SequencesCompat::Seqs(seqs) => TrackNode::Group {
-            id: Token(0),
+        SequencesCompat::Seqs(seqs) => TrackNode {
             name: "Root".into(),
-            muted: false,
+            proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
-            collapsed: false,
-            children: seqs.into_iter().map(TrackNode::Seq).collect(),
-            proba: 1.0,
-            not_generate_until: None,
+            kind: NodeKind::Group {
+                id: Token(0),
+                muted: false,
+                collapsed: false,
+                children: seqs.into_iter().map(TrackNode::from_sequence).collect(),
+                not_generate_until: None,
+            },
         },
     })
 }
@@ -317,9 +321,9 @@ impl GuiApp {
     where
         F: FnMut(&Sequence),
     {
-        match node {
-            TrackNode::Seq(s) => f(s),
-            TrackNode::Group { children, .. } => {
+        match &node.kind {
+            NodeKind::Seq(s) => f(s),
+            NodeKind::Group { children, .. } => {
                 for ch in children {
                     Self::visit_sequences(ch, f); // not `&mut f`
                 }
@@ -331,9 +335,9 @@ impl GuiApp {
     where
         F: FnMut(&mut Sequence),
     {
-        match node {
-            TrackNode::Seq(s) => f(s),
-            TrackNode::Group { children, .. } => {
+        match &mut node.kind {
+            NodeKind::Seq(s) => f(s),
+            NodeKind::Group { children, .. } => {
                 for ch in children {
                     Self::visit_sequences_mut(ch, f); // not `&mut f`
                 }
@@ -344,10 +348,7 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        let volume = match self.score.track_root {
-            TrackNode::Group { volume, .. } => volume,
-            TrackNode::Seq(_) => unreachable!(),
-        };
+        let volume = self.score.track_root.volume();
         node.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
         self.score.track_root.push_child(node);
     }
@@ -359,10 +360,7 @@ impl GuiApp {
         let now = self.now();
 
         // Base volume used when drawing this node (mirrors `new_node`)
-        let base_volume = match &node {
-            TrackNode::Group { volume, .. } => *volume,
-            TrackNode::Seq(_) => 1.0,
-        };
+        let base_volume = node.volume();
 
         // Draw the (possibly nested) node into current notes
         node.draw_node(
@@ -374,18 +372,20 @@ impl GuiApp {
         );
 
         // Keep invariant: root is a Group
-        self.score.track_root = match node {
-            TrackNode::Group { .. } => node,
-            seq @ TrackNode::Seq(_) => TrackNode::Group {
-                id: self.score.last_token.next(),
+        self.score.track_root = match &node.kind {
+            NodeKind::Group { .. } => node,
+            NodeKind::Seq(_) => TrackNode {
                 name: String::new(),
-                muted: false,
+                proba: 1.0,
                 volume: 1.0,
                 spacial: 0.5,
-                collapsed: false,
-                children: vec![seq],
-                proba: 1.0,
-                not_generate_until: None,
+                kind: NodeKind::Group {
+                    id: self.score.last_token.next(),
+                    muted: false,
+                    collapsed: false,
+                    children: vec![node],
+                    not_generate_until: None,
+                },
             },
         };
     }
@@ -441,9 +441,9 @@ impl GuiApp {
     }
     // Collect paths to *sequences* (preorder)
     fn collect_seq_paths(node: &TrackNode, cur: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {
-        match node {
-            TrackNode::Seq(_) => out.push(cur.clone()),
-            TrackNode::Group { children, .. } => {
+        match &node.kind {
+            NodeKind::Seq(_) => out.push(cur.clone()),
+            NodeKind::Group { children, .. } => {
                 for (i, ch) in children.iter().enumerate() {
                     cur.push(i);
                     Self::collect_seq_paths(ch, cur, out);
@@ -539,13 +539,13 @@ impl GuiApp {
                 base_path: &[usize],
                 out: &mut Vec<(Token, Vec<usize>, f64)>,
             ) {
-                match node {
-                    TrackNode::Seq(seq) => {
+                match &node.kind {
+                    NodeKind::Seq(seq) => {
                         let mut full_path = base_path.to_vec();
                         full_path.extend_from_slice(current_path);
-                        out.push((seq.token, full_path, seq.volume));
+                        out.push((seq.token, full_path, node.volume));
                     }
-                    TrackNode::Group { children, .. } => {
+                    NodeKind::Group { children, .. } => {
                         for (i, child) in children.iter().enumerate() {
                             current_path.push(i);
                             collect_recursive(child, current_path, base_path, out);

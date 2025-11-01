@@ -38,14 +38,10 @@ pub struct Sequence {
     pub wave_type: WaveType,
     #[serde(default = "default_time_quantum")]
     pub time_quantum: (usize, usize),
-    #[serde(default = "default_proba")]
-    pub proba: f64,
     #[serde(default = "default_harmoniser")]
     pub harmoniser: [u32; 7],
     #[serde(default = "default_beat_offset")]
     pub beat_offset: i32,
-    #[serde(default = "default_volume")]
-    pub volume: f64,
     #[serde(default = "default_glide")]
     pub glide: bool,
     #[serde(default = "default_mute")]
@@ -70,8 +66,6 @@ pub struct Sequence {
     pub pow_fact: (f64, Freq),
     #[serde(default = "default_loop_len")]
     pub loop_len: Time,
-    #[serde(default = "default_spacial")]
-    pub spacial: f64,
     #[serde(default = "default_arpegio")]
     pub arpegio: f64,
     #[serde(default = "default_tolerance")]
@@ -94,8 +88,6 @@ pub struct Sequence {
     pub shuffle_prob: f64,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
-    #[serde(default = "default_name")]
-    pub name: String,
 }
 
 impl Sequence {
@@ -109,7 +101,6 @@ impl Sequence {
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
-            volume: default_volume(),
             mute: default_mute(),
             attack_decay: default_attack_decay(),
             lp_attack_decay: default_attack_decay(),
@@ -120,16 +111,13 @@ impl Sequence {
             chorus: ChorusParams::default(),
             pow_fact: default_pow_fact(),
             loop_len: default_loop_len(),
-            spacial: default_spacial(),
             tolerance: default_tolerance(),
             repeat: default_repeat(),
             accents: default_accents(),
             normalization: default_normalization(),
             shuffle: default_shuffle(),
-            name: format!("seq {}", token.to_string()),
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
-            proba: default_proba(),
             glide: default_glide(),
             cutoff_multiplier: default_cutoff_multiplier(),
             chord: default_tension(),
@@ -147,6 +135,7 @@ impl Sequence {
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
         mut volume: f64,
+        spacial: f64,
     ) {
         if self.mute {
             volume = 0.0;
@@ -270,8 +259,8 @@ impl Sequence {
                 attack_decay: self.attack_decay,
                 lp_attack_decay: self.lp_attack_decay,
                 pow_fact: self.pow_fact,
-                spacial: self.spacial,
-                volume: self.volume,
+                spacial,
+                volume,
                 tolerance: self.tolerance,
                 cutoff_multiplier: self.cutoff_multiplier,
                 lowpass_enabled: self.lowpass_enabled,
@@ -288,6 +277,8 @@ impl Sequence {
         now: Time,
         anticipate: bool,
         volume: f64,
+        spacial: f64,
+        proba: f64,
     ) {
         let base = if anticipate {
             now + GENERATE_EARLY
@@ -301,8 +292,8 @@ impl Sequence {
             .as_ref()
             .map_or(true, |until| now >= *until)
         {
-            if rng.gen_bool(self.proba) {
-                self.draw(notes, rng, start, volume);
+            if rng.gen_bool(proba) {
+                self.draw(notes, rng, start, volume, spacial);
             }
             self.not_generate_until =
                 Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);

@@ -7,7 +7,7 @@ use crate::{
     app::{GuiApp, NotesGroup},
     engine::{
         score::{
-            track_node::{all_paths, TrackNode},
+            track_node::{all_paths, NodeKind},
             Interval,
         },
         waves::envelope,
@@ -110,8 +110,8 @@ impl GuiApp {
                     .map(|p| p.as_slice() == path.as_slice())
                     .unwrap_or(false);
 
-                match node {
-                    TrackNode::Group {
+                match &node.kind {
+                    NodeKind::Group {
                         collapsed, muted, ..
                     } => {
                         let col = highlight_if_selected(
@@ -171,7 +171,7 @@ impl GuiApp {
                         }
                     }
 
-                    TrackNode::Seq(seq) => {
+                    NodeKind::Seq(seq) => {
                         let col = highlight_if_selected(
                             &painter,
                             lane_gap,
@@ -397,7 +397,6 @@ impl GuiApp {
         block_h: f32,
         lane_gap: f32,
     ) {
-        use crate::engine::score::track_node::TrackNode;
         use crate::engine::score::Interval;
 
         use egui::{Align2, Pos2, Stroke};
@@ -482,17 +481,16 @@ impl GuiApp {
             };
 
             let bullet_radius = if is_selected { 5.0 } else { 3.0 };
-            match node {
-                TrackNode::Group {
-                    name,
+            match &mut node.kind {
+                NodeKind::Group {
                     children,
                     ref mut collapsed,
                     ..
                 } => {
-                    let label = if name.is_empty() {
+                    let label = if node.name.is_empty() {
                         format!("Group ({})", children.len())
                     } else {
-                        format!("{} ({})", name, children.len())
+                        format!("{} ({})", node.name, children.len())
                     };
 
                     // let base_col = text_color.gamma_multiply(if is_selected { 1.5 } else { 0.9 });
@@ -529,14 +527,14 @@ impl GuiApp {
                         *collapsed ^= true;
                     }
                 }
-                TrackNode::Seq(seq) => {
+                NodeKind::Seq(seq) => {
                     let label = format!(
                         "{} oct {}",
                         (&seq.wave_type).to_string(),
                         if let Interval::RDTempered(_, _, octave) = &seq.interval {
-                            octave
+                            *octave
                         } else {
-                            &0
+                            0
                         },
                     );
                     painter.text(
