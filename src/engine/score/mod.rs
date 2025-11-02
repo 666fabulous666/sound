@@ -1,3 +1,18 @@
+//! Musical score representation and generation.
+//!
+//! This module defines the data structures for representing musical compositions:
+//! - `Score`: Top-level container for a musical score
+//! - `TrackNode`: Tree structure organizing sequences into groups
+//! - `Sequence`: Individual musical sequence with rhythm and harmony rules
+//! - `Note`: Individual note with timing and pitch information
+//! - `NotesGroup`: Collection of notes for audio rendering
+//!
+//! The score system uses a tree structure where:
+//! - The root is always a Group
+//! - Groups can contain other Groups or Sequences
+//! - Sequences generate notes based on their parameters
+//! - Volume is multiplicative down the tree (parent volume × child volume)
+
 pub mod default_params;
 pub mod note;
 pub mod sequence;
@@ -121,13 +136,27 @@ impl Score {
         }
     }
     /// Product of volumes from the root down to (and including) the node at `path`.
-    /// Returns `None` if `path` is invalid.
+    ///
+    /// Computes the cumulative volume by multiplying all ancestor volumes from root to the node.
+    /// Ensures the result is always finite (clamps invalid values to 0.0).
+    ///
+    /// # Arguments
+    /// * `path` - Index path from root to target node
+    ///
+    /// # Returns
+    /// * `Some(volume)` - The volume chain product (always finite, non-negative)
+    /// * `None` - If the path is invalid (doesn't exist in tree)
     pub fn volume_chain_product(&self, path: &[usize]) -> Option<f64> {
         use crate::engine::score::track_node::TrackNode;
 
-        // Helper: get a node's own volume
+        // Helper: get a node's own volume, ensuring it's finite
         fn node_volume(node: &TrackNode) -> f64 {
-            node.volume()
+            let v = node.volume();
+            if v.is_finite() && v >= 0.0 {
+                v
+            } else {
+                0.0 // Safe fallback for invalid volumes
+            }
         }
 
         let mut node = &self.track_root;
@@ -138,6 +167,11 @@ impl Score {
                 NodeKind::Group { children, .. } => {
                     node = children.get(idx)?;
                     product *= node_volume(node);
+
+                    // Ensure product stays finite
+                    if !product.is_finite() {
+                        product = 0.0;
+                    }
                 }
                 NodeKind::Seq(_) => {
                     // Tried to go deeper under a Seq: invalid path
@@ -496,3 +530,63 @@ impl Score {
         self.track_root.draw_node(&mut self.notes, rng, now);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::score::sequence::Sequence;
+
+    #[test]
+    fn test_volume_chain_product_root() {
+        let score = Score::new();
+        // Root path (empty) should return root volume
+        let vol = score.volume_chain_product(&[]);
+        assert!(vol.is_some());
+        let vol = vol.unwrap();
+        assert!(vol.is_finite(), "Root volume should be finite");
+        assert!(vol > 0.0, "Root volume should be positive");
+    }
+
+    #[test]
+    fn test_volume_chain_product_invalid_path() {
+        let score = Score::new();
+        // Invalid path should return None
+        let vol = score.volume_chain_product(&[99]);
+        assert!(vol.is_none(), "Invalid path should return None");
+    }
+
+    #[test]
+    fn test_volume_chain_product_always_finite() {
+        let mut score = Score::new();
+
+        // Add a child to root
+        let seq = Sequence::new(score.last_token.next());
+        score.track_root.push_child(TrackNode::from_sequence(seq));
+
+        // Test path [0] (first child)
+        let vol = score.volume_chain_product(&[0]);
+        assert!(vol.is_some());
+        let vol = vol.unwrap();
+        assert!(vol.is_finite(), "Volume chain product should always be finite");
+        assert!(vol >= 0.0, "Volume should be non-negative");
+    }
+
+    #[test]
+    fn test_score_new_has_valid_state() {
+        let score = Score::new();
+
+        // Check that initial state is valid
+        assert!(score.notes.is_empty(), "New score should have no notes");
+        assert_eq!(score.delays.0.len(), 3, "Should have 3 left delays");
+        assert_eq!(score.delays.1.len(), 3, "Should have 3 right delays");
+
+        // All delays should be positive and finite
+        for &delay in &score.delays.0 {
+            assert!(delay.is_finite() && delay > 0.0, "Delay should be positive and finite");
+        }
+        for &delay in &score.delays.1 {
+            assert!(delay.is_finite() && delay > 0.0, "Delay should be positive and finite");
+        }
+    }
+}
+
