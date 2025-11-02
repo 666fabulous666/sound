@@ -175,6 +175,52 @@ impl GuiApp {
                                 }
                             });
 
+                            // Hue control (common)
+                            ui.horizontal(|ui| {
+                                let hue = &mut track_node_mut.hue;
+                                let hue_resp = slider_with_reset(
+                                    ui,
+                                    hue,
+                                    0.0..=360.0,
+                                    "Hue",
+                                    None,
+                                    0.0,
+                                    false,
+                                ).on_hover_ui(|ui| {
+                                    ui.label("Color hue in HSL space (0-360)");
+                                    ui.label(egui::RichText::new("Right-click to reset").weak());
+                                });
+
+                                if hue_resp.changed() || hue_resp.secondary_clicked() {
+                                    *hue = hue.rem_euclid(360.0);
+                                    edited_seq = true;
+                                }
+
+                                // Color preview square - Convert HSL to RGB
+                                let h = *hue / 60.0;
+                                let c = 1.0; // chroma at full saturation
+                                let x = c * (1.0 - ((h % 2.0) - 1.0).abs());
+                                let (r1, g1, b1) = match h as i32 {
+                                    0 => (c, x, 0.0),
+                                    1 => (x, c, 0.0),
+                                    2 => (0.0, c, x),
+                                    3 => (0.0, x, c),
+                                    4 => (x, 0.0, c),
+                                    _ => (c, 0.0, x),
+                                };
+                                let color = egui::Color32::from_rgb(
+                                    (r1 * 255.0) as u8,
+                                    (g1 * 255.0) as u8,
+                                    (b1 * 255.0) as u8,
+                                );
+
+                                let (rect, _) = ui.allocate_exact_size(
+                                    egui::vec2(20.0, 20.0),
+                                    egui::Sense::hover()
+                                );
+                                ui.painter().rect_filled(rect, 2.0, color);
+                            });
+
                             ui.separator();
 
                             // === TYPE-SPECIFIC SECTION ===

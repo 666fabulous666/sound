@@ -119,7 +119,7 @@ impl GuiApp {
                             lane_gap,
                             track_rect,
                             is_selected,
-                            ui.visuals().text_color(),
+                            GuiApp::group_color(node.hue),
                             ui.visuals().panel_fill,
                         );
                         let group_prefix = path.clone();
@@ -177,7 +177,7 @@ impl GuiApp {
                             lane_gap,
                             track_rect,
                             is_selected,
-                            Self::hash_color(&seq.wave_type),
+                            GuiApp::seq_color(&seq.wave_type, node.hue),
                             ui.visuals().panel_fill,
                         );
                         // Repeat window tiling modulo loop
@@ -544,7 +544,7 @@ impl GuiApp {
                         text_style.resolve(ui.style()),
                         base_text_col,
                     );
-                    let wave_color = Self::hash_color(&seq.wave_type);
+                    let wave_color = GuiApp::seq_color(&seq.wave_type, node.hue);
                     painter.circle_filled(*anchor, bullet_radius, wave_color);
                     painter.circle_stroke(*anchor, bullet_radius, Stroke::new(1.0, text_color));
                 }

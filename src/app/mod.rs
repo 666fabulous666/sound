@@ -102,6 +102,7 @@ where
             proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
+            hue: 0.0,
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
                 muted: false,
@@ -115,6 +116,7 @@ where
             proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
+            hue: 0.0,
             kind: NodeKind::Group {
                 id: Token(0),
                 muted: false,
@@ -215,10 +217,20 @@ impl GuiApp {
         rect.left() + t.as_secs() as f32 / loop_len.as_secs() as f32 * rect.width()
     }
 
-    fn hash_color(w: &WaveType) -> egui::Color32 {
+    /// Get color for a sequence, combining wave type and custom hue
+    fn seq_color(w: &WaveType, custom_hue: f64) -> egui::Color32 {
         let txt = format!("{:?}", w.to_string());
-        let h = hash32(&txt) % 360;
-        hsl_to_color32(h as _, 0.5, 0.5)
+        let base_h = hash32(&txt) % 360;
+        // Blend base hue with custom hue - add them and wrap around
+        let h = ((base_h as f64 + custom_hue) % 360.0) as f32;
+        hsl_to_color32(h, 0.5, 0.5)
+    }
+
+    /// Get color for a group using custom hue with low saturation (gray-ish)
+    fn group_color(custom_hue: f64) -> egui::Color32 {
+        // Use low saturation for gray appearance, can be adjusted by hue
+        let h = (custom_hue % 360.0) as f32;
+        hsl_to_color32(h, 0.1, 0.5) // Low saturation for subtle color
     }
 
     fn now(&self) -> Time {
@@ -379,6 +391,7 @@ impl GuiApp {
                 proba: 1.0,
                 volume: 1.0,
                 spacial: 0.5,
+                hue: 0.0,
                 kind: NodeKind::Group {
                     id: self.score.last_token.next(),
                     muted: false,

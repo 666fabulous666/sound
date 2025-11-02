@@ -78,6 +78,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     130.0
@@ -92,6 +99,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.34,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -108,7 +116,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 2,
                   "name": "seq 2"
                 }
@@ -172,6 +184,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     130.0
@@ -186,6 +205,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.6400000000000001,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -202,7 +222,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 10,
                   "name": "seq 2"
                 }
@@ -266,6 +290,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     70.0
@@ -280,6 +311,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.73,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -296,7 +328,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 3,
                   "name": "seq 2"
                 }
@@ -360,6 +396,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     250.0
@@ -374,6 +417,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.22000000000000003,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -390,7 +434,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 4,
                   "name": "seq 2"
                 }
@@ -454,6 +502,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     100.0
@@ -468,6 +523,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.5,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -484,7 +540,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 5,
                   "name": "seq 2"
                 }
@@ -548,6 +608,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.002,
                     350.0
@@ -562,6 +629,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.6900000000000001,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -578,7 +646,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 6,
                   "name": "seq 2"
                 }
@@ -642,6 +714,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -656,6 +735,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.36000000000000004,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -672,7 +752,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 7,
                   "name": "seq 2"
                 }
@@ -736,6 +820,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -750,6 +841,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.5,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -766,7 +858,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 8,
                   "name": "seq 2"
                 }
@@ -830,12 +926,19 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
                   ],
                   "vibrato": [
-                    0.00019999999999999998,
+                    0.0002,
                     12.0
                   ],
                   "pow_fact": [
@@ -844,6 +947,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.41,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -860,7 +964,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 17,
                   "name": "seq 2"
                 }
@@ -924,12 +1032,19 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
                   ],
                   "vibrato": [
-                    0.00019999999999999998,
+                    0.0002,
                     12.0
                   ],
                   "pow_fact": [
@@ -938,6 +1053,7 @@
                   ],
                   "loop_len": 16.0,
                   "spacial": 0.66,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -954,7 +1070,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 783.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 18,
                   "name": "seq 2"
                 }
@@ -969,7 +1089,7 @@
             "name": "Rythm",
             "muted": false,
             "proba": 1.0,
-            "volume": 1.0,
+            "volume": 2.0,
             "spacial": 0.5,
             "collapsed": false,
             "children": [
@@ -1025,7 +1145,7 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 0.48,
+                  "volume": 1.6,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -1033,6 +1153,13 @@
                     4.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -1047,6 +1174,7 @@
                   ],
                   "loop_len": 8.0,
                   "spacial": 0.5,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -1063,7 +1191,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 775.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 11,
                   "name": "seq 11"
                 }
@@ -1119,7 +1251,7 @@
                     8
                   ],
                   "beat_offset": 4,
-                  "volume": 2.0,
+                  "volume": 1.32,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9351433262702766,
@@ -1127,6 +1259,13 @@
                     100.0,
                     0.3333
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -1141,6 +1280,7 @@
                   ],
                   "loop_len": 8.0,
                   "spacial": 0.38,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -1157,7 +1297,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 775.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 12,
                   "name": "seq 11"
                 }
@@ -1214,7 +1358,7 @@
                     8
                   ],
                   "beat_offset": 10,
-                  "volume": 0.67,
+                  "volume": 0.2,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9288762419418922,
@@ -1222,6 +1366,13 @@
                     100.0,
                     0.17000000000000004
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -1236,6 +1387,7 @@
                   ],
                   "loop_len": 8.0,
                   "spacial": 0.5700000000000001,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -1252,7 +1404,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 775.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 13,
                   "name": "seq 11"
                 }
@@ -1309,7 +1465,7 @@
                     8
                   ],
                   "beat_offset": 2,
-                  "volume": 0.48,
+                  "volume": 0.2,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9288762419418922,
@@ -1317,6 +1473,13 @@
                     100.0,
                     0.17000000000000004
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -1331,6 +1494,7 @@
                   ],
                   "loop_len": 8.0,
                   "spacial": 0.45,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
@@ -1347,7 +1511,11 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 775.9,
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 79.0,
                   "token": 15,
                   "name": "seq 11"
                 }

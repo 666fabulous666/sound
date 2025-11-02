@@ -9,6 +9,10 @@ use crate::{
     Token, TokenGen,
 };
 
+fn default_hue() -> f64 {
+    0.0
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum NodeKind {
     Group {
@@ -29,6 +33,8 @@ pub struct TrackNode {
     pub proba: f64,
     pub volume: f64,  // mix gain multiplier (>= 0.0)
     pub spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
+    #[serde(default = "default_hue")]
+    pub hue: f64,     // HSL hue 0.0..=360.0
     #[serde(flatten)]
     pub kind: NodeKind,
 }
@@ -62,6 +68,7 @@ impl TrackNode {
             proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
+            hue: 0.0,
             kind: NodeKind::Group {
                 id: gen.next(),
                 muted: false,
@@ -79,6 +86,7 @@ impl TrackNode {
             proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
+            hue: 0.0,
             kind: NodeKind::Seq(seq),
         }
     }

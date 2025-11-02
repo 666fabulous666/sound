@@ -293,6 +293,7 @@ impl Score {
             proba: 1.0,
             volume: 1.0,
             spacial: 0.5,
+            hue: 0.0,
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
                 muted: false,
