@@ -8,8 +8,10 @@ mod top_panel;
 use crate::{
     engine::{
         score::{
-            default_params::default_delays, sequence::Sequence, track_node::{TrackNode, NodeKind}, Interval,
-            NotesGroup, Score,
+            default_params::default_delays,
+            sequence::Sequence,
+            track_node::{NodeKind, TrackNode},
+            Interval, NotesGroup, Score,
         },
         waves::WaveType,
     },
@@ -360,28 +362,18 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        let volume = self.score.track_root.volume();
-        node.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
+        node.draw_node(&mut self.score.notes, &mut self.rng, now);
         self.score.track_root.push_child(node);
     }
 
     /// Replace the root with `node`.
-    /// - Draws `node` first (recursively) using the same base-volume logic as `new_node`.
+    /// - Draws `node` first (recursively).
     /// - Ensures the root remains a `Group` by wrapping a lone `Seq` if needed.
     pub fn replace_root_with(&mut self, mut node: TrackNode) {
         let now = self.now();
 
-        // Base volume used when drawing this node (mirrors `new_node`)
-        let base_volume = node.volume();
-
         // Draw the (possibly nested) node into current notes
-        node.draw_node(
-            &mut self.score.notes,
-            &mut self.rng,
-            now,
-            /*anticipate=*/ true,
-            base_volume,
-        );
+        node.draw_node(&mut self.score.notes, &mut self.rng, now);
 
         // Keep invariant: root is a Group
         self.score.track_root = match &node.kind {
@@ -421,8 +413,7 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree
         let now = self.now();
-        let volume = self.score.volume_chain_product(path).unwrap();
-        cloned.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
+        cloned.draw_node(&mut self.score.notes, &mut self.rng, now);
 
         // 4) Insert clone right after the original
         let insert_idx = path[path.len() - 1] + 1;
@@ -447,9 +438,8 @@ impl GuiApp {
             self.drain_notes_from_seq(tk);
         }
         let now = self.now();
-        let volume = self.score.volume_chain_product(path).unwrap();
         if let Some(n) = self.score.track_root.get_mut(path) {
-            n.draw_node(&mut self.score.notes, &mut self.rng, now, true, volume);
+            n.draw_node(&mut self.score.notes, &mut self.rng, now);
         }
     }
     // Collect paths to *sequences* (preorder)
@@ -538,62 +528,52 @@ impl GuiApp {
             .retain(|NotesGroup { token, .. }| *token != tk);
     }
 
-    /// Recalculate volume for all NotesGroup entries belonging to sequences
-    /// that are descendants of the node at `path`.
-    /// Used when Group volume changes to immediately affect audio without regeneration.
-    fn update_descendant_volumes(&mut self, path: &[usize]) {
-        // Collect all (token, sequence_path, base_volume) tuples from sequences under this path
-        let seq_info: Vec<(Token, Vec<usize>, f64)> = {
+    /// Update volumes for ALL NotesGroup entries based on the tree structure.
+    /// This is the ONLY way volumes are set in NotesGroup - always as the product of all ancestors.
+    /// Called after any volume change and after note generation.
+    fn update_all_volumes_from_tree(&mut self) {
+        // Collect all (token, path) pairs for all sequences in the tree
+        let seq_paths: Vec<(Token, Vec<usize>)> = {
             let mut out = Vec::new();
 
             fn collect_recursive(
                 node: &TrackNode,
                 current_path: &mut Vec<usize>,
-                base_path: &[usize],
-                out: &mut Vec<(Token, Vec<usize>, f64)>,
+                out: &mut Vec<(Token, Vec<usize>)>,
             ) {
                 match &node.kind {
                     NodeKind::Seq(seq) => {
-                        let mut full_path = base_path.to_vec();
-                        full_path.extend_from_slice(current_path);
-                        out.push((seq.token, full_path, node.volume));
+                        out.push((seq.token, current_path.clone()));
                     }
                     NodeKind::Group { children, .. } => {
                         for (i, child) in children.iter().enumerate() {
                             current_path.push(i);
-                            collect_recursive(child, current_path, base_path, out);
+                            collect_recursive(child, current_path, out);
                             current_path.pop();
                         }
                     }
                 }
             }
 
-            if let Some(node) = self.score.track_root.get(path) {
-                let mut current = Vec::new();
-                collect_recursive(node, &mut current, path, &mut out);
-            }
+            let mut path = Vec::new();
+            collect_recursive(&self.score.track_root, &mut path, &mut out);
             out
         };
 
-        // Compute the new volumes for each token (before mutating notes)
-        let volume_updates: Vec<(Token, f64)> = seq_info
+        // Compute volume for each token as the product from root
+        let volume_updates: Vec<(Token, f64)> = seq_paths
             .iter()
-            .filter_map(|(token, seq_path, seq_volume)| {
+            .filter_map(|(token, path)| {
                 self.score
-                    .volume_chain_product(seq_path)
-                    .map(|volume_chain| {
-                        // volume_chain includes the sequence's own volume, so divide it out
-                        let group_chain = volume_chain / seq_volume.max(f64::MIN_POSITIVE);
-                        let new_volume = seq_volume * group_chain;
-                        (*token, new_volume)
-                    })
+                    .volume_chain_product(path)
+                    .map(|volume| (*token, volume))
             })
             .collect();
 
-        // Apply the updates to NotesGroup entries
+        // Apply volumes to NotesGroup entries
         for ng in self.score.notes.iter_mut() {
-            if let Some((_, new_volume)) = volume_updates.iter().find(|(tk, _)| *tk == ng.token) {
-                ng.volume = *new_volume;
+            if let Some((_, volume)) = volume_updates.iter().find(|(tk, _)| *tk == ng.token) {
+                ng.volume = *volume;
             }
         }
     }
@@ -712,6 +692,7 @@ impl App for GuiApp {
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.score.generate_notes(self.now(), &mut self.rng);
+        self.update_all_volumes_from_tree(); // Apply volumes based on tree structure
         self.score.retain_notes(self.now());
         self.score
             .shared_notes

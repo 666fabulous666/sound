@@ -73,7 +73,7 @@ impl GuiApp {
                 ScrollArea::vertical().show(ui, |ui| {
                     let mut action = Action::None;
                     let mut edited_seq = false;
-                    let mut group_volume_changed = false; // Track if Group volume changed
+                    let mut mix_params_changed = false; // Track if volume/pan changed (applies to both groups and sequences)
                     let mut octave_update: Option<(Token, i32)> = None; // (token, octave_shift)
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
@@ -103,54 +103,62 @@ impl GuiApp {
                                 }
                             });
 
-                            // Volume control (common)
-                            let token_for_volume = if let Some(seq) = track_node_mut.as_seq() {
-                                Some(seq.token)
-                            } else {
-                                None
-                            };
-
+                            // Volume control (common) - unified for both sequences and groups
                             ui.horizontal(|ui| {
                                 let volume = track_node_mut.volume_mut();
-                                if let Some(token) = token_for_volume {
-                                    // For sequences, use the helper that updates NotesGroup
-                                    helpers::volume_control(ui, volume, &mut self.score.notes, token);
-                                } else {
-                                    // For groups, use simple slider
-                                    if slider_with_reset(
-                                        ui,
-                                        volume,
-                                        0.0..=5.0,
-                                        "Volume",
-                                        Some("+ / - (Shift×10)"),
-                                        default_volume(),
-                                        false,
-                                    ).changed() {
-                                        group_volume_changed = true;
+
+                                // Keyboard shortcuts for volume adjustment
+                                let kb_changed = ui.ctx().input(|i| {
+                                    let step = if i.modifiers.shift { 0.5 } else { 0.05 };
+                                    let mut changed = false;
+                                    if i.key_down(egui::Key::Plus) {
+                                        *volume = (*volume + step).min(32.0);
+                                        changed = true;
                                     }
+                                    if i.key_down(egui::Key::Minus) {
+                                        *volume = (*volume - step).max(0.0);
+                                        changed = true;
+                                    }
+                                    changed
+                                });
+
+                                let vol_resp = slider_with_reset(
+                                    ui,
+                                    volume,
+                                    0.0..=5.0,
+                                    "Volume",
+                                    Some("+ / - (Shift×10)"),
+                                    default_volume(),
+                                    false,
+                                ).on_hover_ui(|ui| {
+                                    ui.label(egui::RichText::new("Hold + / - to change").weak());
+                                });
+
+                                if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed {
+                                    mix_params_changed = true;
                                 }
                             });
 
-                            // Pan control (common)
+                            // Pan control (common) - unified for both sequences and groups
                             ui.horizontal(|ui| {
                                 let pan = track_node_mut.pan_mut();
-                                if let Some(token) = token_for_volume {
-                                    // For sequences, use the helper that updates NotesGroup
-                                    helpers::spacial_control(ui, pan, &mut self.score.notes, token);
-                                } else {
-                                    // For groups, use simple slider
-                                    slider_with_reset(
-                                        ui,
-                                        pan,
-                                        0.0..=1.0,
-                                        "Pan",
-                                        None,
-                                        default_pan(),
-                                        false,
-                                    ).on_hover_ui(|ui| {
-                                        ui.label("0.5 is centered, 0.0 is left, 1.0 is right");
-                                        ui.label(egui::RichText::new("Right-click to reset").weak());
-                                    });
+
+                                let pan_resp = slider_with_reset(
+                                    ui,
+                                    pan,
+                                    0.0..=1.0,
+                                    "Pan",
+                                    None,
+                                    default_pan(),
+                                    false,
+                                ).on_hover_ui(|ui| {
+                                    ui.label("0.5 is centered, 0.0 is left, 1.0 is right");
+                                    ui.label(egui::RichText::new("Right-click to reset").weak());
+                                });
+
+                                if pan_resp.changed() || pan_resp.secondary_clicked() {
+                                    *pan = pan.clamp(0.0, 1.0);
+                                    mix_params_changed = true;
                                 }
                             });
 
@@ -911,11 +919,10 @@ impl GuiApp {
                             }
                         }
                     }
-                    // Apply deferred Group volume change (after mutable borrow is dropped)
-                    if group_volume_changed {
-                        if let Some(sel) = self.selected.clone() {
-                            self.update_descendant_volumes(&sel);
-                        }
+                    // Apply deferred volume change (after mutable borrow is dropped)
+                    // This updates NotesGroup volumes for ALL sequences using chain products from root
+                    if mix_params_changed {
+                        self.update_all_volumes_from_tree();
                     }
 
                     // Apply deferred octave change (after mutable borrow is dropped)

@@ -61,6 +61,7 @@ impl GuiApp {
             .track_root
             .for_each_sequence_mut(|s| s.not_generate_until = None);
         self.score.generate_notes(self.now(), &mut self.rng);
+        self.update_all_volumes_from_tree(); // Apply volumes based on tree structure
         // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
         self.score.delays = state.delays;
     }

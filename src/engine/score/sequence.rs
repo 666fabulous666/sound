@@ -134,12 +134,10 @@ impl Sequence {
         notes_buffer: &mut Vec<NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
-        mut volume: f64,
         pan: f64,
     ) {
-        if self.mute {
-            volume = 0.0;
-        }
+        // Volume is always 1.0 for note generation - actual volume is applied separately
+        let volume = 1.0;
         let inclusions = match &self.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
@@ -186,7 +184,7 @@ impl Sequence {
             tmp.shuffle(rng);
         }
         let tmp = tmp.into_iter().map(|(t, d)| Note {
-            time: t + seq_start, // + Time(1e-3 * ((7.3 * n as f64) % 5.0)),
+            time: t + seq_start,
             duration: *d,
             interval: self.interval.clone(),
             glide: None,
@@ -199,7 +197,7 @@ impl Sequence {
                         .iter()
                         .map(|a| ((t + seq_start) * *a).as_secs().fract())
                         .sum::<f64>()),
-            tension: self.chord,
+            chord: self.chord,
             random_chord: self.random_chord,
             reverse_prob: self.reverse_prob,
             shuffle_prob: self.shuffle_prob,
@@ -243,11 +241,22 @@ impl Sequence {
         } else {
             tmp
         };
-        if let Some(NotesGroup { notes, .. }) = notes_buffer
-            .iter_mut()
-            .find(|NotesGroup { token, .. }| *token == self.token)
-        {
-            notes.extend(tmp);
+        if let Some(ng) = notes_buffer.iter_mut().find(|ng| ng.token == self.token) {
+            // Update all parameters every time we regenerate to ensure Sequence is the source of truth.
+            // Volume is NOT set here - it will be computed separately based on tree structure.
+            ng.notes.extend(tmp);
+            ng.pan = pan;
+            ng.bend = self.bend;
+            ng.vibrato = self.vibrato;
+            ng.wave_type = self.wave_type.clone();
+            ng.chorus = self.chorus.clone();
+            ng.attack_decay = self.attack_decay;
+            ng.lp_attack_decay = self.lp_attack_decay;
+            ng.pow_fact = self.pow_fact;
+            ng.tolerance = self.tolerance;
+            ng.cutoff_multiplier = self.cutoff_multiplier;
+            ng.lowpass_enabled = self.lowpass_enabled;
+            ng.lp_order = self.lp_order;
         } else {
             notes_buffer.push(NotesGroup {
                 token: self.token,
@@ -260,7 +269,7 @@ impl Sequence {
                 lp_attack_decay: self.lp_attack_decay,
                 pow_fact: self.pow_fact,
                 pan,
-                volume,
+                volume: 1.0, // Initial volume - will be updated by volume application mechanism
                 tolerance: self.tolerance,
                 cutoff_multiplier: self.cutoff_multiplier,
                 lowpass_enabled: self.lowpass_enabled,
@@ -270,21 +279,16 @@ impl Sequence {
     }
 
     /// Core drawing for a single sequence.
+    /// Volume is NOT passed here - notes are generated at 1.0.
     pub fn draw_sequence_core(
         &mut self,
         notes: &mut Vec<NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
-        anticipate: bool,
-        volume: f64,
         pan: f64,
         proba: f64,
     ) {
-        let base = if anticipate {
-            now + GENERATE_EARLY
-        } else {
-            now
-        };
+        let base = now + GENERATE_EARLY;
         let start = self.loop_len * (base / self.loop_len).floor();
 
         if self
@@ -293,7 +297,7 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             if rng.gen_bool(proba) {
-                self.draw(notes, rng, start, volume, pan);
+                self.draw(notes, rng, start, pan);
             }
             self.not_generate_until =
                 Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);

@@ -13,7 +13,7 @@ pub struct Note {
     pub interval: Interval,
     pub glide: Option<Interval>,
     pub volume: f64,
-    pub tension: usize,
+    pub chord: usize,
     pub random_chord: bool,
     pub reverse_prob: f64,
     #[serde(default)]
@@ -88,9 +88,9 @@ impl Note {
                 let mut degree = if harmonise {
                     (-11..12i32)
                         .combinations(if self.random_chord {
-                            rng.gen_range(1..=self.tension)
+                            rng.gen_range(1..=self.chord)
                         } else {
-                            self.tension
+                            self.chord
                         })
                         .min_by_key(|d| {
                             (tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)

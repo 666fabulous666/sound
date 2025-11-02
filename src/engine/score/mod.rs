@@ -7,7 +7,10 @@ use std::sync::Arc;
 
 use crate::{
     engine::{
-        score::{note::Note, track_node::{TrackNode, NodeKind}},
+        score::{
+            note::Note,
+            track_node::{NodeKind, TrackNode},
+        },
         waves::WaveType,
     },
     time_freq::{Freq, Time},
@@ -345,7 +348,9 @@ impl Score {
         target_before.push(target_idx_before);
 
         // Must be a group
-        let is_group = self.track_root.get(&target_before)
+        let is_group = self
+            .track_root
+            .get(&target_before)
             .map(|node| node.is_group())
             .unwrap_or(false);
         if !is_group {
@@ -488,22 +493,6 @@ impl Score {
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
-        self.track_root
-            // .draw_node(&mut self.notes, rng, now, true, GLOBAL_VOLUME);
-            .draw_node(&mut self.notes, rng, now, true, 1.0);
-        // let paths: Vec<_> = self
-        //     .track_root
-        //     .sequences_with_paths()
-        //     .filter(|(_, seq)| {
-        //         seq.not_generate_until
-        //             .as_ref()
-        //             .map_or(true, |until| now >= *until)
-        //     })
-        //     .map(|(path, _)| path)
-        //     .collect();
-
-        // for p in paths {
-        //     self.draw_node_at(&p, now, rng);
-        // }
+        self.track_root.draw_node(&mut self.notes, rng, now);
     }
 }

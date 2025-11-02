@@ -35,11 +35,11 @@ pub struct TrackNode {
     pub name: String,
     #[serde(default = "default_proba")]
     pub proba: f64,
-    pub volume: f64,  // mix gain multiplier (>= 0.0)
+    pub volume: f64, // mix gain multiplier (>= 0.0)
     #[serde(default = "default_pan", alias = "spacial")]
-    pub pan: f64,     // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
+    pub pan: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
     #[serde(default = "default_hue")]
-    pub hue: f64,     // HSL hue 0.0..=360.0
+    pub hue: f64, // HSL hue 0.0..=360.0
     #[serde(flatten)]
     pub kind: NodeKind,
 }
@@ -251,17 +251,16 @@ impl TrackNode {
         }
     }
     /// Recursively draw all sequences under this node.
+    /// Volume is NOT computed here - notes are generated at 1.0 and volume is applied separately.
     pub fn draw_node(
         &mut self,
         notes: &mut Vec<NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
-        anticipate: bool,
-        node_volume: f64,
     ) {
         match &mut self.kind {
             NodeKind::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, anticipate, node_volume * self.volume, self.pan, self.proba);
+                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba);
             }
             NodeKind::Group {
                 children,
@@ -269,15 +268,14 @@ impl TrackNode {
                 not_generate_until,
                 ..
             } => {
-                let volume = if *muted || !rng.gen_bool(self.proba) {
-                    0.0
-                } else {
-                    self.volume
-                };
+                if *muted {
+                    return; // Don't generate anything if muted
+                }
                 if not_generate_until.map_or(true, |until| now >= until) {
-                    if rng.gen_bool(self.proba) {}
-                    for ch in children {
-                        ch.draw_node(notes, rng, now, anticipate, volume * node_volume);
+                    if rng.gen_bool(self.proba) {
+                        for ch in children {
+                            ch.draw_node(notes, rng, now);
+                        }
                     }
                 }
             }
@@ -580,9 +578,7 @@ fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> Strin
             }
         }
         NodeKind::Group {
-            children,
-            muted,
-            ..
+            children, muted, ..
         } => {
             // Use a box emoji unless ascii_only
             if !opts.ascii_only {
