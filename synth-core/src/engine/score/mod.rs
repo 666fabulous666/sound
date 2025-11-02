@@ -18,6 +18,7 @@ pub mod note;
 pub mod sequence;
 pub mod track_node;
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::{
@@ -110,7 +111,6 @@ pub struct NotesGroup {
     pub notes: Vec<Note>,
     pub pow_fact: (f64, Freq),
     pub pan: f64,
-    pub token: Token,
     pub tolerance: (Time, Time),
     pub vibrato: (f64, Freq),
     pub volume: f64,
@@ -118,21 +118,21 @@ pub struct NotesGroup {
 }
 
 pub struct Score {
-    pub notes: Vec<NotesGroup>,
+    pub notes: BTreeMap<Token, NotesGroup>,
     pub track_root: TrackNode,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
-    pub shared_notes: Arc<ArcSwap<Vec<NotesGroup>>>,
+    pub shared_notes: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
 }
 impl Score {
     pub fn new() -> Self {
         let mut last_token = TokenGen(0);
         Self {
-            notes: Vec::new(),
+            notes: BTreeMap::new(),
             track_root: TrackNode::new_root(&mut last_token),
             last_token,
             delays: default_delays(),
-            shared_notes: Arc::new(ArcSwap::from_pointee(Vec::new())),
+            shared_notes: Arc::new(ArcSwap::from_pointee(BTreeMap::new())),
         }
     }
     /// Product of volumes from the root down to (and including) the node at `path`.
@@ -521,8 +521,8 @@ impl Score {
     //     }
     // }
     pub fn retain_notes(&mut self, now: Time) {
-        let _ = self.notes.iter_mut().for_each(|NotesGroup { notes, .. }| {
-            notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
+        self.notes.values_mut().for_each(|ng| {
+            ng.notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
         });
     }
 

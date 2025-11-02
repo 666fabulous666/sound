@@ -1,0 +1,2 @@
+- The color hue picker exposed to the user is not consistent with the colors of the trakcs. Use unified hsl <-> rgb logics for both properties panel and timeline panel.
+- The label that is written to the left of the tracks in the timeline panel should be the current ones if the TrackNode doesn't have a name, or the name otherwise.

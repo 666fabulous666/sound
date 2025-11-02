@@ -256,8 +256,7 @@ impl GuiApp {
                                         if let Some(ng) = self
                                             .score
                                             .notes
-                                            .iter_mut()
-                                            .find(|ng| ng.token == seq_mut.token)
+                                            .get_mut(&seq_mut.token)
                                         {
                                             ng.wave_type = seq_mut.wave_type;
                                         }

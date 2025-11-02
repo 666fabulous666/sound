@@ -523,9 +523,7 @@ impl GuiApp {
     }
 
     fn drain_notes_from_seq(&mut self, tk: Token) {
-        self.score
-            .notes
-            .retain(|NotesGroup { token, .. }| *token != tk);
+        self.score.notes.remove(&tk);
     }
 
     /// Update volumes for ALL NotesGroup entries based on the tree structure.
@@ -571,8 +569,8 @@ impl GuiApp {
             .collect();
 
         // Apply volumes to NotesGroup entries
-        for ng in self.score.notes.iter_mut() {
-            if let Some((_, volume)) = volume_updates.iter().find(|(tk, _)| *tk == ng.token) {
+        for (token, ng) in self.score.notes.iter_mut() {
+            if let Some((_, volume)) = volume_updates.iter().find(|(tk, _)| *tk == *token) {
                 ng.volume = *volume;
             }
         }
@@ -581,7 +579,7 @@ impl GuiApp {
     /// Update interval octaves for all notes in NotesGroup belonging to a sequence token.
     /// Used when octave changes to immediately shift notes without regeneration.
     fn update_sequence_octaves(&mut self, token: Token, octave_shift: i32) {
-        if let Some(ng) = self.score.notes.iter_mut().find(|ng| ng.token == token) {
+        if let Some(ng) = self.score.notes.get_mut(&token) {
             for note in ng.notes.iter_mut() {
                 match &mut note.interval {
                     Interval::Tempered(_degree, octave) => {

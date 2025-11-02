@@ -3,6 +3,8 @@ use core::marker::PhantomData;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
+use std::collections::BTreeMap;
+
 use crate::{
     engine::score::{sequence::Sequence, NotesGroup},
     time_freq::Time,
@@ -254,7 +256,7 @@ impl TrackNode {
     /// Volume is NOT computed here - notes are generated at 1.0 and volume is applied separately.
     pub fn draw_node(
         &mut self,
-        notes: &mut Vec<NotesGroup>,
+        notes: &mut BTreeMap<Token, NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
     ) {

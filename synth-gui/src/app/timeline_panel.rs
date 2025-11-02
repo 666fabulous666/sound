@@ -221,8 +221,8 @@ impl GuiApp {
                         self.score
                             .notes
                             .iter()
-                            .filter(|NotesGroup { token, .. }| *token == seq.token)
-                            .flat_map(|NotesGroup { notes, .. }| notes.iter())
+                            .filter(|(token, _)| **token == seq.token)
+                            .flat_map(|(_, ng)| ng.notes.iter())
                             .collect::<Vec<_>>()
                             .iter()
                             .for_each(|n| {

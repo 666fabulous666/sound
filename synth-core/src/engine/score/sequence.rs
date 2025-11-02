@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::iter::once;
 
 use itertools::Itertools;
@@ -131,7 +132,7 @@ impl Sequence {
     }
     pub fn draw(
         &self,
-        notes_buffer: &mut Vec<NotesGroup>,
+        notes_buffer: &mut BTreeMap<Token, NotesGroup>,
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
         pan: f64,
@@ -241,7 +242,7 @@ impl Sequence {
         } else {
             tmp
         };
-        if let Some(ng) = notes_buffer.iter_mut().find(|ng| ng.token == self.token) {
+        if let Some(ng) = notes_buffer.get_mut(&self.token) {
             // Update all parameters every time we regenerate to ensure Sequence is the source of truth.
             // Volume is NOT set here - it will be computed separately based on tree structure.
             ng.notes.extend(tmp);
@@ -258,8 +259,7 @@ impl Sequence {
             ng.lowpass_enabled = self.lowpass_enabled;
             ng.lp_order = self.lp_order;
         } else {
-            notes_buffer.push(NotesGroup {
-                token: self.token,
+            notes_buffer.insert(self.token, NotesGroup {
                 bend: self.bend,
                 vibrato: self.vibrato,
                 notes: tmp,
@@ -282,7 +282,7 @@ impl Sequence {
     /// Volume is NOT passed here - notes are generated at 1.0.
     pub fn draw_sequence_core(
         &mut self,
-        notes: &mut Vec<NotesGroup>,
+        notes: &mut BTreeMap<Token, NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         pan: f64,

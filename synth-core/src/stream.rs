@@ -2,7 +2,7 @@ use arc_swap::ArcSwap;
 use core::panic;
 use cpal::traits::{DeviceTrait, StreamTrait};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     sync::{atomic::AtomicU64, Arc},
 };
 
@@ -19,7 +19,7 @@ pub fn stream(
     freq0: Freq,
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
-    note_queue: Arc<ArcSwap<Vec<NotesGroup>>>,
+    note_queue: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
     delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
 ) -> cpal::Stream {
@@ -48,23 +48,25 @@ pub fn stream(
                 let mut dry_left = 0.0;
                 let mut dry_right = 0.0;
 
-                for NotesGroup {
-                    notes: notes_from_seq,
-                    bend,
-                    vibrato,
-                    wave_type,
-                    chorus,
-                    attack_decay,
-                    lp_attack_decay,
-                    cutoff_multiplier,
-                    pow_fact,
-                    pan,
-                    volume,
+                for (
                     token,
-                    lowpass_enabled,
-                    lp_order,
-                    ..
-                } in note_groups.iter()
+                    NotesGroup {
+                        notes: notes_from_seq,
+                        bend,
+                        vibrato,
+                        wave_type,
+                        chorus,
+                        attack_decay,
+                        lp_attack_decay,
+                        cutoff_multiplier,
+                        pow_fact,
+                        pan,
+                        volume,
+                        lowpass_enabled,
+                        lp_order,
+                        ..
+                    },
+                ) in note_groups.iter()
                 {
                     for note in notes_from_seq.iter() {
                         let memory = lp_memories

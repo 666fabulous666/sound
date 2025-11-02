@@ -1,10 +1,12 @@
+use std::collections::BTreeMap;
+
 use itertools::Itertools;
 use rand::{seq::SliceRandom, Rng};
 use serde::Deserialize;
 
 use super::Interval;
 
-use crate::{engine::score::NotesGroup, time_freq::Time};
+use crate::{engine::score::NotesGroup, time_freq::Time, Token};
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
@@ -22,7 +24,7 @@ pub struct Note {
 impl Note {
     pub fn draw(
         &self,
-        context: &[NotesGroup],
+        context: &BTreeMap<Token, NotesGroup>,
         self_ctx: &mut Vec<Note>,
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
@@ -34,7 +36,7 @@ impl Note {
             Interval::RDTempered(n_rd_steps, base, octave) => {
                 // 1. Collect contextual notes from external context
                 let mut others = context
-                    .iter()
+                    .values()
                     .flat_map(
                         |NotesGroup {
                              notes, tolerance, ..
