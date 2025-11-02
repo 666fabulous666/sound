@@ -135,7 +135,7 @@ impl Sequence {
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
         mut volume: f64,
-        spacial: f64,
+        pan: f64,
     ) {
         if self.mute {
             volume = 0.0;
@@ -259,7 +259,7 @@ impl Sequence {
                 attack_decay: self.attack_decay,
                 lp_attack_decay: self.lp_attack_decay,
                 pow_fact: self.pow_fact,
-                spacial,
+                pan,
                 volume,
                 tolerance: self.tolerance,
                 cutoff_multiplier: self.cutoff_multiplier,
@@ -277,7 +277,7 @@ impl Sequence {
         now: Time,
         anticipate: bool,
         volume: f64,
-        spacial: f64,
+        pan: f64,
         proba: f64,
     ) {
         let base = if anticipate {
@@ -293,7 +293,7 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             if rng.gen_bool(proba) {
-                self.draw(notes, rng, start, volume, spacial);
+                self.draw(notes, rng, start, volume, pan);
             }
             self.not_generate_until =
                 Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);

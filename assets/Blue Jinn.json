@@ -1,14 +1,21 @@
 {
   "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "pan": 0.5,
+    "hue": 0.0,
     "Group": {
       "id": 1,
-      "name": "Root",
       "muted": false,
-      "volume": 1.0,
-      "spacial": 0.5,
       "collapsed": false,
       "children": [
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 8.0,
@@ -52,7 +59,6 @@
               1
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.9862327044933592,
             "attack_decay": [
@@ -72,7 +78,6 @@
               17.64
             ],
             "loop_len": 8.0,
-            "spacial": 0.5,
             "tolerance": [
               0.0,
               0.0
@@ -90,11 +95,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 17,
-            "name": ""
+            "token": 17
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 8.0,
@@ -142,7 +151,6 @@
               32
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.6204032394013999,
             "attack_decay": [
@@ -162,7 +170,6 @@
               17.64
             ],
             "loop_len": 8.0,
-            "spacial": 0.5,
             "tolerance": [
               0.0,
               0.0
@@ -180,11 +187,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 12,
-            "name": ""
+            "token": 12
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 1.5,
@@ -224,7 +235,6 @@
               4
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.6204032394013999,
             "attack_decay": [
@@ -244,7 +254,6 @@
               17.64
             ],
             "loop_len": 2.0,
-            "spacial": 0.5,
             "tolerance": [
               0.0,
               0.0
@@ -262,11 +271,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 11,
-            "name": ""
+            "token": 11
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.35000000000000003,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 3.0,
@@ -309,7 +322,6 @@
               8
             ],
             "beat_offset": 2,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -329,7 +341,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.35000000000000003,
             "tolerance": [
               1.0,
               0.0
@@ -347,11 +358,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 15,
-            "name": ""
+            "token": 15
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.35000000000000003,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 1.0,
@@ -394,7 +409,6 @@
               8
             ],
             "beat_offset": 2,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -414,7 +428,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.35000000000000003,
             "tolerance": [
               1.0,
               0.0
@@ -432,11 +445,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 20,
-            "name": ""
+            "token": 20
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.68,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 0.75,
@@ -480,7 +497,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.8630729480942446,
             "attack_decay": [
@@ -500,7 +516,6 @@
               21.159999999999997
             ],
             "loop_len": 2.0,
-            "spacial": 0.68,
             "tolerance": [
               1.0,
               0.0
@@ -518,11 +533,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 22,
-            "name": ""
+            "token": 22
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.1800000000000002,
+          "pan": 0.35000000000000003,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.75,
             "t_max": 2.0,
@@ -564,7 +583,6 @@
               16
             ],
             "beat_offset": 0,
-            "volume": 1.1800000000000002,
             "mute": false,
             "normalization": 0.25,
             "attack_decay": [
@@ -584,7 +602,6 @@
               0.0
             ],
             "loop_len": 2.0,
-            "spacial": 0.35000000000000003,
             "tolerance": [
               0.0,
               0.0
@@ -602,11 +619,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 384.65,
-            "token": 23,
-            "name": ""
+            "token": 23
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.35000000000000003,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 0.375,
@@ -648,7 +669,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.25,
             "attack_decay": [
@@ -668,7 +688,6 @@
               0.0
             ],
             "loop_len": 2.0,
-            "spacial": 0.35000000000000003,
             "tolerance": [
               1.0,
               0.0
@@ -686,11 +705,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 25,
-            "name": ""
+            "token": 25
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.7,
+          "pan": 0.61,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 1.0,
@@ -731,7 +754,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.7,
             "mute": false,
             "normalization": 0.3873907843083414,
             "attack_decay": [
@@ -751,7 +773,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.61,
             "tolerance": [
               0.0,
               0.0
@@ -769,11 +790,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 4,
-            "name": ""
+            "token": 4
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.73,
+          "hue": 0.0,
           "Seq": {
             "t_min": 2.75,
             "t_max": 4.0,
@@ -815,7 +840,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.3873907843083414,
             "attack_decay": [
@@ -835,7 +859,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.73,
             "tolerance": [
               0.0,
               0.0
@@ -853,11 +876,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 386.65,
-            "token": 14,
-            "name": ""
+            "token": 14
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 0.2,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 6.625,
@@ -897,7 +924,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 0.2,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -917,7 +943,6 @@
               0.0
             ],
             "loop_len": 8.0,
-            "spacial": 0.5,
             "tolerance": [
               0.0,
               0.0
@@ -935,11 +960,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 2,
-            "name": ""
+            "token": 2
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.4,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 1.0,
@@ -980,7 +1009,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -1000,7 +1028,6 @@
               0.0
             ],
             "loop_len": 2.0,
-            "spacial": 0.4,
             "tolerance": [
               0.0,
               0.0
@@ -1018,11 +1045,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 5,
-            "name": ""
+            "token": 5
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.45,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 4.0,
@@ -1061,7 +1092,6 @@
               8
             ],
             "beat_offset": 10,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.7313142789104217,
             "attack_decay": [
@@ -1081,7 +1111,6 @@
               0.0
             ],
             "loop_len": 8.0,
-            "spacial": 0.45,
             "tolerance": [
               0.0,
               0.0
@@ -1099,8 +1128,7 @@
             ],
             "shuffle": false,
             "not_generate_until": 383.9,
-            "token": 6,
-            "name": ""
+            "token": 6
           }
         }
       ]

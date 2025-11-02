@@ -131,24 +131,24 @@ impl GuiApp {
                                 }
                             });
 
-                            // Spacial control (common)
+                            // Pan control (common)
                             ui.horizontal(|ui| {
-                                let spacial = track_node_mut.spacial_mut();
+                                let pan = track_node_mut.pan_mut();
                                 if let Some(token) = token_for_volume {
                                     // For sequences, use the helper that updates NotesGroup
-                                    helpers::spacial_control(ui, spacial, &mut self.score.notes, token);
+                                    helpers::spacial_control(ui, pan, &mut self.score.notes, token);
                                 } else {
                                     // For groups, use simple slider
                                     slider_with_reset(
                                         ui,
-                                        spacial,
+                                        pan,
                                         0.0..=1.0,
-                                        "Stereo",
+                                        "Pan",
                                         None,
-                                        default_spacial(),
+                                        default_pan(),
                                         false,
                                     ).on_hover_ui(|ui| {
-                                        ui.label("0.5 is centered");
+                                        ui.label("0.5 is centered, 0.0 is left, 1.0 is right");
                                         ui.label(egui::RichText::new("Right-click to reset").weak());
                                     });
                                 }

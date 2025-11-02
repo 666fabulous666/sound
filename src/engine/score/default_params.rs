@@ -45,6 +45,10 @@ pub fn default_spacial() -> f64 {
     0.5
 }
 
+pub fn default_pan() -> f64 {
+    0.5
+}
+
 pub fn default_arpegio() -> f64 {
     0.0
 }

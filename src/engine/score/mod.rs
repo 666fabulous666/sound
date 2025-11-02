@@ -91,7 +91,7 @@ pub struct NotesGroup {
     pub chorus: ChorusParams,
     pub notes: Vec<Note>,
     pub pow_fact: (f64, Freq),
-    pub spacial: f64,
+    pub pan: f64,
     pub token: Token,
     pub tolerance: (Time, Time),
     pub vibrato: (f64, Freq),
@@ -292,7 +292,7 @@ impl Score {
             name,
             proba: 1.0,
             volume: 1.0,
-            spacial: 0.5,
+            pan: 0.5,
             hue: 0.0,
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids

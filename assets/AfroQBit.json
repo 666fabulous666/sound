@@ -1,32 +1,43 @@
 {
   "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "pan": 0.5,
+    "hue": 0.0,
     "Group": {
       "id": 1,
-      "name": "Root",
       "muted": false,
-      "volume": 1.0,
-      "spacial": 0.5,
       "collapsed": false,
       "children": [
         {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.42,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 22,
-            "name": "Group",
             "muted": false,
-            "volume": 1.42,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "Group",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Group": {
                   "id": 20,
-                  "name": "Group",
                   "muted": false,
-                  "volume": 1.0,
-                  "spacial": 0.5,
                   "collapsed": false,
                   "children": [
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.34,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 1.0,
                         "t_max": 2.0,
@@ -66,14 +77,30 @@
                           1,
                           16
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 2,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.8940500679207981,
                         "attack_decay": [
                           25.0,
                           4.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -87,11 +114,12 @@
                           0.0
                         ],
                         "loop_len": 2.0,
-                        "spacial": 0.34,
+                        "arpegio": 0.0,
                         "tolerance": [
                           0.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 4,
                         "accents": [
                           0.3333333333333333,
@@ -101,12 +129,20 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 8.9,
-                        "token": 3,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 88.0,
+                        "token": 3
                       }
                     },
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.66,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 0.0,
                         "t_max": 1.0,
@@ -146,14 +182,30 @@
                           1,
                           16
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 0,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.8940500679207981,
                         "attack_decay": [
                           25.0,
                           4.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -167,11 +219,12 @@
                           0.0
                         ],
                         "loop_len": 2.0,
-                        "spacial": 0.66,
+                        "arpegio": 0.0,
                         "tolerance": [
                           0.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 4,
                         "accents": [
                           0.3333333333333333,
@@ -181,15 +234,24 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 7.9,
-                        "token": 8,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 87.0,
+                        "token": 8
                       }
                     }
-                  ]
+                  ],
+                  "not_generate_until": null
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.43,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 4.0,
@@ -229,14 +291,30 @@
                     1,
                     16
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 0,
-                  "volume": 1.0,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
                     5.0,
                     0.5
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -250,11 +328,12 @@
                     0.0
                   ],
                   "loop_len": 4.0,
-                  "spacial": 0.43,
+                  "arpegio": 0.0,
                   "tolerance": [
                     0.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 2,
                   "accents": [
                     0.5,
@@ -265,12 +344,20 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 7.9,
-                  "token": 5,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 87.0,
+                  "token": 5
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 2.0,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 8.0,
@@ -312,14 +399,30 @@
                     1,
                     8
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 0,
-                  "volume": 0.30000000000000004,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
                     5.0,
                     0.5
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     32.0
@@ -333,11 +436,12 @@
                     0.0
                   ],
                   "loop_len": 8.0,
-                  "spacial": 0.5,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 1,
                   "accents": [
                     1.0,
@@ -348,21 +452,31 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 7.9,
-                  "token": 6,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 87.0,
+                  "token": 6
                 }
               },
               {
+                "name": "Group",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Group": {
                   "id": 21,
-                  "name": "Group",
                   "muted": false,
-                  "volume": 1.0,
-                  "spacial": 0.5,
                   "collapsed": false,
                   "children": [
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.43,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 1.0,
                         "t_max": 1.6875,
@@ -402,14 +516,30 @@
                           1,
                           16
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 2,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.9389358381354518,
                         "attack_decay": [
                           100.0,
                           0.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -423,11 +553,12 @@
                           0.0
                         ],
                         "loop_len": 2.0,
-                        "spacial": 0.43,
+                        "arpegio": 0.0,
                         "tolerance": [
                           0.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 4,
                         "accents": [
                           0.2,
@@ -438,12 +569,20 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 8.9,
-                        "token": 1,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 88.0,
+                        "token": 1
                       }
                     },
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.43,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 0.0,
                         "t_max": 0.6875,
@@ -483,14 +622,30 @@
                           1,
                           16
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 0,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.9389358381354518,
                         "attack_decay": [
                           100.0,
                           0.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -504,11 +659,12 @@
                           0.0
                         ],
                         "loop_len": 2.0,
-                        "spacial": 0.43,
+                        "arpegio": 0.0,
                         "tolerance": [
                           0.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 2,
                         "accents": [
                           0.2,
@@ -518,15 +674,24 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 3.9,
-                        "token": 7,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 83.0,
+                        "token": 7
                       }
                     }
-                  ]
+                  ],
+                  "not_generate_until": null
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.6200000000000001,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 2.0,
@@ -568,14 +733,30 @@
                     1,
                     8
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 2,
-                  "volume": 1.0,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.9341610596080862,
                   "attack_decay": [
                     100.0,
                     0.3
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     -0.001,
                     50.0
@@ -589,44 +770,58 @@
                     0.0
                   ],
                   "loop_len": 2.0,
-                  "spacial": 0.6200000000000001,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 2,
                   "accents": [
                     1.0,
                     []
                   ],
                   "shuffle": false,
-                  "not_generate_until": 3.9,
-                  "token": 11,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 83.0,
+                  "token": 11
                 }
               }
-            ]
+            ],
+            "not_generate_until": null
           }
         },
         {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 23,
-            "name": "Group",
             "muted": false,
-            "volume": 1.0,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "Group",
+                "proba": 1.0,
+                "volume": 1.5,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Group": {
                   "id": 24,
-                  "name": "Group",
                   "muted": false,
-                  "volume": 1.5,
-                  "spacial": 0.5,
                   "collapsed": false,
                   "children": [
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.5,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 0.0,
                         "t_max": 1.5,
@@ -669,14 +864,30 @@
                           1,
                           8
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 2,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.5844270967202702,
                         "attack_decay": [
                           4.0,
                           1.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -690,11 +901,12 @@
                           0.0
                         ],
                         "loop_len": 4.0,
-                        "spacial": 0.5,
+                        "arpegio": 0.0,
                         "tolerance": [
                           1.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 4,
                         "accents": [
                           1.0,
@@ -706,12 +918,20 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 15.9,
-                        "token": 9,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 95.0,
+                        "token": 9
                       }
                     },
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.5,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 2.0,
                         "t_max": 3.5,
@@ -754,14 +974,30 @@
                           1,
                           8
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 2,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.5844270967202702,
                         "attack_decay": [
                           4.0,
                           1.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -775,11 +1011,12 @@
                           0.0
                         ],
                         "loop_len": 8.0,
-                        "spacial": 0.5,
+                        "arpegio": 0.0,
                         "tolerance": [
                           1.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 2,
                         "accents": [
                           1.0,
@@ -791,12 +1028,20 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 17.9,
-                        "token": 13,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 81.0,
+                        "token": 13
                       }
                     },
                     {
+                      "name": "",
+                      "proba": 1.0,
+                      "volume": 1.0,
+                      "pan": 0.5,
+                      "hue": 0.0,
                       "Seq": {
                         "t_min": 6.0,
                         "t_max": 8.0,
@@ -839,14 +1084,30 @@
                           1,
                           8
                         ],
+                        "harmoniser": [
+                          10,
+                          11,
+                          11,
+                          4,
+                          3,
+                          0,
+                          8
+                        ],
                         "beat_offset": 2,
-                        "volume": 1.0,
+                        "glide": false,
                         "mute": false,
                         "normalization": 0.5844270967202702,
                         "attack_decay": [
                           4.0,
                           1.5
                         ],
+                        "lp_attack_decay": [
+                          4.0,
+                          0.3333
+                        ],
+                        "cutoff_multiplier": 4.0,
+                        "lowpass_enabled": false,
+                        "lp_order": 1,
                         "bend": [
                           0.0,
                           32.0
@@ -860,11 +1121,12 @@
                           0.0
                         ],
                         "loop_len": 8.0,
-                        "spacial": 0.5,
+                        "arpegio": 0.0,
                         "tolerance": [
                           1.0,
                           0.0
                         ],
+                        "harmonise": false,
                         "repeat": 1,
                         "accents": [
                           1.0,
@@ -876,15 +1138,24 @@
                           ]
                         ],
                         "shuffle": false,
-                        "not_generate_until": 13.9,
-                        "token": 14,
-                        "name": ""
+                        "chord": 1,
+                        "random_chord": false,
+                        "reverse_prob": 0.0,
+                        "shuffle_prob": 0.0,
+                        "not_generate_until": 85.0,
+                        "token": 14
                       }
                     }
-                  ]
+                  ],
+                  "not_generate_until": null
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 0.67,
+                "pan": 0.25,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 0.75,
@@ -925,14 +1196,30 @@
                     1,
                     8
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 2,
-                  "volume": 0.67,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.5844270967202702,
                   "attack_decay": [
                     4.0,
                     1.5
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.011,
                     180.0
@@ -946,11 +1233,12 @@
                     0.0
                   ],
                   "loop_len": 1.0,
-                  "spacial": 0.25,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 8,
                   "accents": [
                     1.0,
@@ -962,12 +1250,20 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 7.9,
-                  "token": 16,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 88.0,
+                  "token": 16
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.75,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 1.75,
@@ -1008,14 +1304,30 @@
                     1,
                     8
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 0,
-                  "volume": 1.0,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.5349922439811376,
                   "attack_decay": [
                     4.0,
                     1.0
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     180.0
@@ -1029,11 +1341,12 @@
                     0.0
                   ],
                   "loop_len": 2.0,
-                  "spacial": 0.75,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 4,
                   "accents": [
                     1.0,
@@ -1045,12 +1358,20 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 7.9,
-                  "token": 17,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 87.0,
+                  "token": 17
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.75,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.5,
                   "t_max": 2.0,
@@ -1091,14 +1412,30 @@
                     1,
                     8
                   ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
                   "beat_offset": 2,
-                  "volume": 1.0,
+                  "glide": false,
                   "mute": false,
                   "normalization": 0.5349922439811376,
                   "attack_decay": [
                     4.0,
                     1.0
                   ],
+                  "lp_attack_decay": [
+                    4.0,
+                    0.3333
+                  ],
+                  "cutoff_multiplier": 4.0,
+                  "lowpass_enabled": false,
+                  "lp_order": 1,
                   "bend": [
                     0.0,
                     180.0
@@ -1112,11 +1449,12 @@
                     0.0
                   ],
                   "loop_len": 2.0,
-                  "spacial": 0.75,
+                  "arpegio": 0.0,
                   "tolerance": [
                     1.0,
                     0.0
                   ],
+                  "harmonise": false,
                   "repeat": 4,
                   "accents": [
                     1.0,
@@ -1128,15 +1466,20 @@
                     ]
                   ],
                   "shuffle": false,
-                  "not_generate_until": 8.4,
-                  "token": 18,
-                  "name": ""
+                  "chord": 1,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 87.5,
+                  "token": 18
                 }
               }
-            ]
+            ],
+            "not_generate_until": null
           }
         }
-      ]
+      ],
+      "not_generate_until": null
     }
   },
   "delays": [

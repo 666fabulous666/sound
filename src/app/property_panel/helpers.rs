@@ -140,7 +140,7 @@ pub fn spacial_control(
     if changed {
         *spacial = spacial.clamp(0.0, 1.0);
         update_notes_group(notes, token, |ng| {
-            ng.spacial = *spacial;
+            ng.pan = *spacial;
         });
     }
     changed

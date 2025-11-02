@@ -58,7 +58,7 @@ pub fn stream(
                     lp_attack_decay,
                     cutoff_multiplier,
                     pow_fact,
-                    spacial,
+                    pan,
                     volume,
                     token,
                     lowpass_enabled,
@@ -97,8 +97,8 @@ pub fn stream(
                                     memory,
                                     sample_rate,
                                 );
-                            dry_left += (1.0 - spacial) * dry;
-                            dry_right += spacial * dry;
+                            dry_left += (1.0 - pan) * dry;
+                            dry_right += pan * dry;
                         }
                     }
                 }

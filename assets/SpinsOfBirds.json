@@ -1,14 +1,21 @@
 {
   "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "pan": 0.5,
+    "hue": 0.0,
     "Group": {
       "id": 1,
-      "name": "Root",
       "muted": false,
-      "volume": 1.0,
-      "spacial": 0.5,
       "collapsed": false,
       "children": [
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 4.0,
@@ -49,7 +56,6 @@
               2
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -69,7 +75,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -86,11 +91,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 191.9,
-            "token": 22,
-            "name": ""
+            "token": 22
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 2.5,
@@ -129,7 +138,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -149,7 +157,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.5,
             "tolerance": [
               0.1,
               0.0
@@ -166,11 +173,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 191.9,
-            "token": 17,
-            "name": ""
+            "token": 17
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 1.0,
             "t_max": 2.0,
@@ -209,7 +220,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -229,7 +239,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.5,
             "tolerance": [
               0.1,
               0.0
@@ -246,20 +255,26 @@
             ],
             "shuffle": false,
             "not_generate_until": 192.9,
-            "token": 16,
-            "name": ""
+            "token": 16
           }
         },
         {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 29,
-            "name": "Group",
             "muted": false,
-            "volume": 1.0,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.27999999999999997,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 2.0,
@@ -303,7 +318,6 @@
                     8
                   ],
                   "beat_offset": 3,
-                  "volume": 1.0,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
@@ -323,7 +337,6 @@
                     0.0
                   ],
                   "loop_len": 4.0,
-                  "spacial": 0.27999999999999997,
                   "tolerance": [
                     1.0,
                     0.0
@@ -340,11 +353,15 @@
                   ],
                   "shuffle": false,
                   "not_generate_until": 191.9,
-                  "token": 19,
-                  "name": ""
+                  "token": 19
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.68,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 2.0,
@@ -388,7 +405,6 @@
                     8
                   ],
                   "beat_offset": 3,
-                  "volume": 1.0,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
@@ -408,7 +424,6 @@
                     0.0
                   ],
                   "loop_len": 4.0,
-                  "spacial": 0.68,
                   "tolerance": [
                     1.0,
                     0.0
@@ -425,23 +440,29 @@
                   ],
                   "shuffle": false,
                   "not_generate_until": 191.9,
-                  "token": 20,
-                  "name": ""
+                  "token": 20
                 }
               }
             ]
           }
         },
         {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 28,
-            "name": "Group",
             "muted": false,
-            "volume": 1.0,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.68,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 2.5,
                   "t_max": 3.75,
@@ -482,7 +503,6 @@
                     6
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
@@ -502,7 +522,6 @@
                     0.0
                   ],
                   "loop_len": 4.0,
-                  "spacial": 0.68,
                   "tolerance": [
                     1.0,
                     0.0
@@ -519,11 +538,15 @@
                   ],
                   "shuffle": false,
                   "not_generate_until": 182.4,
-                  "token": 23,
-                  "name": ""
+                  "token": 23
                 }
               },
               {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "pan": 0.68,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 2.5,
                   "t_max": 3.75,
@@ -564,7 +587,6 @@
                     6
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "mute": false,
                   "normalization": 0.4142069808095242,
                   "attack_decay": [
@@ -584,7 +606,6 @@
                     0.0
                   ],
                   "loop_len": 4.0,
-                  "spacial": 0.68,
                   "tolerance": [
                     1.0,
                     0.0
@@ -601,14 +622,18 @@
                   ],
                   "shuffle": false,
                   "not_generate_until": 182.4,
-                  "token": 24,
-                  "name": ""
+                  "token": 24
                 }
               }
             ]
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 2.0,
             "t_max": 2.75,
@@ -648,7 +673,6 @@
               8
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -668,7 +692,6 @@
               0.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.5,
             "tolerance": [
               0.1,
               0.0
@@ -685,11 +708,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 193.9,
-            "token": 18,
-            "name": ""
+            "token": 18
           }
         },
         {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.35000000000000003,
+          "hue": 0.0,
           "Seq": {
             "t_min": 3.0,
             "t_max": 4.0,
@@ -729,7 +756,6 @@
               6
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "mute": false,
             "normalization": 0.4142069808095242,
             "attack_decay": [
@@ -749,7 +775,6 @@
               1.0
             ],
             "loop_len": 4.0,
-            "spacial": 0.35000000000000003,
             "tolerance": [
               0.1,
               0.0
@@ -766,8 +791,7 @@
             ],
             "shuffle": false,
             "not_generate_until": 186.9,
-            "token": 26,
-            "name": ""
+            "token": 26
           }
         }
       ]

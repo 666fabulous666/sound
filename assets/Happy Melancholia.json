@@ -1,25 +1,32 @@
 {
   "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "pan": 0.5,
+    "hue": 0.0,
     "Group": {
       "id": 1,
-      "name": "Root",
       "muted": false,
-      "proba": 1.0,
-      "volume": 1.0,
-      "spacial": 0.5,
       "collapsed": false,
       "children": [
         {
+          "name": "Melody",
+          "proba": 1.0,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 18,
-            "name": "Melody",
             "muted": false,
-            "proba": 1.0,
-            "volume": 1.0,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "seq 2",
+                "proba": 0.5900000000000001,
+                "volume": 1.0,
+                "pan": 0.34,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -59,7 +66,6 @@
                     5,
                     8
                   ],
-                  "proba": 0.5900000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -70,7 +76,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -98,7 +103,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.34,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -121,11 +125,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 2,
-                  "name": "seq 2"
+                  "token": 2
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.5900000000000001,
+                "volume": 1.0,
+                "pan": 0.6400000000000001,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -165,7 +173,6 @@
                     5,
                     8
                   ],
-                  "proba": 0.5900000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -176,7 +183,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -204,7 +210,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.6400000000000001,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -227,11 +232,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 10,
-                  "name": "seq 2"
+                  "token": 10
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.6900000000000001,
+                "volume": 1.0,
+                "pan": 0.73,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -271,7 +280,6 @@
                     1,
                     2
                   ],
-                  "proba": 0.6900000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -282,7 +290,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -310,7 +317,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.73,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -333,11 +339,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 3,
-                  "name": "seq 2"
+                  "token": 3
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.6400000000000001,
+                "volume": 1.0,
+                "pan": 0.22000000000000003,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -377,7 +387,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.6400000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -388,7 +397,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -416,7 +424,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.22000000000000003,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -439,11 +446,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 4,
-                  "name": "seq 2"
+                  "token": 4
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.71,
+                "volume": 1.0,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -483,7 +494,6 @@
                     1,
                     2
                   ],
-                  "proba": 0.71,
                   "harmoniser": [
                     10,
                     11,
@@ -494,7 +504,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -522,7 +531,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.5,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -545,11 +553,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 5,
-                  "name": "seq 2"
+                  "token": 5
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.8300000000000001,
+                "volume": 1.0,
+                "pan": 0.6900000000000001,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -589,7 +601,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.8300000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -600,7 +611,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -628,7 +638,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.6900000000000001,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -651,11 +660,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 6,
-                  "name": "seq 2"
+                  "token": 6
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.71,
+                "volume": 1.0,
+                "pan": 0.36000000000000004,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -695,7 +708,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.71,
                   "harmoniser": [
                     10,
                     11,
@@ -706,7 +718,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -734,7 +745,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.36000000000000004,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -757,11 +767,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 7,
-                  "name": "seq 2"
+                  "token": 7
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.66,
+                "volume": 1.0,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -801,7 +815,6 @@
                     1,
                     2
                   ],
-                  "proba": 0.66,
                   "harmoniser": [
                     10,
                     11,
@@ -812,7 +825,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.0,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -840,7 +852,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.5,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -863,11 +874,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 8,
-                  "name": "seq 2"
+                  "token": 8
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.5,
+                "volume": 0.7200000000000001,
+                "pan": 0.41,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -907,7 +922,6 @@
                     1,
                     2
                   ],
-                  "proba": 0.5,
                   "harmoniser": [
                     10,
                     11,
@@ -918,7 +932,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 0.7200000000000001,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -946,7 +959,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.41,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -969,11 +981,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 17,
-                  "name": "seq 2"
+                  "token": 17
                 }
               },
               {
+                "name": "seq 2",
+                "proba": 0.5,
+                "volume": 0.4,
+                "pan": 0.66,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 16.0,
@@ -1013,7 +1029,6 @@
                     1,
                     2
                   ],
-                  "proba": 0.5,
                   "harmoniser": [
                     10,
                     11,
@@ -1024,7 +1039,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 0.4,
                   "glide": true,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -1052,7 +1066,6 @@
                     0.0
                   ],
                   "loop_len": 16.0,
-                  "spacial": 0.66,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -1075,8 +1088,7 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 18,
-                  "name": "seq 2"
+                  "token": 18
                 }
               }
             ],
@@ -1084,16 +1096,22 @@
           }
         },
         {
+          "name": "Rythm",
+          "proba": 1.0,
+          "volume": 2.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Group": {
             "id": 17,
-            "name": "Rythm",
             "muted": false,
-            "proba": 1.0,
-            "volume": 2.0,
-            "spacial": 0.5,
             "collapsed": false,
             "children": [
               {
+                "name": "seq 11",
+                "proba": 0.8500000000000001,
+                "volume": 1.6,
+                "pan": 0.5,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 8.0,
@@ -1134,7 +1152,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.8500000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -1145,7 +1162,6 @@
                     8
                   ],
                   "beat_offset": 0,
-                  "volume": 1.6,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.4142069808095242,
@@ -1173,7 +1189,6 @@
                     0.0
                   ],
                   "loop_len": 8.0,
-                  "spacial": 0.5,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -1196,11 +1211,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 11,
-                  "name": "seq 11"
+                  "token": 11
                 }
               },
               {
+                "name": "seq 11",
+                "proba": 0.78,
+                "volume": 1.32,
+                "pan": 0.38,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 8.0,
@@ -1240,7 +1259,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.78,
                   "harmoniser": [
                     10,
                     11,
@@ -1251,7 +1269,6 @@
                     8
                   ],
                   "beat_offset": 4,
-                  "volume": 1.32,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9351433262702766,
@@ -1279,7 +1296,6 @@
                     0.0
                   ],
                   "loop_len": 8.0,
-                  "spacial": 0.38,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -1302,11 +1318,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 12,
-                  "name": "seq 11"
+                  "token": 12
                 }
               },
               {
+                "name": "seq 11",
+                "proba": 0.6900000000000001,
+                "volume": 0.2,
+                "pan": 0.5700000000000001,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 8.0,
@@ -1347,7 +1367,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.6900000000000001,
                   "harmoniser": [
                     10,
                     11,
@@ -1358,7 +1377,6 @@
                     8
                   ],
                   "beat_offset": 10,
-                  "volume": 0.2,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9288762419418922,
@@ -1386,7 +1404,6 @@
                     0.0
                   ],
                   "loop_len": 8.0,
-                  "spacial": 0.5700000000000001,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -1409,11 +1426,15 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 13,
-                  "name": "seq 11"
+                  "token": 13
                 }
               },
               {
+                "name": "seq 11",
+                "proba": 0.15000000000000002,
+                "volume": 0.2,
+                "pan": 0.45,
+                "hue": 0.0,
                 "Seq": {
                   "t_min": 0.0,
                   "t_max": 8.0,
@@ -1454,7 +1475,6 @@
                     1,
                     4
                   ],
-                  "proba": 0.15000000000000002,
                   "harmoniser": [
                     10,
                     11,
@@ -1465,7 +1485,6 @@
                     8
                   ],
                   "beat_offset": 2,
-                  "volume": 0.2,
                   "glide": false,
                   "mute": false,
                   "normalization": 0.9288762419418922,
@@ -1493,7 +1512,6 @@
                     0.0
                   ],
                   "loop_len": 8.0,
-                  "spacial": 0.45,
                   "arpegio": 0.0,
                   "tolerance": [
                     1.0,
@@ -1516,8 +1534,7 @@
                   "reverse_prob": 0.0,
                   "shuffle_prob": 0.0,
                   "not_generate_until": 79.0,
-                  "token": 15,
-                  "name": "seq 11"
+                  "token": 15
                 }
               }
             ],

@@ -13,6 +13,10 @@ fn default_hue() -> f64 {
     0.0
 }
 
+fn default_pan() -> f64 {
+    0.5
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum NodeKind {
     Group {
@@ -32,7 +36,8 @@ pub struct TrackNode {
     #[serde(default = "default_proba")]
     pub proba: f64,
     pub volume: f64,  // mix gain multiplier (>= 0.0)
-    pub spacial: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
+    #[serde(default = "default_pan", alias = "spacial")]
+    pub pan: f64,     // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
     #[serde(default = "default_hue")]
     pub hue: f64,     // HSL hue 0.0..=360.0
     #[serde(flatten)]
@@ -67,7 +72,7 @@ impl TrackNode {
             name: name.into(),
             proba: 1.0,
             volume: 1.0,
-            spacial: 0.5,
+            pan: 0.5,
             hue: 0.0,
             kind: NodeKind::Group {
                 id: gen.next(),
@@ -85,7 +90,7 @@ impl TrackNode {
             name: String::new(),
             proba: 1.0,
             volume: 1.0,
-            spacial: 0.5,
+            pan: 0.5,
             hue: 0.0,
             kind: NodeKind::Seq(seq),
         }
@@ -112,12 +117,12 @@ impl TrackNode {
         &mut self.volume
     }
 
-    pub fn spacial(&self) -> f64 {
-        self.spacial
+    pub fn pan(&self) -> f64 {
+        self.pan
     }
 
-    pub fn spacial_mut(&mut self) -> &mut f64 {
-        &mut self.spacial
+    pub fn pan_mut(&mut self) -> &mut f64 {
+        &mut self.pan
     }
 
     pub fn proba(&self) -> f64 {
@@ -165,8 +170,8 @@ impl TrackNode {
     pub fn clamp_mix(&mut self) {
         let volume = self.volume_mut();
         *volume = volume.max(0.0);
-        let spacial = self.spacial_mut();
-        *spacial = spacial.clamp(0.0, 1.0);
+        let pan = self.pan_mut();
+        *pan = pan.clamp(0.0, 1.0);
     }
 
     // ---------- Path-based navigation & edits ----------
@@ -256,7 +261,7 @@ impl TrackNode {
     ) {
         match &mut self.kind {
             NodeKind::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, anticipate, node_volume * self.volume, self.spacial, self.proba);
+                seq.draw_sequence_core(notes, rng, now, anticipate, node_volume * self.volume, self.pan, self.proba);
             }
             NodeKind::Group {
                 children,
@@ -596,8 +601,8 @@ fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> Strin
                 if (node.volume - 1.0).abs() > f64::EPSILON {
                     let _ = write!(s, " vol={:.2}", node.volume);
                 }
-                if (node.spacial - 0.5).abs() > f64::EPSILON {
-                    let _ = write!(s, " pan={:.2}", node.spacial);
+                if (node.pan - 0.5).abs() > f64::EPSILON {
+                    let _ = write!(s, " pan={:.2}", node.pan);
                 }
             }
         }

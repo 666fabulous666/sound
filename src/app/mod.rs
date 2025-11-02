@@ -101,7 +101,7 @@ where
             name: "Root".into(),
             proba: 1.0,
             volume: 1.0,
-            spacial: 0.5,
+            pan: 0.5,
             hue: 0.0,
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
@@ -115,7 +115,7 @@ where
             name: "Root".into(),
             proba: 1.0,
             volume: 1.0,
-            spacial: 0.5,
+            pan: 0.5,
             hue: 0.0,
             kind: NodeKind::Group {
                 id: Token(0),
@@ -390,7 +390,7 @@ impl GuiApp {
                 name: String::new(),
                 proba: 1.0,
                 volume: 1.0,
-                spacial: 0.5,
+                pan: 0.5,
                 hue: 0.0,
                 kind: NodeKind::Group {
                     id: self.score.last_token.next(),

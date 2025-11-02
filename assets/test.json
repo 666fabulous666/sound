@@ -1,14 +1,21 @@
 {
   "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "pan": 0.5,
+    "hue": 0.0,
     "Group": {
       "id": 1,
-      "name": "Root",
       "muted": false,
-      "volume": 1.0,
-      "spacial": 0.5,
       "collapsed": false,
       "children": [
         {
+          "name": "seq 2",
+          "proba": 0.5900000000000001,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -48,7 +55,6 @@
               5,
               8
             ],
-            "proba": 0.5900000000000001,
             "harmoniser": [
               [
                 10,
@@ -70,7 +76,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -91,7 +96,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -109,11 +113,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 2,
-            "name": "seq 2"
+            "token": 2
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.5900000000000001,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -153,7 +161,6 @@
               5,
               8
             ],
-            "proba": 0.5900000000000001,
             "harmoniser": [
               [
                 10,
@@ -175,7 +182,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -196,7 +202,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -214,11 +219,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 10,
-            "name": "seq 2"
+            "token": 10
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.6900000000000001,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -258,7 +267,6 @@
               1,
               2
             ],
-            "proba": 0.6900000000000001,
             "harmoniser": [
               [
                 10,
@@ -280,7 +288,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -301,7 +308,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -319,11 +325,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 3,
-            "name": "seq 2"
+            "token": 3
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.6400000000000001,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -363,7 +373,6 @@
               1,
               4
             ],
-            "proba": 0.6400000000000001,
             "harmoniser": [
               [
                 10,
@@ -385,7 +394,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -406,7 +414,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -424,11 +431,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 4,
-            "name": "seq 2"
+            "token": 4
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.71,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -468,7 +479,6 @@
               1,
               2
             ],
-            "proba": 0.71,
             "harmoniser": [
               [
                 10,
@@ -490,7 +500,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -511,7 +520,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -529,11 +537,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 5,
-            "name": "seq 2"
+            "token": 5
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.8300000000000001,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -573,7 +585,6 @@
               1,
               4
             ],
-            "proba": 0.8300000000000001,
             "harmoniser": [
               [
                 10,
@@ -595,7 +606,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -616,7 +626,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -634,11 +643,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 6,
-            "name": "seq 2"
+            "token": 6
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.71,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -678,7 +691,6 @@
               1,
               4
             ],
-            "proba": 0.71,
             "harmoniser": [
               [
                 10,
@@ -700,7 +712,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": true,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -721,7 +732,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -739,11 +749,15 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 7,
-            "name": "seq 2"
+            "token": 7
           }
         },
         {
+          "name": "seq 2",
+          "proba": 0.66,
+          "volume": 1.0,
+          "pan": 0.5,
+          "hue": 0.0,
           "Seq": {
             "t_min": 0.0,
             "t_max": 16.0,
@@ -783,7 +797,6 @@
               1,
               2
             ],
-            "proba": 0.66,
             "harmoniser": [
               [
                 10,
@@ -805,7 +818,6 @@
               ]
             ],
             "beat_offset": 0,
-            "volume": 1.0,
             "glide": false,
             "mute": false,
             "normalization": 0.4142069808095242,
@@ -826,7 +838,6 @@
               0.0
             ],
             "loop_len": 16.0,
-            "spacial": 0.5,
             "tolerance": [
               1.0,
               0.0
@@ -844,8 +855,7 @@
             ],
             "shuffle": false,
             "not_generate_until": 2271.9,
-            "token": 8,
-            "name": "seq 2"
+            "token": 8
           }
         }
       ]
