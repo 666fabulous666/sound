@@ -14,9 +14,9 @@ use crate::{
         score::{sequence::Sequence, track_node::TrackNode},
     },
     layout_left,
-    stream::stream,
     F0,
 };
+use synth_core::stream::stream;
 
 impl GuiApp {
     pub fn top_panel(

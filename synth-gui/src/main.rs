@@ -20,7 +20,7 @@ fn main() {
             "Notes GUI",
             native_options,
             Box::new(move |cc| {
-                use synth::app::GuiApp;
+                use synth_gui::app::GuiApp;
 
                 Ok(Box::new(GuiApp::new(cc, device)))
             }),

@@ -1,7 +1,6 @@
 use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
-use egui::emath::Numeric;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
@@ -208,6 +207,11 @@ impl fmt::Display for Freq {
     }
 }
 
+// Optional egui integration for GUI support
+#[cfg(feature = "egui-support")]
+use egui::emath::Numeric;
+
+#[cfg(feature = "egui-support")]
 impl Numeric for Time {
     const INTEGRAL: bool = false;
     const MIN: Self = Time(f64::MIN);
@@ -224,6 +228,7 @@ impl Numeric for Time {
     }
 }
 
+#[cfg(feature = "egui-support")]
 impl Numeric for Freq {
     const INTEGRAL: bool = false;
     const MIN: Self = Freq(f64::MIN);

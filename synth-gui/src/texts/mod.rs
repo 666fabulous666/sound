@@ -19,4 +19,4 @@ I’d love your feedback — feel free to open an issue or suggestion on GitHub.
 
 Enjoy! "#;
 
-pub const README_MD: &str = include_str!("../../README.md");
+pub const README_MD: &str = include_str!("../../../README.md");

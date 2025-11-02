@@ -1,0 +1,48 @@
+[package]
+name = "synth-gui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "synth-gui"
+path = "src/main.rs"
+
+[lib]
+name = "synth_gui"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+synth-core = { path = "../synth-core", features = ["egui-support"] }
+serde.workspace = true
+serde_json.workspace = true
+rand.workspace = true
+itertools.workspace = true
+egui.workspace = true
+eframe.workspace = true
+wgpu.workspace = true
+epaint.workspace = true
+winit.workspace = true
+rfd.workspace = true
+instant.workspace = true
+anyhow.workspace = true
+log.workspace = true
+arc-swap.workspace = true
+egui_commonmark.workspace = true
+image.workspace = true
+num-traits.workspace = true
+
+# Native-only
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cpal.workspace = true
+crossterm = "0.27"
+pollster = "0.4"
+
+# WASM-only
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+cpal = { version = "0.15.3", features = ["wasm-bindgen"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1"
+console_log = "1.0"
+getrandom = { version = "0.2", features = ["js"] }

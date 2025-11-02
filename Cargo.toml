@@ -1,51 +1,41 @@
-[package]
-name = "synth"
+[workspace]
+resolver = "2"
+members = [
+    "synth-core",
+    "synth-cli",
+    "synth-gui",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
+authors = ["Fabien Mathieu"]
 
-[lib]
-name = "synth"
-crate-type = ["cdylib", "rlib"]
-
-[[bin]]
-name = "synth-native"
-path = "src/main.rs"
-
-[dependencies]
+[workspace.dependencies]
+# Core audio dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-winit = "0.28.0"
 rand = "0.8"
 itertools = "0.14.0"
-hound = "3.5.0"  # For writing .wav files
-egui = "0.32"
-# egui_double_slider = "0.9.0"
-eframe = { version = "0.32", default-features = false, features = ["wgpu", "default_fonts"] }
-wgpu = { version = "25", features = ["webgpu", "webgl"] }
-# wgpu = { version = "25", default-features = false, features = ["webgpu"] }
+hound = "3.5.0"
 anyhow = "1"
-rfd = "0.14"
-instant = "0.1.13"
 log = "0.4"
 arc-swap = "1.7.1"
-egui_commonmark = "0.21.1"
-epaint = "0.32.3"
-image = "0.25.8"
 num-traits = "0.2.19"
-# egui_extras = "0.32.3"
 
-# --- native-only ---
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Audio playback
 cpal = "0.15"
-crossterm = "0.27"
-pollster = "0.4"
 
-# --- wasm-only ---
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-cpal = { version = "0.15.3", features = ["wasm-bindgen"] }
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-console_error_panic_hook = "0.1"
-console_log = "1.0"
-getrandom = { version = "0.2", features = ["js"] }
+# GUI dependencies
+egui = "0.32"
+eframe = { version = "0.32", default-features = false, features = ["wgpu", "default_fonts"] }
+wgpu = { version = "25", features = ["webgpu", "webgl"] }
+epaint = "0.32.3"
+winit = "0.28.0"
+rfd = "0.14"
+instant = "0.1.13"
+egui_commonmark = "0.21.1"
+image = "0.25.8"
 
+# CLI dependencies
+clap = { version = "4.5", features = ["derive"] }

@@ -1,0 +1,24 @@
+[package]
+name = "synth-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "synth-cli"
+path = "src/main.rs"
+
+[dependencies]
+synth-core = { path = "../synth-core" }
+clap.workspace = true
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rand.workspace = true
+arc-swap.workspace = true
+env_logger = "0.11"
+
+# Native-only audio
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cpal.workspace = true

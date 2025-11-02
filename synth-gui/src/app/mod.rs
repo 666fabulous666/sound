@@ -175,13 +175,13 @@ impl GuiApp {
     pub fn load_logo(&mut self, ctx: &egui::Context) {
         if self.logo.is_none() {
             let image = if ctx.style().visuals.dark_mode {
-                let bytes = include_bytes!("../../assets/QuantumHarmonicsTmpWhite.png");
+                let bytes = include_bytes!("../../../assets/QuantumHarmonicsTmpWhite.png");
 
                 image::load_from_memory(bytes)
                     .expect("Failed to load logo")
                     .to_rgba8()
             } else {
-                let bytes = include_bytes!("../../assets/QuantumHarmonicsTmp.png");
+                let bytes = include_bytes!("../../../assets/QuantumHarmonicsTmp.png");
                 image::load_from_memory(bytes)
                     .expect("Failed to load logo")
                     .to_rgba8()
