@@ -1,4 +1,4 @@
-use crate::engine::score::default_proba;
+use crate::engine::score::{default_proba, probability::Probability};
 use core::marker::PhantomData;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -36,7 +36,7 @@ pub enum NodeKind {
 pub struct TrackNode {
     pub name: String,
     #[serde(default = "default_proba")]
-    pub proba: f64,
+    pub proba: Probability,
     pub volume: f64, // mix gain multiplier (>= 0.0)
     #[serde(default = "default_pan", alias = "spacial")]
     pub pan: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
@@ -72,7 +72,7 @@ impl TrackNode {
     pub fn new_node(gen: &mut TokenGen, name: impl Into<String>) -> Self {
         TrackNode {
             name: name.into(),
-            proba: 1.0,
+            proba: Probability::default(),
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
@@ -90,7 +90,7 @@ impl TrackNode {
     pub fn from_sequence(seq: Sequence) -> Self {
         TrackNode {
             name: String::new(),
-            proba: 1.0,
+            proba: Probability::default(),
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
@@ -127,12 +127,16 @@ impl TrackNode {
         &mut self.pan
     }
 
-    pub fn proba(&self) -> f64 {
+    pub fn proba(&self) -> Probability {
         self.proba
     }
 
-    pub fn proba_mut(&mut self) -> &mut f64 {
+    pub fn proba_mut(&mut self) -> &mut Probability {
         &mut self.proba
+    }
+
+    pub fn set_proba(&mut self, value: f64) {
+        self.proba.set(value);
     }
 
     pub fn child_count(&self) -> usize {
@@ -274,7 +278,7 @@ impl TrackNode {
                     return; // Don't generate anything if muted
                 }
                 if not_generate_until.map_or(true, |until| now >= until) {
-                    if rng.gen_bool(self.proba) {
+                    if rng.gen_bool(self.proba.as_f64()) {
                         for ch in children {
                             ch.draw_node(notes, rng, now);
                         }

@@ -15,6 +15,7 @@
 
 pub mod default_params;
 pub mod note;
+pub mod probability;
 pub mod sequence;
 pub mod time_quantum;
 pub mod track_node;
@@ -26,6 +27,7 @@ use crate::{
     engine::{
         score::{
             note::Note,
+            probability::Probability,
             track_node::{NodeKind, TrackNode},
         },
         waves::WaveType,
@@ -328,7 +330,7 @@ impl Score {
         // 2) Build the group (adapt fields to your TrackNode::Group)
         let group = TrackNode {
             name,
-            proba: 1.0,
+            proba: Probability::default(),
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,

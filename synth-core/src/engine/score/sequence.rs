@@ -9,6 +9,7 @@ use std::convert::TryFrom;
 
 use crate::engine::score::default_params;
 use crate::engine::score::note::Note;
+use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::NotesGroup;
 use crate::engine::score::RdRythm;
@@ -314,7 +315,7 @@ impl Sequence {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         pan: f64,
-        proba: f64,
+        proba: Probability,
     ) {
         let base = now + GENERATE_EARLY;
         let start = self.loop_len * (base / self.loop_len).floor();
@@ -324,7 +325,7 @@ impl Sequence {
             .as_ref()
             .map_or(true, |until| now >= *until)
         {
-            if rng.gen_bool(proba) {
+            if rng.gen_bool(proba.as_f64()) {
                 self.draw(notes, rng, start, pan);
             }
             self.not_generate_until =

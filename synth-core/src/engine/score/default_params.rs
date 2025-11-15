@@ -1,4 +1,6 @@
-use crate::engine::score::{time_quantum::TimeQuantum, ChorusParams, DetRythm, RdRythm};
+use crate::engine::score::{
+    probability::Probability, time_quantum::TimeQuantum, ChorusParams, DetRythm, RdRythm,
+};
 use crate::time_freq::{Freq, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
 
@@ -98,8 +100,8 @@ pub fn default_loop_len() -> Time {
 pub fn default_time_quantum() -> TimeQuantum {
     TimeQuantum::default()
 }
-pub fn default_proba() -> f64 {
-    1.0
+pub fn default_proba() -> Probability {
+    Probability::default()
 }
 pub fn default_reverse_prob() -> f64 {
     0.0

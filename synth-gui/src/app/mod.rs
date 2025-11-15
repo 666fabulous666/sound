@@ -9,6 +9,7 @@ use crate::{
     engine::{
         score::{
             default_params::default_delays,
+            probability::Probability,
             sequence::Sequence,
             track_node::{NodeKind, TrackNode},
             Interval, NotesGroup, Score,
@@ -101,7 +102,7 @@ where
         SequencesCompat::Root(root) => root,
         SequencesCompat::Nodes(children) => TrackNode {
             name: "Root".into(),
-            proba: 1.0,
+            proba: Probability::default(),
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
@@ -115,7 +116,7 @@ where
         },
         SequencesCompat::Seqs(seqs) => TrackNode {
             name: "Root".into(),
-            proba: 1.0,
+            proba: Probability::default(),
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
@@ -380,7 +381,7 @@ impl GuiApp {
             NodeKind::Group { .. } => node,
             NodeKind::Seq(_) => TrackNode {
                 name: String::new(),
-                proba: 1.0,
+                proba: Probability::default(),
                 volume: 1.0,
                 pan: 0.5,
                 hue: 0.0,

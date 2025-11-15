@@ -206,14 +206,14 @@ impl GuiApp {
 
                             // Proba control (common)
                             ui.horizontal(|ui| {
-                                let proba = track_node_mut.proba_mut();
+                                let mut proba_value = track_node_mut.proba().as_f64();
                                 let proba_resp = slider_with_reset(
                                     ui,
-                                    proba,
+                                    &mut proba_value,
                                     0.0..=1.0,
                                     "Proba",
                                     None,
-                                    default_proba(),
+                                    default_proba().as_f64(),
                                     false,
                                 )
                                 .on_hover_ui(|ui| {
@@ -221,7 +221,7 @@ impl GuiApp {
                                 });
 
                                 if proba_resp.changed() || proba_resp.secondary_clicked() {
-                                    *proba = proba.clamp(0.0, 1.0);
+                                    track_node_mut.set_proba(proba_value);
                                     impact.require_regeneration();
                                 }
                             });
