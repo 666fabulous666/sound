@@ -4,7 +4,7 @@ use egui::{Color32, Painter, Rect};
 use egui::Align2;
 
 use crate::{
-    app::{GuiApp, NotesGroup},
+    app::GuiApp,
     engine::{
         score::{
             track_node::{all_paths, NodeKind},
@@ -57,7 +57,7 @@ impl GuiApp {
             .score
             .track_root
             .sequences()
-            .map(|s| s.time_quantum.1 as isize)
+            .map(|s| s.time_quantum.denominator() as isize)
             .collect();
 
         // ----- UI -----

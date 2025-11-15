@@ -9,6 +9,7 @@ use std::convert::TryFrom;
 
 use crate::engine::score::default_params;
 use crate::engine::score::note::Note;
+use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::NotesGroup;
 use crate::engine::score::RdRythm;
 use crate::time_freq::Freq;
@@ -37,7 +38,7 @@ pub struct Sequence {
     pub interval: Interval,
     pub wave_type: WaveType,
     #[serde(default = "default_time_quantum")]
-    pub time_quantum: (usize, usize),
+    pub time_quantum: TimeQuantum,
     #[serde(default = "default_harmoniser")]
     pub harmoniser: [u32; 7],
     #[serde(default = "default_beat_offset")]
@@ -156,7 +157,7 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let step_as_time = Time(self.time_quantum.0 as f64 / self.time_quantum.1 as f64);
+        let step_as_time = self.time_quantum.step_duration();
         let limit_time = self.t_max.min(self.loop_len);
         let mut windows: Vec<(Time, Time)> = Vec::new();
         let step_secs = step_as_time.as_secs();

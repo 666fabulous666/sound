@@ -16,6 +16,7 @@
 pub mod default_params;
 pub mod note;
 pub mod sequence;
+pub mod time_quantum;
 pub mod track_node;
 
 use std::collections::BTreeMap;
@@ -521,9 +522,9 @@ impl Score {
     //     }
     // }
     pub fn retain_notes(&mut self, now: Time) {
-        self.notes.values_mut().for_each(|ng| {
-            ng.notes.retain(|n| n.time + NOTE_LINGER_TIME >= now)
-        });
+        self.notes
+            .values_mut()
+            .for_each(|ng| ng.notes.retain(|n| n.time + NOTE_LINGER_TIME >= now));
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
@@ -567,7 +568,10 @@ mod tests {
         let vol = score.volume_chain_product(&[0]);
         assert!(vol.is_some());
         let vol = vol.unwrap();
-        assert!(vol.is_finite(), "Volume chain product should always be finite");
+        assert!(
+            vol.is_finite(),
+            "Volume chain product should always be finite"
+        );
         assert!(vol >= 0.0, "Volume should be non-negative");
     }
 
@@ -582,11 +586,16 @@ mod tests {
 
         // All delays should be positive and finite
         for &delay in &score.delays.0 {
-            assert!(delay.is_finite() && delay > 0.0, "Delay should be positive and finite");
+            assert!(
+                delay.is_finite() && delay > 0.0,
+                "Delay should be positive and finite"
+            );
         }
         for &delay in &score.delays.1 {
-            assert!(delay.is_finite() && delay > 0.0, "Delay should be positive and finite");
+            assert!(
+                delay.is_finite() && delay > 0.0,
+                "Delay should be positive and finite"
+            );
         }
     }
 }
-

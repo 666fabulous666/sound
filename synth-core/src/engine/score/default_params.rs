@@ -1,4 +1,4 @@
-use crate::engine::score::{ChorusParams, DetRythm, RdRythm};
+use crate::engine::score::{time_quantum::TimeQuantum, ChorusParams, DetRythm, RdRythm};
 use crate::time_freq::{Freq, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
 
@@ -95,8 +95,8 @@ pub fn default_delta_shift() -> f64 {
 pub fn default_loop_len() -> Time {
     DEFAULT_LOOP_LEN
 }
-pub fn default_time_quantum() -> (usize, usize) {
-    (1, 8)
+pub fn default_time_quantum() -> TimeQuantum {
+    TimeQuantum::default()
 }
 pub fn default_proba() -> f64 {
     1.0

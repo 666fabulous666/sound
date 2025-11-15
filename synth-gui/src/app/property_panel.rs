@@ -337,38 +337,47 @@ impl GuiApp {
                                 ui.collapsing("Rythm", |ui| {
                                     {
                                         ui.horizontal(|ui| {
-                                            let mut tmp_quantum = seq_mut.time_quantum.clone();
+                                            let mut numerator = seq_mut.time_quantum.numerator();
+                                            let mut denominator =
+                                                seq_mut.time_quantum.denominator();
                                             ui.label("Time quantum:")
                                                 .on_hover_text(TIME_QUANTUM_TEXT);
                                             if ui
                                                 .add(
-                                                    egui::DragValue::new(&mut tmp_quantum.0)
+                                                    egui::DragValue::new(&mut numerator)
                                                         .range(1..=128),
                                                 )
                                                 .changed()
                                             {
-                                                seq_mut.time_quantum.0 = tmp_quantum.0;
+                                                seq_mut
+                                                    .time_quantum
+                                                    .set_numerator(numerator)
+                                                    .expect(
+                                                        "UI enforces valid time-quantum numerator",
+                                                    );
                                                 impact.require_regeneration();
                                             };
                                             ui.label("/");
                                             if ui
                                                 .add(
-                                                    egui::DragValue::new(&mut tmp_quantum.1)
+                                                    egui::DragValue::new(&mut denominator)
                                                         .range(1..=128),
                                                 )
                                                 .changed()
                                             {
-                                                seq_mut.time_quantum.1 = tmp_quantum.1;
+                                                seq_mut
+                                                    .time_quantum
+                                                    .set_denominator(denominator)
+                                                    .expect(
+                                                    "UI enforces valid time-quantum denominator",
+                                                );
                                                 impact.require_regeneration();
                                             };
                                         });
                                     }
                                     ui.separator();
                                     {
-                                        let step = Time(
-                                            seq_mut.time_quantum.0 as f64
-                                                / seq_mut.time_quantum.1 as f64,
-                                        );
+                                        let step = seq_mut.time_quantum.step_duration();
 
                                         let mut t_min = seq_mut.t_min.as_secs();
                                         let mut t_max = seq_mut.t_max.as_secs();
@@ -418,10 +427,7 @@ impl GuiApp {
                                             });
 
                                             if left || right {
-                                                let step = Time(
-                                                    seq_mut.time_quantum.0 as f64
-                                                        / seq_mut.time_quantum.1 as f64,
-                                                );
+                                                let step = seq_mut.time_quantum.step_duration();
                                                 let dir = if left { -1.0 } else { 1.0 };
 
                                                 let cmd = mods.command;
