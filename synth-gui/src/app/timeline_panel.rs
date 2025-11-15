@@ -12,7 +12,7 @@ use crate::{
         },
         waves::envelope,
     },
-    time_freq::Time,
+    time_freq::{Beat, Tempo, Time},
     NOTE_LINGER_TIME, TREE_DEPTH_WIDTH,
 };
 
@@ -41,6 +41,7 @@ impl GuiApp {
             .cloned()
             .collect();
 
+        let tempo = self.score.tempo();
         let current_time = self.now();
 
         // Grid params based on sequences only:
@@ -48,7 +49,9 @@ impl GuiApp {
             .score
             .track_root
             .sequences()
-            .fold(Time(0.0), |acc, seq| acc.max(seq.loop_len));
+            .fold(Time(0.0), |acc, seq| {
+                acc.max(tempo.beats_to_time(seq.loop_len))
+            });
         let playhead = NOTE_LINGER_TIME.min(max_loop_len);
         let track_display_length = max_loop_len + playhead;
 
@@ -83,6 +86,7 @@ impl GuiApp {
                 text_color,
                 rect,
                 &painter,
+                tempo,
             );
 
             // --- lanes: iterate owned paths, fetch node on-demand ---
@@ -181,9 +185,11 @@ impl GuiApp {
                             ui.visuals().panel_fill,
                         );
                         // Repeat window tiling modulo loop
-                        let loop_len = seq.loop_len;
-                        let win_len = seq.t_max - seq.t_min;
-                        let start0 = (seq.t_min - current_time).rem_euclid(loop_len) + playhead;
+                        let loop_len = tempo.beats_to_time(seq.loop_len);
+                        let t_min_time = tempo.beats_to_time(seq.t_min);
+                        let t_max_time = tempo.beats_to_time(seq.t_max);
+                        let win_len = t_max_time - t_min_time;
+                        let start0 = (t_min_time - current_time).rem_euclid(loop_len) + playhead;
                         let repeats =
                             (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
 
@@ -284,69 +290,78 @@ impl GuiApp {
                         let bar_color = col.lerp_to_gamma(text_color, 0.5);
 
                         // repeat bars
-                        let rep_loop_len = seq.loop_len * seq.repeat as f64;
-                        let bar_pos =
-                            rep_loop_len + playhead - (self.now()).rem_euclid(rep_loop_len);
-                        (0..seq.repeat).for_each(|j| {
-                            let pos = seq.loop_len * j as f64 + playhead
-                                - (self.now()).rem_euclid(rep_loop_len);
+                        let rep_loop_len = tempo.beats_to_time(seq.loop_len * seq.repeat as f64);
+                        let current = self.now();
+                        if rep_loop_len.as_secs() > 0.0 {
+                            let bar_pos =
+                                rep_loop_len + playhead - current.rem_euclid(rep_loop_len);
+                            (0..seq.repeat).for_each(|j| {
+                                let pos = tempo.beats_to_time(seq.loop_len * j as f64) + playhead
+                                    - current.rem_euclid(rep_loop_len);
+                                painter.text(
+                                    egui::pos2(
+                                        Self::t_to_x(rect, pos, track_display_length),
+                                        y0 - 0.333 * lane_gap,
+                                    ),
+                                    Align2::CENTER_BOTTOM,
+                                    format!("{}/{}", j + 1, seq.repeat),
+                                    egui::TextStyle::Body.resolve(ui.style()),
+                                    bar_color,
+                                );
+                            });
                             painter.text(
                                 egui::pos2(
-                                    Self::t_to_x(rect, pos, track_display_length),
+                                    Self::t_to_x(rect, bar_pos, track_display_length),
                                     y0 - 0.333 * lane_gap,
                                 ),
                                 Align2::CENTER_BOTTOM,
-                                format!("{}/{}", j + 1, seq.repeat),
+                                format!("x{}", seq.repeat),
                                 egui::TextStyle::Body.resolve(ui.style()),
                                 bar_color,
                             );
-                        });
-                        painter.text(
-                            egui::pos2(
-                                Self::t_to_x(rect, bar_pos, track_display_length),
-                                y0 - 0.333 * lane_gap,
-                            ),
-                            Align2::CENTER_BOTTOM,
-                            format!("x{}", seq.repeat),
-                            egui::TextStyle::Body.resolve(ui.style()),
-                            bar_color,
-                        );
-                        painter.line_segment(
-                            [
-                                egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y0),
-                                egui::pos2(Self::t_to_x(rect, bar_pos, track_display_length), y1),
-                            ],
-                            egui::Stroke::new(2.0, bar_color),
-                        );
-                        painter.line_segment(
-                            [
+                            painter.line_segment(
+                                [
+                                    egui::pos2(
+                                        Self::t_to_x(rect, bar_pos, track_display_length),
+                                        y0,
+                                    ),
+                                    egui::pos2(
+                                        Self::t_to_x(rect, bar_pos, track_display_length),
+                                        y1,
+                                    ),
+                                ],
+                                egui::Stroke::new(2.0, bar_color),
+                            );
+                            painter.line_segment(
+                                [
+                                    egui::pos2(
+                                        Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
+                                        y0,
+                                    ),
+                                    egui::pos2(
+                                        Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
+                                        y1,
+                                    ),
+                                ],
+                                egui::Stroke::new(2.0, bar_color),
+                            );
+                            painter.circle_filled(
                                 egui::pos2(
-                                    Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-                                    y0,
+                                    Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
+                                    0.75 * y0 + 0.25 * y1,
                                 ),
+                                2.0,
+                                bar_color,
+                            );
+                            painter.circle_filled(
                                 egui::pos2(
-                                    Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-                                    y1,
+                                    Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
+                                    0.25 * y0 + 0.75 * y1,
                                 ),
-                            ],
-                            egui::Stroke::new(2.0, bar_color),
-                        );
-                        painter.circle_filled(
-                            egui::pos2(
-                                Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-                                0.75 * y0 + 0.25 * y1,
-                            ),
-                            2.0,
-                            bar_color,
-                        );
-                        painter.circle_filled(
-                            egui::pos2(
-                                Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-                                0.25 * y0 + 0.75 * y1,
-                            ),
-                            2.0,
-                            bar_color,
-                        );
+                                2.0,
+                                bar_color,
+                            );
+                        }
 
                         // click to select
                         if ui
@@ -562,22 +577,29 @@ fn paint_grid(
     text_color: Color32,
     rect: Rect,
     painter: &Painter,
+    tempo: Tempo,
 ) {
+    let track_beats = tempo
+        .time_to_beats(track_display_length)
+        .as_beats()
+        .max(0.0);
     for sub_grid in &sub_grids {
-        let n = (track_display_length.as_secs() as isize) * *sub_grid;
+        if *sub_grid <= 0 {
+            continue;
+        }
+        let subdivisions = (track_beats * *sub_grid as f64).ceil() as isize;
+        let n = subdivisions.max(*sub_grid);
         for s in -n..=2 * n {
-            let x = GuiApp::t_to_x(
-                rect,
-                Time(s as f64 / *sub_grid as f64) - current_time.rem_euclid(max_loop_len)
-                    + playhead,
-                track_display_length,
-            );
-            // let base_col = hsl_to_color32(((279 * *sub_grid) % 360) as _, 0.5, 0.5);
+            let beat = Beat(s as f64 / *sub_grid as f64);
+            let line_time =
+                tempo.beats_to_time(beat) - current_time.rem_euclid(max_loop_len) + playhead;
+            let x = GuiApp::t_to_x(rect, line_time, track_display_length);
             let base_col = text_color;
             let thickness = 1.0;
+            let half = *sub_grid / 2;
             let col = if s % *sub_grid == 0 {
                 base_col.gamma_multiply(0.2)
-            } else if *sub_grid != 0 && s % (*sub_grid / 2) == 0 {
+            } else if half > 0 && s % half == 0 {
                 base_col.gamma_multiply(0.1)
             } else {
                 base_col.gamma_multiply(0.05)

@@ -21,7 +21,7 @@ use crate::{
     engine::score::{default_params::*, sequence::Sequence, track_node::NodeKind, Interval},
     layout_left,
     shortcuts::*,
-    time_freq::Time,
+    time_freq::Beat,
     Token,
 };
 
@@ -377,14 +377,13 @@ impl GuiApp {
                                     }
                                     ui.separator();
                                     {
-                                        let step = seq_mut.time_quantum.step_duration();
+                                        let step = seq_mut.time_quantum.beat_step();
 
-                                        let mut t_min = seq_mut.t_min.as_secs();
-                                        let mut t_max = seq_mut.t_max.as_secs();
+                                        let mut t_min = seq_mut.t_min.as_beats();
+                                        let mut t_max = seq_mut.t_max.as_beats();
 
-                                        egui::CollapsingHeader::new("Sequence position").show(
-                                            ui,
-                                            |ui| {
+                                        egui::CollapsingHeader::new("Sequence position (beats)")
+                                            .show(ui, |ui| {
                                                 ui.add(
                                                     egui::Slider::new(&mut t_min, 0.0..=t_max)
                                                         .text("t_min"),
@@ -392,30 +391,31 @@ impl GuiApp {
                                                 ui.add(
                                                     egui::Slider::new(
                                                         &mut t_max,
-                                                        t_min..=seq_mut.loop_len.as_secs(),
+                                                        t_min..=seq_mut.loop_len.as_beats(),
                                                     )
                                                     .text("t_max"),
                                                 );
 
                                                 t_max =
-                                                    t_max.clamp(t_min, seq_mut.loop_len.as_secs());
+                                                    t_max.clamp(t_min, seq_mut.loop_len.as_beats());
 
-                                                if (t_min - seq_mut.t_min.as_secs()).abs()
+                                                if (t_min - seq_mut.t_min.as_beats()).abs()
                                                     > f64::EPSILON
                                                 {
-                                                    seq_mut.t_min =
-                                                        step * (Time(t_min) / step).round();
+                                                    let quantized =
+                                                        step * ((Beat(t_min) / step).round());
+                                                    seq_mut.t_min = quantized;
                                                     impact.require_regeneration();
                                                 }
-                                                if (Time(t_max) - seq_mut.t_max).as_secs().abs()
+                                                if (t_max - seq_mut.t_max.as_beats()).abs()
                                                     > f64::EPSILON
                                                 {
-                                                    seq_mut.t_max =
-                                                        step * (Time(t_max) / step).round();
+                                                    let quantized =
+                                                        step * ((Beat(t_max) / step).round());
+                                                    seq_mut.t_max = quantized;
                                                     impact.require_regeneration();
                                                 }
-                                            },
-                                        );
+                                            });
 
                                         if !ui.ctx().wants_keyboard_input() {
                                             let (left, right, mods) = ui.ctx().input(|i| {
@@ -427,15 +427,14 @@ impl GuiApp {
                                             });
 
                                             if left || right {
-                                                let step = seq_mut.time_quantum.step_duration();
                                                 let dir = if left { -1.0 } else { 1.0 };
 
                                                 let cmd = mods.command;
                                                 let alt = mods.alt;
 
-                                                let mut new_min = seq_mut.t_min.as_secs();
-                                                let mut new_max = seq_mut.t_max.as_secs();
-                                                let s = step.as_secs();
+                                                let mut new_min = seq_mut.t_min.as_beats();
+                                                let mut new_max = seq_mut.t_max.as_beats();
+                                                let s = step.as_beats();
 
                                                 match (cmd, alt) {
                                                     (true, false) => {
@@ -445,23 +444,23 @@ impl GuiApp {
                                                     (false, true) => {
                                                         new_max = (new_max + dir * s).clamp(
                                                             new_min,
-                                                            seq_mut.loop_len.as_secs(),
+                                                            seq_mut.loop_len.as_beats(),
                                                         );
                                                     }
                                                     _ => {
                                                         let span = new_max - new_min;
                                                         new_min = (new_min + dir * s).clamp(
                                                             0.0,
-                                                            (seq_mut.loop_len.as_secs() - span)
+                                                            (seq_mut.loop_len.as_beats() - span)
                                                                 .max(0.0),
                                                         );
                                                         new_max = (new_min + span)
-                                                            .min(seq_mut.loop_len.as_secs());
+                                                            .min(seq_mut.loop_len.as_beats());
                                                     }
                                                 }
 
-                                                seq_mut.t_min = Time(new_min);
-                                                seq_mut.t_max = Time(new_max);
+                                                seq_mut.t_min = Beat(new_min);
+                                                seq_mut.t_max = Beat(new_max);
                                                 impact.require_regeneration();
                                             }
                                         }
@@ -516,16 +515,16 @@ impl GuiApp {
                                             };
                                         });
                                         ui.horizontal(|ui| {
-                                            let mut loop_len = seq_mut.loop_len.clone();
-                                            ui.label("Loop length:")
+                                            let mut loop_len = seq_mut.loop_len.as_beats();
+                                            ui.label("Loop length (beats):")
                                                 .on_hover_text(LOOP_LENGTH_TEXT);
                                             let slider = ui.add(
                                                 egui::DragValue::new(&mut loop_len)
                                                     .range(0.0..=512.0),
                                             );
                                             if slider.changed() {
-                                                loop_len = loop_len.max(Time(0.0));
-                                                seq_mut.loop_len = loop_len.max(Time(0.0));
+                                                let loop_len = Beat(loop_len.max(0.0));
+                                                seq_mut.loop_len = loop_len;
                                                 seq_mut.t_max = seq_mut.t_max.min(loop_len);
                                                 impact.require_regeneration();
                                             };

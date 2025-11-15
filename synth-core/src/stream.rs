@@ -7,7 +7,11 @@ use std::{
 };
 
 use crate::{
-    engine::{reverb::Reverb, score::{Interval, NotesGroup}, waves::generate_wave},
+    engine::{
+        reverb::Reverb,
+        score::{Interval, NotesGroup},
+        waves::generate_wave,
+    },
     time_freq::{DivByFreq, Freq, Time},
     Token, REVERB_BUFFER_LEN,
 };
@@ -70,12 +74,7 @@ pub fn stream(
                 {
                     for note in notes_from_seq.iter() {
                         let memory = lp_memories
-                            .entry((
-                                *token,
-                                note.time,
-                                note.interval.clone(),
-                                note.glide.clone(),
-                            ))
+                            .entry((*token, note.time, note.interval.clone(), note.glide.clone()))
                             .or_insert([0.0; 5]);
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);

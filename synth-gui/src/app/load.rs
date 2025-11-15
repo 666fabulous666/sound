@@ -1,4 +1,7 @@
-use crate::app::{GuiApp, GuiState};
+use crate::{
+    app::{GuiApp, GuiState},
+    time_freq::Tempo,
+};
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
@@ -60,9 +63,10 @@ impl GuiApp {
         self.score_mut()
             .track_root
             .for_each_sequence_mut(|s| s.not_generate_until = None);
+        self.score.set_tempo(Tempo::new(state.tempo_bpm));
         self.score.generate_notes(self.now(), &mut self.rng);
         self.update_all_volumes_from_tree(); // Apply volumes based on tree structure
-        // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
+                                             // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
         self.score.delays = state.delays;
     }
 }

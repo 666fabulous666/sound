@@ -8,7 +8,7 @@ mod top_panel;
 use crate::{
     engine::{
         score::{
-            default_params::default_delays,
+            default_params::{default_delays, default_tempo},
             probability::Probability,
             sequence::Sequence,
             track_node::{NodeKind, TrackNode},
@@ -18,7 +18,7 @@ use crate::{
     },
     shortcuts::*,
     texts::README_MD,
-    time_freq::Time,
+    time_freq::{Tempo, Time},
     Token, GROOVE_DEFAULTS,
 };
 use arc_swap::ArcSwap;
@@ -137,6 +137,12 @@ pub struct GuiState {
     pub seqs: TrackNode,
     #[serde(default = "default_delays")]
     pub delays: (Vec<f64>, Vec<f64>),
+    #[serde(default = "default_tempo_bpm")]
+    pub tempo_bpm: f64,
+}
+
+fn default_tempo_bpm() -> f64 {
+    default_tempo().beats_per_minute()
 }
 
 impl GuiApp {
@@ -363,7 +369,8 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        node.draw_node(&mut self.score.notes, &mut self.rng, now);
+        let tempo = self.score.tempo();
+        node.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
         self.score.track_root.push_child(node);
     }
 
@@ -372,9 +379,10 @@ impl GuiApp {
     /// - Ensures the root remains a `Group` by wrapping a lone `Seq` if needed.
     pub fn replace_root_with(&mut self, mut node: TrackNode) {
         let now = self.now();
+        let tempo = self.score.tempo();
 
         // Draw the (possibly nested) node into current notes
-        node.draw_node(&mut self.score.notes, &mut self.rng, now);
+        node.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
 
         // Keep invariant: root is a Group
         self.score.track_root = match &node.kind {
@@ -396,6 +404,21 @@ impl GuiApp {
         };
     }
 
+    fn regenerate_entire_score(&mut self) {
+        self.score.notes.clear();
+        self.score.generate_notes(self.now(), &mut self.rng);
+        self.update_all_volumes_from_tree();
+    }
+
+    fn set_tempo_bpm(&mut self, bpm: f64) {
+        let bpm = bpm.max(1.0);
+        if (self.score.tempo().beats_per_minute() - bpm).abs() <= f64::EPSILON {
+            return;
+        }
+        self.score.set_tempo(Tempo::new(bpm));
+        self.regenerate_entire_score();
+    }
+
     // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.
     fn clone_node(&mut self, path: &[usize]) {
         if path.is_empty() {
@@ -414,7 +437,8 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree
         let now = self.now();
-        cloned.draw_node(&mut self.score.notes, &mut self.rng, now);
+        let tempo = self.score.tempo();
+        cloned.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
 
         // 4) Insert clone right after the original
         let insert_idx = path[path.len() - 1] + 1;
@@ -439,8 +463,9 @@ impl GuiApp {
             self.drain_notes_from_seq(tk);
         }
         let now = self.now();
+        let tempo = self.score.tempo();
         if let Some(n) = self.score.track_root.get_mut(path) {
-            n.draw_node(&mut self.score.notes, &mut self.rng, now);
+            n.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
         }
     }
     // Collect paths to *sequences* (preorder)

@@ -25,10 +25,7 @@ pub enum SynthError {
     Io(std::io::Error),
 
     /// Invalid path in tree structure
-    InvalidPath {
-        path: Vec<usize>,
-        reason: String,
-    },
+    InvalidPath { path: Vec<usize>, reason: String },
 
     /// Token not found
     TokenNotFound(usize),
@@ -38,7 +35,11 @@ impl fmt::Display for SynthError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SynthError::Json(e) => write!(f, "JSON error: {}", e),
-            SynthError::InvalidParameter { param, value, reason } => {
+            SynthError::InvalidParameter {
+                param,
+                value,
+                reason,
+            } => {
                 write!(f, "Invalid parameter '{}' = {}: {}", param, value, reason)
             }
             SynthError::AudioDevice(msg) => write!(f, "Audio device error: {}", msg),

@@ -13,7 +13,7 @@ use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::NotesGroup;
 use crate::engine::score::RdRythm;
-use crate::time_freq::Freq;
+use crate::time_freq::{Beat, Freq, Tempo, Time};
 
 use crate::engine::waves::WaveType;
 use crate::Token;
@@ -26,13 +26,12 @@ use super::Rythm;
 
 use super::ChorusParams;
 
-use crate::time_freq::Time;
 use default_params::*;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
-    pub t_min: Time,
-    pub t_max: Time,
+    pub t_min: Beat,
+    pub t_max: Beat,
     pub chorus: ChorusParams,
     pub inclusions: Rythm,
     pub exclusions: Rythm,
@@ -67,7 +66,7 @@ pub struct Sequence {
     #[serde(default = "default_pow_fact")]
     pub pow_fact: (f64, Freq),
     #[serde(default = "default_loop_len")]
-    pub loop_len: Time,
+    pub loop_len: Beat,
     #[serde(default = "default_arpegio")]
     pub arpegio: f64,
     #[serde(default = "default_tolerance")]
@@ -95,8 +94,8 @@ pub struct Sequence {
 impl Sequence {
     pub fn new(token: Token) -> Self {
         Sequence {
-            t_min: Time(0.0),
-            t_max: DEFAULT_LOOP_LEN,
+            t_min: Beat(0.0),
+            t_max: Beat(DEFAULT_LOOP_LEN.as_secs()),
             time_quantum: default_time_quantum(),
             exclusions: Rythm::Rd(RdRythm::default()),
             inclusions: Rythm::Rd(RdRythm::default()),
@@ -137,6 +136,7 @@ impl Sequence {
         rng: &mut rand::prelude::ThreadRng,
         seq_start: Time,
         pan: f64,
+        tempo: Tempo,
     ) {
         // Volume is always 1.0 for note generation - actual volume is applied separately
         let volume = 1.0;
@@ -158,22 +158,22 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let step_as_time = self.time_quantum.step_duration();
-        let limit_time = self.t_max.min(self.loop_len);
-        let mut windows: Vec<(Time, Time)> = Vec::new();
-        let step_secs = step_as_time.as_secs();
-        let available = limit_time - self.t_min;
-        if step_secs.is_finite() && step_secs > 0.0 && available.as_secs() > 0.0 {
-            let estimated_steps = ((available / step_as_time).ceil() as usize).saturating_add(1);
+        let step_in_beats = self.time_quantum.beat_step();
+        let limit_in_beats = self.t_max.min(self.loop_len);
+        let mut windows: Vec<(Beat, Beat)> = Vec::new();
+        let step_value = step_in_beats.as_beats();
+        let available = limit_in_beats - self.t_min;
+        if step_value.is_finite() && step_value > 0.0 && available.as_beats() > 0.0 {
+            let estimated_steps = ((available / step_in_beats).ceil() as usize).saturating_add(1);
             let mut starts = Vec::new();
-            starts.reserve(estimated_steps.min(4096)); // heuristic cap
+            starts.reserve(estimated_steps.min(4096));
             for raw_idx in 0..estimated_steps {
                 let step_idx = match i32::try_from(raw_idx) {
                     Ok(value) => value,
                     Err(_) => break,
                 };
-                let time = self.t_min + step_as_time * raw_idx as f64;
-                if time >= limit_time {
+                let beat_time = self.t_min + step_in_beats * raw_idx as f64;
+                if beat_time >= limit_in_beats {
                     break;
                 }
                 if !inclusions
@@ -188,7 +188,7 @@ impl Sequence {
                 {
                     continue;
                 }
-                starts.push(time);
+                starts.push(beat_time);
             }
             if !starts.is_empty() {
                 windows.reserve(starts.len());
@@ -210,24 +210,31 @@ impl Sequence {
         if self.shuffle {
             windows.shuffle(rng);
         }
-        let tmp = windows.into_iter().map(|(t, d)| Note {
-            time: t + seq_start,
-            duration: d,
-            interval: self.interval.clone(),
-            glide: None,
-            volume: volume / self.normalization
-                * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
-                / (self.accents.0
-                    + self
-                        .accents
-                        .1
-                        .iter()
-                        .map(|a| ((t + seq_start) * *a).as_secs().fract())
-                        .sum::<f64>()),
-            chord: self.chord,
-            random_chord: self.random_chord,
-            reverse_prob: self.reverse_prob,
-            shuffle_prob: self.shuffle_prob,
+        let step_as_time = tempo.beats_to_time(step_in_beats);
+        let loop_len_time = tempo.beats_to_time(self.loop_len);
+        let tmp = windows.into_iter().map(|(t, d)| {
+            let time_offset = tempo.beats_to_time(t);
+            let duration_time = tempo.beats_to_time(d);
+            let note_start = seq_start + time_offset;
+            Note {
+                time: note_start,
+                duration: duration_time,
+                interval: self.interval.clone(),
+                glide: None,
+                volume: volume / self.normalization
+                    * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
+                    / (self.accents.0
+                        + self
+                            .accents
+                            .1
+                            .iter()
+                            .map(|a| (note_start * *a).as_secs().fract())
+                            .sum::<f64>()),
+                chord: self.chord,
+                random_chord: self.random_chord,
+                reverse_prob: self.reverse_prob,
+                shuffle_prob: self.shuffle_prob,
+            }
         });
         let mut self_ctx = vec![];
         let tmp: Vec<Note> = tmp
@@ -249,7 +256,7 @@ impl Sequence {
                         .clone()
                         .iter()
                         .map(move |tmp| Note {
-                            time: tmp.time + self.loop_len * i as f64,
+                            time: tmp.time + loop_len_time * i as f64,
                             ..tmp.clone()
                         })
                         .collect::<Vec<_>>()
@@ -316,9 +323,11 @@ impl Sequence {
         now: Time,
         pan: f64,
         proba: Probability,
+        tempo: Tempo,
     ) {
         let base = now + GENERATE_EARLY;
-        let start = self.loop_len * (base / self.loop_len).floor();
+        let loop_len_time = tempo.beats_to_time(self.loop_len);
+        let start = loop_len_time * (base / loop_len_time).floor();
 
         if self
             .not_generate_until
@@ -326,10 +335,12 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             if rng.gen_bool(proba.as_f64()) {
-                self.draw(notes, rng, start, pan);
+                self.draw(notes, rng, start, pan, tempo);
             }
-            self.not_generate_until =
-                Some(start + self.t_min + self.loop_len * self.repeat as f64 - GENERATE_EARLY);
+            self.not_generate_until = Some(
+                start + tempo.beats_to_time(self.t_min) + loop_len_time * self.repeat as f64
+                    - GENERATE_EARLY,
+            );
         }
     }
 }

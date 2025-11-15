@@ -14,6 +14,7 @@ impl GuiApp {
             let state = GuiState {
                 seqs: self.score.track_root.clone(),
                 delays: self.score.delays.clone(),
+                tempo_bpm: self.score.tempo().beats_per_minute(),
             };
 
             match serde_json::to_string_pretty(&state) {
@@ -35,6 +36,7 @@ impl GuiApp {
         let state = crate::app::GuiState {
             seqs: self.score.track_root.clone(),
             delays: self.score.delays.clone(),
+            tempo_bpm: self.score.tempo().beats_per_minute(),
         };
 
         let Ok(text) = serde_json::to_string_pretty(&state) else {

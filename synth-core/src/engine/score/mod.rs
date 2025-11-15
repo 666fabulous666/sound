@@ -32,7 +32,7 @@ use crate::{
         },
         waves::WaveType,
     },
-    time_freq::{Freq, Time},
+    time_freq::{Freq, Tempo, Time},
     Token, TokenGen, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
@@ -125,6 +125,7 @@ pub struct Score {
     pub track_root: TrackNode,
     pub last_token: TokenGen,
     pub delays: (Vec<f64>, Vec<f64>),
+    pub tempo: Tempo,
     pub shared_notes: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
 }
 impl Score {
@@ -135,8 +136,16 @@ impl Score {
             track_root: TrackNode::new_root(&mut last_token),
             last_token,
             delays: default_delays(),
+            tempo: default_tempo(),
             shared_notes: Arc::new(ArcSwap::from_pointee(BTreeMap::new())),
         }
+    }
+    pub fn tempo(&self) -> Tempo {
+        self.tempo
+    }
+
+    pub fn set_tempo(&mut self, tempo: Tempo) {
+        self.tempo = tempo;
     }
     /// Product of volumes from the root down to (and including) the node at `path`.
     ///
@@ -530,7 +539,8 @@ impl Score {
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
-        self.track_root.draw_node(&mut self.notes, rng, now);
+        self.track_root
+            .draw_node(&mut self.notes, rng, now, self.tempo);
     }
 }
 

@@ -13,8 +13,7 @@ use crate::{
         reverb::Reverb,
         score::{sequence::Sequence, track_node::TrackNode},
     },
-    layout_left,
-    F0,
+    layout_left, F0,
 };
 use synth_core::stream::stream;
 
@@ -133,6 +132,21 @@ impl GuiApp {
                                     Layout::right_to_left(egui::Align::Max),
                                 );
                             });
+                        });
+                        ui.separator();
+                        ui.horizontal(|ui| {
+                            ui.label("Tempo (BPM)");
+                            let mut tempo_bpm = self.score.tempo().beats_per_minute();
+                            let changed = ui
+                                .add(
+                                    egui::DragValue::new(&mut tempo_bpm)
+                                        .range(20.0..=240.0)
+                                        .speed(0.5),
+                                )
+                                .changed();
+                            if changed {
+                                self.set_tempo_bpm(tempo_bpm);
+                            }
                         });
                     }
                 });

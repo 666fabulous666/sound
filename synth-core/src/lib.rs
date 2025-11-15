@@ -8,9 +8,9 @@ pub mod error;
 pub mod stream;
 pub mod time_freq;
 
-use std::ops::Deref;
-use serde::{Deserialize, Serialize};
 use crate::time_freq::{Freq, Time};
+use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 // Core audio constants
 pub const DEFAULT_LOOP_LEN: Time = Time(4.0);
@@ -107,7 +107,10 @@ mod tests {
     #[test]
     fn test_rescale_factor_normal_values() {
         let factor = rescale_factor(1.0, 1.0);
-        assert!(factor.is_finite(), "rescale_factor(1.0, 1.0) should be finite");
+        assert!(
+            factor.is_finite(),
+            "rescale_factor(1.0, 1.0) should be finite"
+        );
         assert!(factor > 0.0, "rescale_factor should be positive");
 
         let factor2 = rescale_factor(0.5, 2.0);

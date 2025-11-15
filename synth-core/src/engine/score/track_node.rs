@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     engine::score::{sequence::Sequence, NotesGroup},
-    time_freq::Time,
+    time_freq::{Tempo, Time},
     Token, TokenGen,
 };
 
@@ -263,10 +263,11 @@ impl TrackNode {
         notes: &mut BTreeMap<Token, NotesGroup>,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
+        tempo: Tempo,
     ) {
         match &mut self.kind {
             NodeKind::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba);
+                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba, tempo);
             }
             NodeKind::Group {
                 children,
@@ -280,7 +281,7 @@ impl TrackNode {
                 if not_generate_until.map_or(true, |until| now >= until) {
                     if rng.gen_bool(self.proba.as_f64()) {
                         for ch in children {
-                            ch.draw_node(notes, rng, now);
+                            ch.draw_node(notes, rng, now, tempo);
                         }
                     }
                 }
@@ -576,8 +577,8 @@ fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> Strin
             s.push_str("Seq");
             if opts.show_details {
                 // Adjust fields to your actual `Sequence` struct
-                let loop_len = seq.loop_len.as_secs();
-                let _ = write!(s, " token={} loop={:.2}s", seq.token.0, loop_len);
+                let loop_len = seq.loop_len.as_beats();
+                let _ = write!(s, " token={} loop={:.2} beats", seq.token.0, loop_len);
                 // If you like: wave type / repeat etc.
                 // let _ = write!(s, " repeat={}", seq.repeat);
                 // let _ = write!(s, " wave={}", seq.wave_type.to_string());

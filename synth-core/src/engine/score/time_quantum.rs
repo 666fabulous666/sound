@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::time_freq::Time;
+use crate::time_freq::Beat;
 
 const MIN_VALUE: u16 = 1;
 const MAX_VALUE: u16 = 128;
@@ -50,8 +50,8 @@ impl TimeQuantum {
         self.numerator() as f64 / self.denominator() as f64
     }
 
-    pub fn step_duration(&self) -> Time {
-        Time(self.ratio())
+    pub fn beat_step(&self) -> Beat {
+        Beat(self.ratio())
     }
 
     pub fn clamp_component(value: u16) -> u16 {

@@ -9,6 +9,12 @@ pub struct Time(pub f64);
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
 pub struct Freq(pub f64);
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+pub struct Beat(pub f64);
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct Tempo(pub f64);
+
 impl Time {
     pub const fn new(seconds: f64) -> Self {
         Self(seconds)
@@ -60,6 +66,56 @@ impl Freq {
     }
 }
 
+impl Beat {
+    pub const fn new(beats: f64) -> Self {
+        Self(beats)
+    }
+    pub const fn as_beats(self) -> f64 {
+        self.0
+    }
+    pub fn max(self, other: Beat) -> Beat {
+        if self > other {
+            self
+        } else {
+            other
+        }
+    }
+    pub fn min(self, other: Beat) -> Beat {
+        if self < other {
+            self
+        } else {
+            other
+        }
+    }
+}
+
+impl Tempo {
+    pub fn new(bpm: f64) -> Self {
+        Self(bpm.max(f64::MIN_POSITIVE))
+    }
+    pub fn beats_per_minute(self) -> f64 {
+        self.0
+    }
+    pub fn seconds_per_beat(self) -> f64 {
+        60.0 / self.0.max(f64::MIN_POSITIVE)
+    }
+    pub fn beats_to_time(self, beats: Beat) -> Time {
+        Time(beats.as_beats() * self.seconds_per_beat())
+    }
+    pub fn time_to_beats(self, time: Time) -> Beat {
+        Beat(time.as_secs() / self.seconds_per_beat())
+    }
+    pub fn set_bpm(&mut self, bpm: f64) {
+        self.0 = bpm.max(f64::MIN_POSITIVE);
+    }
+}
+
+impl Default for Tempo {
+    fn default() -> Self {
+        Tempo(60.0)
+    }
+}
+
 // Time ± Time
 impl Add for Time {
     type Output = Time;
@@ -80,6 +136,30 @@ impl AddAssign for Time {
 }
 impl SubAssign for Time {
     fn sub_assign(&mut self, rhs: Time) {
+        self.0 -= rhs.0;
+    }
+}
+
+// Beat ± Beat
+impl Add for Beat {
+    type Output = Beat;
+    fn add(self, rhs: Beat) -> Beat {
+        Beat(self.0 + rhs.0)
+    }
+}
+impl Sub for Beat {
+    type Output = Beat;
+    fn sub(self, rhs: Beat) -> Beat {
+        Beat(self.0 - rhs.0)
+    }
+}
+impl AddAssign for Beat {
+    fn add_assign(&mut self, rhs: Beat) {
+        self.0 += rhs.0;
+    }
+}
+impl SubAssign for Beat {
+    fn sub_assign(&mut self, rhs: Beat) {
         self.0 -= rhs.0;
     }
 }
@@ -132,6 +212,29 @@ impl DivAssign<f64> for Time {
     }
 }
 
+impl Mul<f64> for Beat {
+    type Output = Beat;
+    fn mul(self, s: f64) -> Beat {
+        Beat(self.0 * s)
+    }
+}
+impl Div<f64> for Beat {
+    type Output = Beat;
+    fn div(self, s: f64) -> Beat {
+        Beat(self.0 / s)
+    }
+}
+impl MulAssign<f64> for Beat {
+    fn mul_assign(&mut self, s: f64) {
+        self.0 *= s;
+    }
+}
+impl DivAssign<f64> for Beat {
+    fn div_assign(&mut self, s: f64) {
+        self.0 /= s;
+    }
+}
+
 impl Mul<f64> for Freq {
     type Output = Freq;
     fn mul(self, s: f64) -> Freq {
@@ -168,6 +271,12 @@ impl Div<Freq> for Freq {
         self.0 / rhs.0
     }
 }
+impl Div<Beat> for Beat {
+    type Output = f64;
+    fn div(self, rhs: Beat) -> f64 {
+        self.0 / rhs.0
+    }
+}
 
 // Cross products
 impl Mul<Freq> for Time {
@@ -182,6 +291,18 @@ impl Mul<Time> for Freq {
         self.0 * rhs.0
     }
 }
+impl Mul<Tempo> for Beat {
+    type Output = Time;
+    fn mul(self, tempo: Tempo) -> Time {
+        tempo.beats_to_time(self)
+    }
+}
+impl Mul<Beat> for Tempo {
+    type Output = Time;
+    fn mul(self, beat: Beat) -> Time {
+        self.beats_to_time(beat)
+    }
+}
 
 // Summation
 impl Sum for Time {
@@ -194,6 +315,11 @@ impl Sum for Freq {
         Freq(iter.map(|f| f.0).sum())
     }
 }
+impl Sum for Beat {
+    fn sum<I: Iterator<Item = Beat>>(iter: I) -> Beat {
+        Beat(iter.map(|b| b.0).sum())
+    }
+}
 
 // Display
 impl fmt::Display for Time {
@@ -204,6 +330,16 @@ impl fmt::Display for Time {
 impl fmt::Display for Freq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} Hz", self.0)
+    }
+}
+impl fmt::Display for Beat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} beats", self.0)
+    }
+}
+impl fmt::Display for Tempo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} BPM", self.0)
     }
 }
 

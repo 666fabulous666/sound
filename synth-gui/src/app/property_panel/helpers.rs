@@ -2,8 +2,8 @@ use egui::{Response, Ui};
 use std::fmt::Display;
 
 use super::hover_texts::{
-    ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT,
-    DETUNE_WEIGHTING_TEXT, POW_FACT_EVOL_TEXT, SYM_DETUNE_TEXT, VOICE_LAYERS_TEXT,
+    ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
+    POW_FACT_EVOL_TEXT, SYM_DETUNE_TEXT, VOICE_LAYERS_TEXT,
 };
 use crate::{
     engine::score::{default_params::*, sequence::Sequence, ChorusParams, NotesGroup},
@@ -63,8 +63,11 @@ pub fn u32_cell(
 }
 
 /// Update aesthetic parameter in NotesGroup by finding the matching token
-pub fn update_notes_group<F>(notes: &mut std::collections::BTreeMap<Token, NotesGroup>, token: Token, update_fn: F)
-where
+pub fn update_notes_group<F>(
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+    token: Token,
+    update_fn: F,
+) where
     F: FnOnce(&mut NotesGroup),
 {
     if let Some(ng) = notes.get_mut(&token) {
@@ -180,7 +183,11 @@ pub fn envelope_section(
 }
 
 /// Handle bend controls with aesthetic update
-pub fn bend_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collections::BTreeMap<Token, NotesGroup>) {
+pub fn bend_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+) {
     let seq_bend = &mut seq.bend;
     let mut mag_disp = seq_bend.0 * 1e4;
     let mut speed = seq_bend.1;
@@ -219,7 +226,11 @@ pub fn bend_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collection
 }
 
 /// Handle vibrato controls with aesthetic update
-pub fn vibrato_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collections::BTreeMap<Token, NotesGroup>) {
+pub fn vibrato_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+) {
     let seq_vibr = &mut seq.vibrato;
     let mut mag_disp = seq_vibr.0 * 1e6;
     let mut freq = seq_vibr.1;
@@ -258,7 +269,11 @@ pub fn vibrato_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collect
 }
 
 /// Handle chorus controls with aesthetic update
-pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collections::BTreeMap<Token, NotesGroup>) {
+pub fn chorus_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+) {
     let seq_chorus = &mut seq.chorus;
 
     let voices = &mut seq_chorus.voices;
@@ -363,7 +378,11 @@ pub fn chorus_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collecti
 }
 
 /// Handle power factor controls with aesthetic update
-pub fn power_factor_section(ui: &mut Ui, seq: &mut Sequence, notes: &mut std::collections::BTreeMap<Token, NotesGroup>) {
+pub fn power_factor_section(
+    ui: &mut Ui,
+    seq: &mut Sequence,
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+) {
     let seq_pow = &mut seq.pow_fact;
     let mut initial = seq_pow.0;
     let mut evol_disp = Freq(seq_pow.1.as_hz().signum() * seq_pow.1.as_hz().abs().sqrt());

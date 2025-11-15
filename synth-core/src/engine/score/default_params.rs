@@ -1,7 +1,7 @@
 use crate::engine::score::{
     probability::Probability, time_quantum::TimeQuantum, ChorusParams, DetRythm, RdRythm,
 };
-use crate::time_freq::{Freq, Time};
+use crate::time_freq::{Beat, Freq, Tempo, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
 
 pub fn default_repeat() -> usize {
@@ -94,8 +94,8 @@ pub fn default_drum_normalization() -> f64 {
 pub fn default_delta_shift() -> f64 {
     0.0
 }
-pub fn default_loop_len() -> Time {
-    DEFAULT_LOOP_LEN
+pub fn default_loop_len() -> Beat {
+    Beat(DEFAULT_LOOP_LEN.as_secs())
 }
 pub fn default_time_quantum() -> TimeQuantum {
     TimeQuantum::default()
@@ -115,8 +115,8 @@ pub fn default_lowpass_enabled() -> bool {
 pub fn default_lp_order() -> u32 {
     1
 }
-pub fn default_tempo() -> f64 {
-    60.0
+pub fn default_tempo() -> Tempo {
+    Tempo::new(60.0)
 }
 impl Default for ChorusParams {
     fn default() -> Self {

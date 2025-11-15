@@ -3,9 +3,9 @@
 //! This library provides a graphical editor for creating and manipulating audio synthesis scores.
 
 pub mod app;
+pub mod range_slider;
 pub mod shortcuts;
 pub mod texts;
-pub mod range_slider;
 
 // Re-export core functionality
 pub use synth_core::*;
@@ -24,7 +24,10 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         "Happy Melancholia",
         include_str!("../../assets/Happy Melancholia.json"),
     ),
-    ("Chart Of Doom", include_str!("../../assets/ChartOfDoom.json")),
+    (
+        "Chart Of Doom",
+        include_str!("../../assets/ChartOfDoom.json"),
+    ),
     ("Unicorns", include_str!("../../assets/Unicorns.json")),
     ("Afro Q-Bit", include_str!("../../assets/AfroQBit.json")),
     ("Blue Jinn", include_str!("../../assets/Blue Jinn.json")),

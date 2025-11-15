@@ -8,7 +8,10 @@ use std::time::Duration;
 use synth_core::{
     engine::{
         reverb::Reverb,
-        score::{track_node::{NodeKind, TrackNode}, Score},
+        score::{
+            track_node::{NodeKind, TrackNode},
+            Score,
+        },
     },
     stream::stream,
     Token, TokenGen, F0, REVERB_BUFFER_LEN,
@@ -45,10 +48,7 @@ fn precompute_and_play(
     sample_rate: f64,
     duration_secs: u64,
 ) -> Result<()> {
-    use synth_core::{
-        engine::waves::generate_wave,
-        time_freq::Time,
-    };
+    use synth_core::{engine::waves::generate_wave, time_freq::Time};
 
     println!("Precomputing {} seconds of audio...", duration_secs);
 
@@ -207,8 +207,8 @@ fn main() -> Result<()> {
     let json_content = std::fs::read_to_string(&args.file)
         .with_context(|| format!("Failed to read file: {:?}", args.file))?;
 
-    let state: ScoreState = serde_json::from_str(&json_content)
-        .with_context(|| "Failed to parse JSON file")?;
+    let state: ScoreState =
+        serde_json::from_str(&json_content).with_context(|| "Failed to parse JSON file")?;
 
     println!("Loaded: {:?}", args.file);
 
@@ -262,7 +262,7 @@ fn main() -> Result<()> {
         F0,
         &device,
         clock.clone(),
-        score.shared_notes.clone(),  // Use Score's shared_notes
+        score.shared_notes.clone(), // Use Score's shared_notes
         (
             Reverb::<REVERB_BUFFER_LEN>::new(0.5, 0.5, sample_rate),
             Reverb::<REVERB_BUFFER_LEN>::new(0.5, 0.5, sample_rate),
