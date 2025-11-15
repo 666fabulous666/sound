@@ -530,50 +530,37 @@ impl GuiApp {
     /// This is the ONLY way volumes are set in NotesGroup - always as the product of all ancestors.
     /// Called after any volume change and after note generation.
     fn update_all_volumes_from_tree(&mut self) {
-        // Collect all (token, path) pairs for all sequences in the tree
-        let seq_paths: Vec<(Token, Vec<usize>)> = {
-            let mut out = Vec::new();
+        fn sanitize(volume: f64) -> f64 {
+            if volume.is_finite() && volume >= 0.0 {
+                volume
+            } else {
+                0.0
+            }
+        }
 
-            fn collect_recursive(
-                node: &TrackNode,
-                current_path: &mut Vec<usize>,
-                out: &mut Vec<(Token, Vec<usize>)>,
-            ) {
-                match &node.kind {
-                    NodeKind::Seq(seq) => {
-                        out.push((seq.token, current_path.clone()));
+        fn dfs(
+            node: &TrackNode,
+            notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+            parent_volume: f64,
+        ) {
+            let node_volume = sanitize(node.volume());
+            let cumulative = sanitize(parent_volume * node_volume);
+
+            match &node.kind {
+                NodeKind::Seq(seq) => {
+                    if let Some(ng) = notes.get_mut(&seq.token) {
+                        ng.volume = cumulative;
                     }
-                    NodeKind::Group { children, .. } => {
-                        for (i, child) in children.iter().enumerate() {
-                            current_path.push(i);
-                            collect_recursive(child, current_path, out);
-                            current_path.pop();
-                        }
+                }
+                NodeKind::Group { children, .. } => {
+                    for child in children {
+                        dfs(child, notes, cumulative);
                     }
                 }
             }
-
-            let mut path = Vec::new();
-            collect_recursive(&self.score.track_root, &mut path, &mut out);
-            out
-        };
-
-        // Compute volume for each token as the product from root
-        let volume_updates: Vec<(Token, f64)> = seq_paths
-            .iter()
-            .filter_map(|(token, path)| {
-                self.score
-                    .volume_chain_product(path)
-                    .map(|volume| (*token, volume))
-            })
-            .collect();
-
-        // Apply volumes to NotesGroup entries
-        for (token, ng) in self.score.notes.iter_mut() {
-            if let Some((_, volume)) = volume_updates.iter().find(|(tk, _)| *tk == *token) {
-                ng.volume = *volume;
-            }
         }
+
+        dfs(&self.score.track_root, &mut self.score.notes, 1.0);
     }
 
     /// Update interval octaves for all notes in NotesGroup belonging to a sequence token.

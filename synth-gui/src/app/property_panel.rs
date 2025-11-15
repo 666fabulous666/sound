@@ -65,6 +65,41 @@ impl Action {
     }
 }
 
+#[derive(Default, Clone)]
+struct ParameterImpact {
+    needs_regeneration: bool,
+    needs_mix_update: bool,
+    octave_shifts: Vec<(Token, i32)>,
+}
+
+impl ParameterImpact {
+    fn require_regeneration(&mut self) {
+        self.needs_regeneration = true;
+    }
+
+    fn require_mix_update(&mut self) {
+        self.needs_mix_update = true;
+    }
+
+    fn queue_octave_shift(&mut self, token: Token, shift: i32) {
+        if shift != 0 {
+            self.octave_shifts.push((token, shift));
+        }
+    }
+
+    fn needs_regeneration(&self) -> bool {
+        self.needs_regeneration
+    }
+
+    fn needs_mix_update(&self) -> bool {
+        self.needs_mix_update
+    }
+
+    fn drain_octave_shifts(&mut self) -> Vec<(Token, i32)> {
+        std::mem::take(&mut self.octave_shifts)
+    }
+}
+
 impl GuiApp {
     pub fn property_panel(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("props")
@@ -72,9 +107,7 @@ impl GuiApp {
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     let mut action = Action::None;
-                    let mut edited_seq = false;
-                    let mut mix_params_changed = false; // Track if volume/pan changed (applies to both groups and sequences)
-                    let mut octave_update: Option<(Token, i32)> = None; // (token, octave_shift)
+                    let mut impact = ParameterImpact::default();
                     if let Some(sel) = self.selected.clone() {
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
@@ -95,10 +128,16 @@ impl GuiApp {
                                 let name = track_node_mut.name_mut();
                                 let resp = ui.add(
                                     TextEdit::singleline(name)
-                                        .hint_text(if is_group { "Group name…" } else { "Sequence name…" })
+                                        .hint_text(if is_group {
+                                            "Group name…"
+                                        } else {
+                                            "Sequence name…"
+                                        })
                                         .desired_width(200.0),
                                 );
-                                if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                if resp.lost_focus()
+                                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                                {
                                     ui.memory_mut(|m| m.surrender_focus(resp.id));
                                 }
                             });
@@ -130,12 +169,14 @@ impl GuiApp {
                                     Some("+ / - (Shift×10)"),
                                     default_volume(),
                                     false,
-                                ).on_hover_ui(|ui| {
+                                )
+                                .on_hover_ui(|ui| {
                                     ui.label(egui::RichText::new("Hold + / - to change").weak());
                                 });
 
-                                if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed {
-                                    mix_params_changed = true;
+                                if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed
+                                {
+                                    impact.require_mix_update();
                                 }
                             });
 
@@ -151,14 +192,15 @@ impl GuiApp {
                                     None,
                                     default_pan(),
                                     false,
-                                ).on_hover_ui(|ui| {
+                                )
+                                .on_hover_ui(|ui| {
                                     ui.label("0.5 is centered, 0.0 is left, 1.0 is right");
                                     ui.label(egui::RichText::new("Right-click to reset").weak());
                                 });
 
                                 if pan_resp.changed() || pan_resp.secondary_clicked() {
                                     *pan = pan.clamp(0.0, 1.0);
-                                    mix_params_changed = true;
+                                    impact.require_mix_update();
                                 }
                             });
 
@@ -173,13 +215,14 @@ impl GuiApp {
                                     None,
                                     default_proba(),
                                     false,
-                                ).on_hover_ui(|ui| {
+                                )
+                                .on_hover_ui(|ui| {
                                     ui.label(egui::RichText::new("Right-click to reset").weak());
                                 });
 
                                 if proba_resp.changed() || proba_resp.secondary_clicked() {
                                     *proba = proba.clamp(0.0, 1.0);
-                                    edited_seq = true;
+                                    impact.require_regeneration();
                                 }
                             });
 
@@ -194,14 +237,15 @@ impl GuiApp {
                                     None,
                                     0.0,
                                     false,
-                                ).on_hover_ui(|ui| {
+                                )
+                                .on_hover_ui(|ui| {
                                     ui.label("Color hue in HSL space (0-360)");
                                     ui.label(egui::RichText::new("Right-click to reset").weak());
                                 });
 
                                 if hue_resp.changed() || hue_resp.secondary_clicked() {
                                     *hue = hue.rem_euclid(360.0);
-                                    edited_seq = true;
+                                    impact.require_regeneration();
                                 }
 
                                 // Color preview square - Convert HSL to RGB
@@ -224,7 +268,7 @@ impl GuiApp {
 
                                 let (rect, _) = ui.allocate_exact_size(
                                     egui::vec2(20.0, 20.0),
-                                    egui::Sense::hover()
+                                    egui::Sense::hover(),
                                 );
                                 ui.painter().rect_filled(rect, 2.0, color);
                             });
@@ -253,11 +297,7 @@ impl GuiApp {
                                         });
                                     if w_choice != seq_mut.wave_type {
                                         seq_mut.wave_type = w_choice;
-                                        if let Some(ng) = self
-                                            .score
-                                            .notes
-                                            .get_mut(&seq_mut.token)
-                                        {
+                                        if let Some(ng) = self.score.notes.get_mut(&seq_mut.token) {
                                             ng.wave_type = seq_mut.wave_type;
                                         }
                                     }
@@ -308,7 +348,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.time_quantum.0 = tmp_quantum.0;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                             ui.label("/");
                                             if ui
@@ -319,7 +359,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.time_quantum.1 = tmp_quantum.1;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                         });
                                     }
@@ -356,14 +396,14 @@ impl GuiApp {
                                                 {
                                                     seq_mut.t_min =
                                                         step * (Time(t_min) / step).round();
-                                                    edited_seq = true;
+                                                    impact.require_regeneration();
                                                 }
                                                 if (Time(t_max) - seq_mut.t_max).as_secs().abs()
                                                     > f64::EPSILON
                                                 {
                                                     seq_mut.t_max =
                                                         step * (Time(t_max) / step).round();
-                                                    edited_seq = true;
+                                                    impact.require_regeneration();
                                                 }
                                             },
                                         );
@@ -416,7 +456,7 @@ impl GuiApp {
 
                                                 seq_mut.t_min = Time(new_min);
                                                 seq_mut.t_max = Time(new_max);
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             }
                                         }
                                     }
@@ -434,7 +474,7 @@ impl GuiApp {
                                                 );
                                             },
                                         ) {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                     }
                                     ui.separator();
@@ -451,7 +491,7 @@ impl GuiApp {
                                                 );
                                             },
                                         ) {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         ui.separator();
                                         ui.horizontal(|ui| {
@@ -466,7 +506,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.beat_offset = tmp_beat_offset;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                         });
                                         ui.horizontal(|ui| {
@@ -481,7 +521,7 @@ impl GuiApp {
                                                 loop_len = loop_len.max(Time(0.0));
                                                 seq_mut.loop_len = loop_len.max(Time(0.0));
                                                 seq_mut.t_max = seq_mut.t_max.min(loop_len);
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                             let mut repeat = seq_mut.repeat.clone();
                                             ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
@@ -490,7 +530,7 @@ impl GuiApp {
                                             );
                                             if slider.changed() {
                                                 seq_mut.repeat = repeat;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                         });
                                     }
@@ -504,7 +544,7 @@ impl GuiApp {
                                         .changed()
                                     {
                                         seq_mut.harmonise = harmonise;
-                                        edited_seq = true
+                                        impact.require_regeneration();
                                     }
                                     ui.separator();
                                     {
@@ -520,7 +560,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.tolerance.0 = tmp_tolerance.0;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                             ui.label(",");
                                             if ui
@@ -531,7 +571,7 @@ impl GuiApp {
                                                 .changed()
                                             {
                                                 seq_mut.tolerance.1 = tmp_tolerance.1;
-                                                edited_seq = true;
+                                                impact.require_regeneration();
                                             };
                                             ui.label("->");
                                         });
@@ -562,7 +602,10 @@ impl GuiApp {
                                             if octave_changed {
                                                 let octave_shift = *octave - old_octave;
                                                 // Store for deferred update (after mutable borrow is dropped)
-                                                octave_update = Some((seq_mut.token, octave_shift));
+                                                impact.queue_octave_shift(
+                                                    seq_mut.token,
+                                                    octave_shift,
+                                                );
                                                 // Also update the sequence's interval
                                                 if let Interval::RDTempered(
                                                     _,
@@ -682,7 +725,7 @@ impl GuiApp {
                                         if changed {
                                             seq_mut.interval = interval;
                                             seq_mut.shuffle = shuffle;
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         if ui
                                             .add(
@@ -691,7 +734,7 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         if ui
                                             .add(
@@ -700,7 +743,7 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         if ui
                                             .add(
@@ -712,7 +755,7 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         if ui
                                             .add(
@@ -724,7 +767,7 @@ impl GuiApp {
                                             )
                                             .changed()
                                         {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                         if ui
                                             .add(egui::Checkbox::new(
@@ -733,7 +776,7 @@ impl GuiApp {
                                             ))
                                             .changed()
                                         {
-                                            edited_seq = true;
+                                            impact.require_regeneration();
                                         }
                                     }
                                 });
@@ -913,23 +956,23 @@ impl GuiApp {
                                     .as_mut()
                                     .map(|track_node| {
                                         track_node.toggle_mute();
-                                        edited_seq = true;
+                                        impact.require_regeneration();
                                     });
                             }
                         }
                     }
                     // Apply deferred volume change (after mutable borrow is dropped)
                     // This updates NotesGroup volumes for ALL sequences using chain products from root
-                    if mix_params_changed {
+                    if impact.needs_mix_update() {
                         self.update_all_volumes_from_tree();
                     }
 
                     // Apply deferred octave change (after mutable borrow is dropped)
-                    if let Some((token, octave_shift)) = octave_update {
+                    for (token, octave_shift) in impact.drain_octave_shifts() {
                         self.update_sequence_octaves(token, octave_shift);
                     }
 
-                    if edited_seq {
+                    if impact.needs_regeneration() {
                         if let Some(sel) = self.selected.clone() {
                             if ui.input(|i| !i.pointer.button_down(egui::PointerButton::Primary)) {
                                 // Clone the node and clear not_generate_until on all sequences within it
