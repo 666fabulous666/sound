@@ -1,12 +1,11 @@
-use std::collections::BTreeMap;
-use std::iter::once;
-
 use itertools::Itertools;
 use rand::seq::index::sample;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 use crate::engine::score::default_params;
 use crate::engine::score::note::Note;
@@ -158,35 +157,60 @@ impl Sequence {
         .into_iter()
         .collect_vec();
         let step_as_time = Time(self.time_quantum.0 as f64 / self.time_quantum.1 as f64);
-        let ts = (0..32768) // FIXME: do better
-            .filter(|i| {
-                inclusions
+        let limit_time = self.t_max.min(self.loop_len);
+        let mut windows: Vec<(Time, Time)> = Vec::new();
+        let step_secs = step_as_time.as_secs();
+        let available = limit_time - self.t_min;
+        if step_secs.is_finite() && step_secs > 0.0 && available.as_secs() > 0.0 {
+            let estimated_steps = ((available / step_as_time).ceil() as usize).saturating_add(1);
+            let mut starts = Vec::new();
+            starts.reserve(estimated_steps.min(4096)); // heuristic cap
+            for raw_idx in 0..estimated_steps {
+                let step_idx = match i32::try_from(raw_idx) {
+                    Ok(value) => value,
+                    Err(_) => break,
+                };
+                let time = self.t_min + step_as_time * raw_idx as f64;
+                if time >= limit_time {
+                    break;
+                }
+                if !inclusions
                     .iter()
-                    .any(|p| (i - self.beat_offset) % (*p as i32) == 0)
-            })
-            .filter(|i| {
-                exclusions
+                    .any(|p| (step_idx - self.beat_offset) % (*p as i32) == 0)
+                {
+                    continue;
+                }
+                if exclusions
                     .iter()
-                    .all(|s| (i + 1 - self.beat_offset) % (*s as i32) != 0)
-            })
-            .map(|i| self.t_min + step_as_time * i as f64)
-            .take_while(|t| *t < self.t_max.min(self.loop_len))
-            .collect_vec();
-        let mut ds = ts
-            .clone()
-            .into_iter()
-            .chain(once(self.t_max))
-            .tuple_windows()
-            .map(|(t1, t2)| t2 - t1)
-            .collect::<Vec<_>>();
-        ds.last_mut().map(|d| *d * 3.0); // WARNING: harcoded 3.0 ...
-        let mut tmp = ts.into_iter().zip(ds.iter()).collect::<Vec<_>>();
-        if self.shuffle {
-            tmp.shuffle(rng);
+                    .any(|s| (step_idx + 1 - self.beat_offset) % (*s as i32) == 0)
+                {
+                    continue;
+                }
+                starts.push(time);
+            }
+            if !starts.is_empty() {
+                windows.reserve(starts.len());
+                for idx in 0..starts.len() {
+                    let current = starts[idx];
+                    let next = if idx + 1 < starts.len() {
+                        starts[idx + 1]
+                    } else {
+                        self.t_max
+                    };
+                    let mut duration = next - current;
+                    if idx + 1 == starts.len() {
+                        duration *= 3.0; // WARNING: hardcoded 3.0 ...
+                    }
+                    windows.push((current, duration));
+                }
+            }
         }
-        let tmp = tmp.into_iter().map(|(t, d)| Note {
+        if self.shuffle {
+            windows.shuffle(rng);
+        }
+        let tmp = windows.into_iter().map(|(t, d)| Note {
             time: t + seq_start,
-            duration: *d,
+            duration: d,
             interval: self.interval.clone(),
             glide: None,
             volume: volume / self.normalization
@@ -259,22 +283,25 @@ impl Sequence {
             ng.lowpass_enabled = self.lowpass_enabled;
             ng.lp_order = self.lp_order;
         } else {
-            notes_buffer.insert(self.token, NotesGroup {
-                bend: self.bend,
-                vibrato: self.vibrato,
-                notes: tmp,
-                wave_type: self.wave_type.clone(),
-                chorus: self.chorus.clone(),
-                attack_decay: self.attack_decay,
-                lp_attack_decay: self.lp_attack_decay,
-                pow_fact: self.pow_fact,
-                pan,
-                volume: 1.0, // Initial volume - will be updated by volume application mechanism
-                tolerance: self.tolerance,
-                cutoff_multiplier: self.cutoff_multiplier,
-                lowpass_enabled: self.lowpass_enabled,
-                lp_order: self.lp_order,
-            });
+            notes_buffer.insert(
+                self.token,
+                NotesGroup {
+                    bend: self.bend,
+                    vibrato: self.vibrato,
+                    notes: tmp,
+                    wave_type: self.wave_type.clone(),
+                    chorus: self.chorus.clone(),
+                    attack_decay: self.attack_decay,
+                    lp_attack_decay: self.lp_attack_decay,
+                    pow_fact: self.pow_fact,
+                    pan,
+                    volume: 1.0, // Initial volume - will be updated by volume application mechanism
+                    tolerance: self.tolerance,
+                    cutoff_multiplier: self.cutoff_multiplier,
+                    lowpass_enabled: self.lowpass_enabled,
+                    lp_order: self.lp_order,
+                },
+            );
         }
     }
 
