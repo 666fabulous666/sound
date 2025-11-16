@@ -33,7 +33,7 @@ use crate::{
         waves::WaveType,
     },
     time_freq::{Freq, Tempo, Time},
-    Token, TokenGen, NOTE_LINGER_TIME,
+    NoteIdGen, Token, TokenGen, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use default_params::*;
@@ -127,6 +127,7 @@ pub struct Score {
     pub delays: (Vec<f64>, Vec<f64>),
     pub tempo: Tempo,
     pub shared_notes: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
+    note_id_gen: NoteIdGen,
 }
 impl Score {
     pub fn new() -> Self {
@@ -138,6 +139,7 @@ impl Score {
             delays: default_delays(),
             tempo: default_tempo(),
             shared_notes: Arc::new(ArcSwap::from_pointee(BTreeMap::new())),
+            note_id_gen: NoteIdGen::default(),
         }
     }
     pub fn tempo(&self) -> Tempo {
@@ -151,6 +153,26 @@ impl Score {
         }
         self.retime_notes(old, tempo, anchor_time);
         self.tempo = tempo;
+    }
+
+    pub fn draw_node_with(
+        &mut self,
+        node: &mut TrackNode,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+    ) {
+        node.draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
+    }
+
+    pub fn draw_node_at_path(
+        &mut self,
+        path: &[usize],
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+    ) {
+        if let Some(node) = self.track_root.get_mut(path) {
+            node.draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
+        }
     }
 
     fn retime_notes(&mut self, old: Tempo, new: Tempo, anchor_time: Time) {
@@ -563,7 +585,7 @@ impl Score {
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
         self.track_root
-            .draw_node(&mut self.notes, rng, now, self.tempo);
+            .draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
     }
 }
 

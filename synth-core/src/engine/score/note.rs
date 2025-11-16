@@ -9,11 +9,13 @@ use super::Interval;
 use crate::{
     engine::score::NotesGroup,
     time_freq::{Beat, Time},
-    Token,
+    NoteId, Token,
 };
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
+    #[serde(default)]
+    pub id: NoteId,
     pub time: Time,
     pub duration: Time,
     #[serde(default)]

@@ -379,8 +379,7 @@ impl GuiApp {
     // Add a new node (Seq or Group) to the root: draw it recursively, then insert.
     fn new_node(&mut self, mut node: TrackNode) {
         let now = self.now();
-        let tempo = self.score.tempo();
-        node.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
+        self.score.draw_node_with(&mut node, &mut self.rng, now);
         self.score.track_root.push_child(node);
     }
 
@@ -389,10 +388,8 @@ impl GuiApp {
     /// - Ensures the root remains a `Group` by wrapping a lone `Seq` if needed.
     pub fn replace_root_with(&mut self, mut node: TrackNode) {
         let now = self.now();
-        let tempo = self.score.tempo();
-
         // Draw the (possibly nested) node into current notes
-        node.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
+        self.score.draw_node_with(&mut node, &mut self.rng, now);
 
         // Keep invariant: root is a Group
         self.score.track_root = match &node.kind {
@@ -441,8 +438,7 @@ impl GuiApp {
         });
         // 3) Redraw the whole cloned subtree
         let now = self.now();
-        let tempo = self.score.tempo();
-        cloned.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
+        self.score.draw_node_with(&mut cloned, &mut self.rng, now);
 
         // 4) Insert clone right after the original
         let insert_idx = path[path.len() - 1] + 1;
@@ -467,10 +463,7 @@ impl GuiApp {
             self.drain_notes_from_seq(tk);
         }
         let now = self.now();
-        let tempo = self.score.tempo();
-        if let Some(n) = self.score.track_root.get_mut(path) {
-            n.draw_node(&mut self.score.notes, &mut self.rng, now, tempo);
-        }
+        self.score.draw_node_at_path(path, &mut self.rng, now);
     }
     // Collect paths to *sequences* (preorder)
     fn collect_seq_paths(node: &TrackNode, cur: &mut Vec<usize>, out: &mut Vec<Vec<usize>>) {

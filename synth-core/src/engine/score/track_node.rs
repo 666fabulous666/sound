@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use crate::{
     engine::score::{sequence::Sequence, NotesGroup},
     time_freq::{Tempo, Time},
-    Token, TokenGen,
+    NoteIdGen, Token, TokenGen,
 };
 
 fn default_hue() -> f64 {
@@ -264,10 +264,11 @@ impl TrackNode {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         tempo: Tempo,
+        note_id_gen: &mut NoteIdGen,
     ) {
         match &mut self.kind {
             NodeKind::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba, tempo);
+                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba, tempo, note_id_gen);
             }
             NodeKind::Group {
                 children,
@@ -281,7 +282,7 @@ impl TrackNode {
                 if not_generate_until.map_or(true, |until| now >= until) {
                     if rng.gen_bool(self.proba.as_f64()) {
                         for ch in children {
-                            ch.draw_node(notes, rng, now, tempo);
+                            ch.draw_node(notes, rng, now, tempo, note_id_gen);
                         }
                     }
                 }

@@ -16,9 +16,9 @@ use crate::engine::score::RdRythm;
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
 use crate::engine::waves::WaveType;
-use crate::Token;
 use crate::DEFAULT_LOOP_LEN;
 use crate::GENERATE_EARLY;
+use crate::{NoteIdGen, Token};
 
 use super::Interval;
 
@@ -137,6 +137,7 @@ impl Sequence {
         seq_start: Time,
         pan: f64,
         tempo: Tempo,
+        note_id_gen: &mut NoteIdGen,
     ) {
         // Volume is always 1.0 for note generation - actual volume is applied separately
         let volume = 1.0;
@@ -218,6 +219,7 @@ impl Sequence {
             let duration_time = tempo.beats_to_time(d);
             let note_start = seq_start + time_offset;
             Note {
+                id: note_id_gen.next(),
                 time: note_start,
                 duration: duration_time,
                 beat_time: seq_start_beats + t,
@@ -240,7 +242,7 @@ impl Sequence {
             }
         });
         let mut self_ctx = vec![];
-        let tmp: Vec<Note> = tmp
+        let base_notes: Vec<Note> = tmp
             .map(|n| {
                 n.draw(
                     &notes_buffer,
@@ -253,21 +255,20 @@ impl Sequence {
                     self.arpegio,
                 )
             })
-            .flat_map(|to_push| {
-                (0..self.repeat).flat_map(move |i| {
-                    // let tmp = to_push.clone();
-                    to_push
-                        .clone()
-                        .iter()
-                        .map(move |tmp| Note {
-                            time: tmp.time + loop_len_time * i as f64,
-                            beat_time: tmp.beat_time + self.loop_len * i as f64,
-                            ..tmp.clone()
-                        })
-                        .collect::<Vec<_>>()
-                })
-            })
+            .flatten()
             .collect();
+
+        let mut tmp: Vec<Note> = Vec::new();
+        for note in base_notes {
+            tmp.push(note.clone());
+            for i in 1..self.repeat {
+                let mut clone = note.clone();
+                clone.id = note_id_gen.next();
+                clone.time += loop_len_time * i as f64;
+                clone.beat_time += self.loop_len * i as f64;
+                tmp.push(clone);
+            }
+        }
         let tmp = if self.glide {
             let mut tmp = tmp;
             if tmp.len() > 1 {
@@ -329,6 +330,7 @@ impl Sequence {
         pan: f64,
         proba: Probability,
         tempo: Tempo,
+        note_id_gen: &mut NoteIdGen,
     ) {
         let base = now + GENERATE_EARLY;
         let loop_len_time = tempo.beats_to_time(self.loop_len);
@@ -340,7 +342,7 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             if rng.gen_bool(proba.as_f64()) {
-                self.draw(notes, rng, start, pan, tempo);
+                self.draw(notes, rng, start, pan, tempo, note_id_gen);
             }
             self.not_generate_until = Some(
                 start + tempo.beats_to_time(self.t_min) + loop_len_time * self.repeat as f64

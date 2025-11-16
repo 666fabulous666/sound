@@ -7,18 +7,16 @@ use std::{
 };
 
 use crate::{
-    engine::{
-        reverb::Reverb,
-        score::{Interval, NotesGroup},
-        waves::generate_wave,
-    },
+    engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
     recorder::Recorder,
     time_freq::{DivByFreq, Freq, Time},
-    Token, REVERB_BUFFER_LEN,
+    NoteId, Token, REVERB_BUFFER_LEN,
 };
 
-// Key for low-pass filter memory: uniquely identifies a note by its sequence, start time, pitch, and glide
-type LpMemoryKey = (Token, Time, Interval, Option<Interval>);
+struct NoteMemory {
+    start_time: Time,
+    state: [f64; 5],
+}
 
 pub fn stream(
     freq0: Freq,
@@ -39,7 +37,7 @@ pub fn stream(
     // println!("sample rate from callback: {sample_rate}");
     let channels = config.channels;
     let stream = {
-        let mut lp_memories: HashMap<LpMemoryKey, [f64; 5]> = HashMap::new();
+        let mut lp_memories: HashMap<NoteId, NoteMemory> = HashMap::new();
         let mut last_cleanup = crate::time_freq::Time(0.0);
         let recorder = recorder.clone();
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
@@ -56,7 +54,7 @@ pub fn stream(
                 let mut dry_right = 0.0;
 
                 for (
-                    token,
+                    _token,
                     NotesGroup {
                         notes: notes_from_seq,
                         bend,
@@ -76,9 +74,10 @@ pub fn stream(
                 ) in note_groups.iter()
                 {
                     for note in notes_from_seq.iter() {
-                        let memory = lp_memories
-                            .entry((*token, note.time, note.interval.clone(), note.glide.clone()))
-                            .or_insert([0.0; 5]);
+                        let memory = lp_memories.entry(note.id).or_insert_with(|| NoteMemory {
+                            start_time: note.time,
+                            state: [0.0; 5],
+                        });
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
                             let volume = 0.1 * volume * note.volume;
@@ -98,7 +97,7 @@ pub fn stream(
                                     *pow_fact,
                                     *lowpass_enabled,
                                     *lp_order,
-                                    memory,
+                                    &mut memory.state,
                                     sample_rate,
                                 );
                             dry_left += (1.0 - pan) * dry;
@@ -111,7 +110,7 @@ pub fn stream(
                 const CLEANUP_INTERVAL: f64 = 10.0;
                 if (now - last_cleanup).as_secs() > CLEANUP_INTERVAL {
                     let cutoff_time = now - crate::NOTE_LINGER_TIME - Time(5.0);
-                    lp_memories.retain(|(_, note_time, _, _), _| *note_time >= cutoff_time);
+                    lp_memories.retain(|_, state| state.start_time >= cutoff_time);
                     last_cleanup = now;
                 }
 

@@ -53,6 +53,29 @@ impl Default for TokenGen {
     }
 }
 
+/// Unique identifier for notes
+#[derive(
+    Debug, Serialize, Deserialize, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash, Default,
+)]
+pub struct NoteId(pub u64);
+
+impl NoteId {
+    pub fn new(value: u64) -> Self {
+        NoteId(value)
+    }
+}
+
+/// Generator for unique note IDs
+#[derive(Default)]
+pub struct NoteIdGen(pub u64);
+
+impl NoteIdGen {
+    pub fn next(&mut self) -> NoteId {
+        self.0 += 1;
+        NoteId(self.0)
+    }
+}
+
 /// Apply a function to the absolute value and restore the sign.
 ///
 /// # Examples
