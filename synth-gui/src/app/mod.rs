@@ -586,33 +586,6 @@ impl GuiApp {
         dfs(&self.score.track_root, &mut self.score.notes, 1.0);
     }
 
-    /// Update interval octaves for all notes in NotesGroup belonging to a sequence token.
-    /// Used when octave changes to immediately shift notes without regeneration.
-    fn update_sequence_octaves(&mut self, token: Token, octave_shift: i32) {
-        if let Some(ng) = self.score.notes.get_mut(&token) {
-            for note in ng.notes.iter_mut() {
-                match &mut note.interval {
-                    Interval::Tempered(_degree, octave) => {
-                        *octave += octave_shift;
-                    }
-                    Interval::RDTempered(_, _, octave) => {
-                        *octave += octave_shift;
-                    }
-                }
-                // Also shift glide target if present
-                if let Some(glide) = &mut note.glide {
-                    match glide {
-                        Interval::Tempered(_, octave) => {
-                            *octave += octave_shift;
-                        }
-                        Interval::RDTempered(_, _, octave) => {
-                            *octave += octave_shift;
-                        }
-                    }
-                }
-            }
-        }
-    }
     #[cfg(target_arch = "wasm32")]
     fn poll_loaded_state(&mut self) {
         let state = {

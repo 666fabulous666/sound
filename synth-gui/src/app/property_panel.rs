@@ -18,7 +18,9 @@ use crate::{
         },
         GuiApp, ALL_WAVES, DRUM_WAVES,
     },
-    engine::score::{default_params::*, sequence::Sequence, track_node::NodeKind, Interval},
+    engine::score::{
+        default_params::*, sequence::Sequence, track_node::NodeKind, Interval, NotesGroup,
+    },
     layout_left,
     shortcuts::*,
     time_freq::Beat,
@@ -69,7 +71,6 @@ impl Action {
 struct ParameterImpact {
     needs_regeneration: bool,
     needs_mix_update: bool,
-    octave_shifts: Vec<(Token, i32)>,
 }
 
 impl ParameterImpact {
@@ -81,12 +82,6 @@ impl ParameterImpact {
         self.needs_mix_update = true;
     }
 
-    fn queue_octave_shift(&mut self, token: Token, shift: i32) {
-        if shift != 0 {
-            self.octave_shifts.push((token, shift));
-        }
-    }
-
     fn needs_regeneration(&self) -> bool {
         self.needs_regeneration
     }
@@ -94,9 +89,29 @@ impl ParameterImpact {
     fn needs_mix_update(&self) -> bool {
         self.needs_mix_update
     }
+}
 
-    fn drain_octave_shifts(&mut self) -> Vec<(Token, i32)> {
-        std::mem::take(&mut self.octave_shifts)
+fn apply_octave_shift(
+    notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+    token: Token,
+    shift: i32,
+) {
+    if shift == 0 {
+        return;
+    }
+    if let Some(ng) = notes.get_mut(&token) {
+        for note in ng.notes.iter_mut() {
+            match &mut note.interval {
+                Interval::Tempered(_, octave) => *octave += shift,
+                Interval::RDTempered(_, _, octave) => *octave += shift,
+            }
+            if let Some(glide) = &mut note.glide {
+                match glide {
+                    Interval::Tempered(_, octave) => *octave += shift,
+                    Interval::RDTempered(_, _, octave) => *octave += shift,
+                }
+            }
+        }
     }
 }
 
@@ -606,12 +621,11 @@ impl GuiApp {
                                             });
                                             if octave_changed {
                                                 let octave_shift = *octave - old_octave;
-                                                // Store for deferred update (after mutable borrow is dropped)
-                                                impact.queue_octave_shift(
+                                                apply_octave_shift(
+                                                    &mut self.score.notes,
                                                     seq_mut.token,
                                                     octave_shift,
                                                 );
-                                                // Also update the sequence's interval
                                                 if let Interval::RDTempered(
                                                     _,
                                                     _,
@@ -970,11 +984,6 @@ impl GuiApp {
                     // This updates NotesGroup volumes for ALL sequences using chain products from root
                     if impact.needs_mix_update() {
                         self.update_all_volumes_from_tree();
-                    }
-
-                    // Apply deferred octave change (after mutable borrow is dropped)
-                    for (token, octave_shift) in impact.drain_octave_shifts() {
-                        self.update_sequence_octaves(token, octave_shift);
                     }
 
                     if impact.needs_regeneration() {
