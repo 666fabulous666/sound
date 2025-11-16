@@ -4,28 +4,17 @@ mod navigation;
 mod rhythm;
 mod sections;
 
-use egui::{Grid, RichText, ScrollArea, TextEdit};
-use helpers::{slider_with_reset, u32_cell, ParameterBehavior};
-use sections::mix;
+use egui::{RichText, ScrollArea, TextEdit};
+use helpers::{ParameterBehavior, SliderParam};
+use sections::{
+    accents, bend, chorus, envelope, harmony, mix, power, rhythm as rhythm_section, vibrato,
+};
 
 use crate::{
-    app::{
-        property_panel::{
-            hover_texts::{
-                GROOVE_OFFSET_TEXT, HARMONISE_TEXT, LOOP_LENGTH_TEXT, OCTAVE_TEXT, POW_FACT_TEXT,
-                REPEAT_TEXT, SHUFFLE_TEXT, TIME_QUANTUM_TEXT, TOLERENCE_TEXT, UNISSON_DETUNE_TEXT,
-                VARIATION_INTERVALS_TEXT, VARIATION_STEPS_TEXT,
-            },
-            navigation::navigation,
-        },
-        GuiApp, ALL_WAVES, DRUM_WAVES,
-    },
-    engine::score::{
-        default_params::*, sequence::Sequence, track_node::NodeKind, Interval, NotesGroup,
-    },
+    app::{property_panel::navigation::navigation, GuiApp, ALL_WAVES, DRUM_WAVES},
+    engine::score::{sequence::Sequence, track_node::NodeKind, Interval, NotesGroup},
     layout_left,
     shortcuts::*,
-    time_freq::Beat,
     Token,
 };
 
@@ -102,7 +91,7 @@ impl ParameterImpact {
     }
 }
 
-fn apply_octave_shift(
+pub(super) fn apply_octave_shift(
     notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
     token: Token,
     shift: i32,
@@ -167,8 +156,7 @@ impl GuiApp {
                                     ui.memory_mut(|m| m.surrender_focus(resp.id));
                                 }
 
-                                let mut hue_value = track_node_mut.hue;
-                                let h = hue_value / 60.0;
+                                let h = track_node_mut.hue / 60.0;
                                 let c = 1.0;
                                 let x = c * (1.0 - ((h % 2.0) - 1.0).abs());
                                 let (r1, g1, b1) = match h as i32 {
@@ -187,22 +175,11 @@ impl GuiApp {
                                 ui.menu_button(
                                     egui::RichText::new("   ").background_color(color),
                                     |ui| {
-                                        if slider_with_reset(
-                                            ui,
-                                            &mut hue_value,
-                                            0.0..=360.0,
-                                            "Hue",
-                                            None,
-                                            0.0,
-                                            false,
-                                        )
-                                        .changed()
-                                        {
-                                            track_node_mut.hue = hue_value.rem_euclid(360.0);
-                                            impact.register_behavior(
-                                                ParameterBehavior::AestheticImmediate,
-                                            );
-                                        }
+                                        let hue_param = SliderParam::new("Hue", 0.0..=360.0)
+                                            .default(0.0)
+                                            .behavior(ParameterBehavior::AestheticImmediate)
+                                            .tooltip("Adjust track color");
+                                        hue_param.draw(ui, &mut track_node_mut.hue, &mut impact);
                                     },
                                 );
                             });
@@ -238,523 +215,64 @@ impl GuiApp {
                                     }
                                 });
 
-                                ui.collapsing("Envelope", |ui| {
-                                    let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
-                                    helpers::envelope_section(
-                                        ui,
-                                        seq_mut,
-                                        &mut self.score.notes,
-                                        is_drum,
-                                    );
-                                });
-
-                                ui.collapsing("Bend", |ui| {
-                                    helpers::bend_section(ui, seq_mut, &mut self.score.notes);
-                                });
-                                ui.collapsing("Vibrato", |ui| {
-                                    helpers::vibrato_section(ui, seq_mut, &mut self.score.notes);
-                                });
+                                let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
+                                envelope::show_envelope_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                    is_drum,
+                                );
+                                bend::show_bend_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                );
+                                vibrato::show_vibrato_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                );
                                 if !DRUM_WAVES.contains(&seq_mut.wave_type) {
-                                    let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
-                                        helpers::chorus_section(ui, seq_mut, &mut self.score.notes);
-                                    });
-                                    header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);
-                                };
-
-                                let header = ui.collapsing("Power factor", |ui| {
-                                    helpers::power_factor_section(
+                                    chorus::show_chorus_section(
                                         ui,
                                         seq_mut,
                                         &mut self.score.notes,
+                                        &mut impact,
                                     );
-                                });
-                                header.header_response.on_hover_text(POW_FACT_TEXT);
-                                ui.collapsing("Rythm", |ui| {
-                                    {
-                                        ui.horizontal(|ui| {
-                                            let mut numerator = seq_mut.time_quantum.numerator();
-                                            let mut denominator =
-                                                seq_mut.time_quantum.denominator();
-                                            ui.label("Time quantum:")
-                                                .on_hover_text(TIME_QUANTUM_TEXT);
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut numerator)
-                                                        .range(1..=128),
-                                                )
-                                                .changed()
-                                            {
-                                                seq_mut
-                                                    .time_quantum
-                                                    .set_numerator(numerator)
-                                                    .expect(
-                                                        "UI enforces valid time-quantum numerator",
-                                                    );
-                                                impact.require_regeneration();
-                                            };
-                                            ui.label("/");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut denominator)
-                                                        .range(1..=128),
-                                                )
-                                                .changed()
-                                            {
-                                                seq_mut
-                                                    .time_quantum
-                                                    .set_denominator(denominator)
-                                                    .expect(
-                                                    "UI enforces valid time-quantum denominator",
-                                                );
-                                                impact.require_regeneration();
-                                            };
-                                        });
-                                    }
-                                    ui.separator();
-                                    {
-                                        let step = seq_mut.time_quantum.beat_step();
-
-                                        let mut t_min = seq_mut.t_min.as_beats();
-                                        let mut t_max = seq_mut.t_max.as_beats();
-
-                                        egui::CollapsingHeader::new("Sequence position (beats)")
-                                            .show(ui, |ui| {
-                                                ui.add(
-                                                    egui::Slider::new(&mut t_min, 0.0..=t_max)
-                                                        .text("t_min"),
-                                                );
-                                                ui.add(
-                                                    egui::Slider::new(
-                                                        &mut t_max,
-                                                        t_min..=seq_mut.loop_len.as_beats(),
-                                                    )
-                                                    .text("t_max"),
-                                                );
-
-                                                t_max =
-                                                    t_max.clamp(t_min, seq_mut.loop_len.as_beats());
-
-                                                if (t_min - seq_mut.t_min.as_beats()).abs()
-                                                    > f64::EPSILON
-                                                {
-                                                    let quantized =
-                                                        step * ((Beat(t_min) / step).round());
-                                                    seq_mut.t_min = quantized;
-                                                    impact.require_regeneration();
-                                                }
-                                                if (t_max - seq_mut.t_max.as_beats()).abs()
-                                                    > f64::EPSILON
-                                                {
-                                                    let quantized =
-                                                        step * ((Beat(t_max) / step).round());
-                                                    seq_mut.t_max = quantized;
-                                                    impact.require_regeneration();
-                                                }
-                                            });
-
-                                        if !ui.ctx().wants_keyboard_input() {
-                                            let (left, right, mods) = ui.ctx().input(|i| {
-                                                (
-                                                    i.key_pressed(egui::Key::ArrowLeft),
-                                                    i.key_pressed(egui::Key::ArrowRight),
-                                                    i.modifiers,
-                                                )
-                                            });
-
-                                            if left || right {
-                                                let dir = if left { -1.0 } else { 1.0 };
-
-                                                let cmd = mods.command;
-                                                let alt = mods.alt;
-
-                                                let mut new_min = seq_mut.t_min.as_beats();
-                                                let mut new_max = seq_mut.t_max.as_beats();
-                                                let s = step.as_beats();
-
-                                                match (cmd, alt) {
-                                                    (true, false) => {
-                                                        new_min =
-                                                            (new_min + dir * s).clamp(0.0, new_max);
-                                                    }
-                                                    (false, true) => {
-                                                        new_max = (new_max + dir * s).clamp(
-                                                            new_min,
-                                                            seq_mut.loop_len.as_beats(),
-                                                        );
-                                                    }
-                                                    _ => {
-                                                        let span = new_max - new_min;
-                                                        new_min = (new_min + dir * s).clamp(
-                                                            0.0,
-                                                            (seq_mut.loop_len.as_beats() - span)
-                                                                .max(0.0),
-                                                        );
-                                                        new_max = (new_min + span)
-                                                            .min(seq_mut.loop_len.as_beats());
-                                                    }
-                                                }
-
-                                                seq_mut.t_min = Beat(new_min);
-                                                seq_mut.t_max = Beat(new_max);
-                                                impact.require_regeneration();
-                                            }
-                                        }
-                                    }
-                                    ui.separator();
-                                    {
-                                        if rhythm::inclusion_section(
-                                            ui,
-                                            seq_mut,
-                                            |ui, gens, default_val| {
-                                                Self::edit_vec(
-                                                    ui,
-                                                    gens,
-                                                    default_val,
-                                                    layout_left(),
-                                                );
-                                            },
-                                        ) {
-                                            impact.require_regeneration();
-                                        }
-                                    }
-                                    ui.separator();
-                                    {
-                                        if rhythm::exclusion_section(
-                                            ui,
-                                            seq_mut,
-                                            |ui, gens, default_val| {
-                                                Self::edit_vec(
-                                                    ui,
-                                                    gens,
-                                                    default_val,
-                                                    layout_left(),
-                                                );
-                                            },
-                                        ) {
-                                            impact.require_regeneration();
-                                        }
-                                        ui.separator();
-                                        ui.horizontal(|ui| {
-                                            let mut tmp_beat_offset = seq_mut.beat_offset.clone();
-                                            ui.label("Groove offset:")
-                                                .on_hover_text(GROOVE_OFFSET_TEXT);
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut tmp_beat_offset)
-                                                        .range(0..=256),
-                                                )
-                                                .changed()
-                                            {
-                                                seq_mut.beat_offset = tmp_beat_offset;
-                                                impact.require_regeneration();
-                                            };
-                                        });
-                                        ui.horizontal(|ui| {
-                                            let mut loop_len = seq_mut.loop_len.as_beats();
-                                            ui.label("Loop length (beats):")
-                                                .on_hover_text(LOOP_LENGTH_TEXT);
-                                            let slider = ui.add(
-                                                egui::DragValue::new(&mut loop_len)
-                                                    .range(0.0..=512.0),
-                                            );
-                                            if slider.changed() {
-                                                let loop_len = Beat(loop_len.max(0.0));
-                                                seq_mut.loop_len = loop_len;
-                                                seq_mut.t_max = seq_mut.t_max.min(loop_len);
-                                                impact.require_regeneration();
-                                            };
-                                            let mut repeat = seq_mut.repeat.clone();
-                                            ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
-                                            let slider = ui.add(
-                                                egui::DragValue::new(&mut repeat).range(1..=64),
-                                            );
-                                            if slider.changed() {
-                                                seq_mut.repeat = repeat;
-                                                impact.require_regeneration();
-                                            };
-                                        });
-                                    }
-                                });
-                                ui.collapsing("Harmony", |ui| {
-                                    ui.checkbox(&mut seq_mut.glide, "Glide");
-                                    let mut harmonise = seq_mut.harmonise;
-                                    if ui
-                                        .checkbox(&mut harmonise, "Harmonise")
-                                        .on_hover_text(HARMONISE_TEXT)
-                                        .changed()
-                                    {
-                                        seq_mut.harmonise = harmonise;
-                                        impact.require_regeneration();
-                                    }
-                                    ui.separator();
-                                    {
-                                        ui.horizontal(|ui| {
-                                            let mut tmp_tolerance = seq_mut.tolerance.clone();
-                                            ui.label("Tolerance:").on_hover_text(TOLERENCE_TEXT);
-                                            ui.label("<-");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut tmp_tolerance.0)
-                                                        .range(-4.0..=16.0),
-                                                )
-                                                .changed()
-                                            {
-                                                seq_mut.tolerance.0 = tmp_tolerance.0;
-                                                impact.require_regeneration();
-                                            };
-                                            ui.label(",");
-                                            if ui
-                                                .add(
-                                                    egui::DragValue::new(&mut tmp_tolerance.1)
-                                                        .range(-4.0..=16.0),
-                                                )
-                                                .changed()
-                                            {
-                                                seq_mut.tolerance.1 = tmp_tolerance.1;
-                                                impact.require_regeneration();
-                                            };
-                                            ui.label("->");
-                                        });
-                                    }
-
-                                    {
-                                        let mut changed = false;
-                                        let mut octave_changed = false;
-                                        let mut interval = seq_mut.interval.clone();
-                                        let mut shuffle = seq_mut.shuffle;
-                                        if let Interval::RDTempered(
-                                            ref mut nb_rd_steps,
-                                            ref mut tones,
-                                            ref mut octave,
-                                        ) = interval
-                                        {
-                                            // octave (aesthetic - update existing notes immediately)
-                                            let old_octave = *octave;
-                                            ui.horizontal(|ui| {
-                                                ui.label("Octave:").on_hover_text(OCTAVE_TEXT);
-                                                if ui
-                                                    .add(egui::Slider::new(octave, -4..=4))
-                                                    .changed()
-                                                {
-                                                    octave_changed = true;
-                                                };
-                                            });
-                                            if octave_changed {
-                                                let octave_shift = *octave - old_octave;
-                                                apply_octave_shift(
-                                                    &mut self.score.notes,
-                                                    seq_mut.token,
-                                                    octave_shift,
-                                                );
-                                                if let Interval::RDTempered(
-                                                    _,
-                                                    _,
-                                                    ref mut seq_octave,
-                                                ) = seq_mut.interval
-                                                {
-                                                    *seq_octave = *octave;
-                                                }
-                                            }
-                                            if !harmonise {
-                                                // nb_rd_steps
-                                                ui.horizontal(|ui| {
-                                                    ui.label("Variation steps:")
-                                                        .on_hover_text(VARIATION_STEPS_TEXT);
-                                                    if ui
-                                                        .add(egui::Slider::new(nb_rd_steps, 0..=16))
-                                                        .changed()
-                                                    {
-                                                        changed = true;
-                                                    };
-                                                });
-                                                ui.label("Variation intervals:")
-                                                    .on_hover_text(VARIATION_INTERVALS_TEXT);
-                                                ui.horizontal_wrapped(|ui| {
-                                                    for tone in -11..=11 {
-                                                        let mut selected = tones.contains(&tone);
-
-                                                        if ui
-                                                            .checkbox(
-                                                                &mut selected,
-                                                                tone.to_string(),
-                                                            )
-                                                            .changed()
-                                                        {
-                                                            if selected {
-                                                                if !tones.contains(&tone) {
-                                                                    tones.push(tone);
-                                                                    tones.sort_unstable();
-                                                                }
-                                                            } else {
-                                                                if let Some(pos) = tones
-                                                                    .iter()
-                                                                    .position(|&v| v == tone)
-                                                                {
-                                                                    tones.remove(pos);
-                                                                }
-                                                            }
-                                                            changed = !tones.is_empty();
-                                                        }
-                                                    }
-                                                });
-                                            } else {
-                                                ui.collapsing("Harmoniser", |ui| {
-                                                    let mut harmoniser = seq_mut.harmoniser;
-                                                    let mut changed = false;
-
-                                                    ui.label(
-                                                        RichText::new(
-                                                            "Weights per interval (0..=6)",
-                                                        )
-                                                        .weak(),
-                                                    );
-                                                    ui.add_space(4.0);
-
-                                                    Grid::new("harmoniser_grid_inverted")
-                                                        .striped(true)
-                                                        .num_columns(3) // interval label + 2 modes
-                                                        .show(ui, |ui| {
-                                                            // Header
-                                                            ui.label(
-                                                                RichText::new("Interval").weak(),
-                                                            );
-                                                            ui.label(
-                                                                RichText::new("Tension").weak(),
-                                                            );
-                                                            ui.end_row();
-
-                                                            // Rows: one per interval
-                                                            for i in 0..=6 {
-                                                                ui.label(format!("{i}"));
-                                                                let r = u32_cell(
-                                                                    ui,
-                                                                    &mut harmoniser[i],
-                                                                    0..=32,
-                                                                    0,
-                                                                );
-                                                                if r.changed() {
-                                                                    changed = true;
-                                                                }
-                                                                ui.end_row();
-                                                            }
-                                                        });
-
-                                                    ui.horizontal_wrapped(|ui| {
-                                                        if ui.button("Reset all to 16").clicked() {
-                                                            harmoniser = [16; 7];
-                                                            changed = true;
-                                                        }
-                                                        if ui.button("Reset defaults").clicked() {
-                                                            harmoniser = default_harmoniser();
-                                                            changed = true;
-                                                        }
-                                                    });
-
-                                                    if changed {
-                                                        seq_mut.harmoniser = harmoniser;
-                                                    }
-                                                });
-                                            }
-                                            ui.separator();
-                                            changed |= ui
-                                                .checkbox(&mut shuffle, "Shuffle")
-                                                .on_hover_text(SHUFFLE_TEXT)
-                                                .changed();
-                                        }
-                                        if changed {
-                                            seq_mut.interval = interval;
-                                            seq_mut.shuffle = shuffle;
-                                            impact.require_regeneration();
-                                        }
-                                        if ui
-                                            .add(
-                                                egui::Slider::new(&mut seq_mut.chord, 1..=12)
-                                                    .text("Chord"),
-                                            )
-                                            .changed()
-                                        {
-                                            impact.require_regeneration();
-                                        }
-                                        if ui
-                                            .add(
-                                                egui::Slider::new(&mut seq_mut.arpegio, -4.0..=4.0)
-                                                    .text("Arpegio"),
-                                            )
-                                            .changed()
-                                        {
-                                            impact.require_regeneration();
-                                        }
-                                        if ui
-                                            .add(
-                                                egui::Slider::new(
-                                                    &mut seq_mut.reverse_prob,
-                                                    0.0..=1.0,
-                                                )
-                                                .text("Reverse prob"),
-                                            )
-                                            .changed()
-                                        {
-                                            impact.require_regeneration();
-                                        }
-                                        if ui
-                                            .add(
-                                                egui::Slider::new(
-                                                    &mut seq_mut.shuffle_prob,
-                                                    0.0..=1.0,
-                                                )
-                                                .text("Shuffle prob"),
-                                            )
-                                            .changed()
-                                        {
-                                            impact.require_regeneration();
-                                        }
-                                        if ui
-                                            .add(egui::Checkbox::new(
-                                                &mut seq_mut.random_chord,
-                                                "Random skip chord notes",
-                                            ))
-                                            .changed()
-                                        {
-                                            impact.require_regeneration();
-                                        }
-                                    }
-                                });
-                                ui.collapsing("Accents", |ui| {
-                                    let def = default_accents();
-                                    let mut mag_disp =
-                                        1.0 / seq_mut.accents.0.max(f64::MIN_POSITIVE);
-                                    let mag_resp = slider_with_reset(
-                                        ui,
-                                        &mut mag_disp,
-                                        0.01..=100.0,
-                                        "Magnitude",
-                                        None,
-                                        1.0 / def.0.max(f64::MIN_POSITIVE),
-                                        true,
-                                    );
-                                    if mag_resp.changed() {
-                                        seq_mut.accents.0 = 1.0 / mag_disp.max(f64::MIN_POSITIVE);
-                                    }
-
-                                    let mut gens_disp: Vec<f64> = seq_mut
-                                        .accents
-                                        .1
-                                        .iter()
-                                        .map(|&x| 1.0 / x.max(f64::MIN_POSITIVE))
-                                        .collect();
-
-                                    let old = gens_disp.clone();
-                                    ui.label("Generators");
-                                    Self::edit_vec(ui, &mut gens_disp, 1.0, layout_left());
-
-                                    if gens_disp != old && !gens_disp.iter().any(|&v| v == 0.0) {
-                                        let restored: Vec<f64> = gens_disp
-                                            .into_iter()
-                                            .map(|x| 1.0 / x.max(f64::MIN_POSITIVE))
-                                            .collect();
-                                        seq_mut.accents.1 = restored;
-                                    }
-                                });
+                                }
+                                power::show_power_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                );
+                                let edit_vec_generators =
+                                    |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
+                                        GuiApp::edit_vec(ui, gens, default_val, layout_left());
+                                    };
+                                rhythm_section::show_rhythm_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut impact,
+                                    &edit_vec_generators,
+                                );
+                                harmony::show_harmony_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                );
+                                accents::show_accents_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut impact,
+                                    |ui, gens, default_val| {
+                                        GuiApp::edit_vec(ui, gens, default_val, layout_left());
+                                    },
+                                );
                             } else {
                                 // Group-specific controls
                                 match &mut track_node_mut.kind {

@@ -46,27 +46,5 @@ pub fn show_mix_section(ui: &mut Ui, track_node: &mut TrackNode, impact: &mut Pa
             .behavior(ParameterBehavior::StructuralFutureOnly)
             .tooltip("Probability for this sequence to generate notes");
         proba_param.draw(ui, track_node.proba_mut(), impact);
-
-        let hue_param = SliderParam::new("Hue", 0.0..=360.0)
-            .default(0.0)
-            .behavior(ParameterBehavior::AestheticImmediate)
-            .tooltip("Color hue in HSL space (0-360)");
-        hue_param.draw(ui, &mut track_node.hue, impact);
-
-        let h = track_node.hue / 60.0;
-        let c = 1.0;
-        let x = c * (1.0 - ((h % 2.0) - 1.0).abs());
-        let (r1, g1, b1) = match h as i32 {
-            0 => (c, x, 0.0),
-            1 => (x, c, 0.0),
-            2 => (0.0, c, x),
-            3 => (0.0, x, c),
-            4 => (x, 0.0, c),
-            _ => (c, 0.0, x),
-        };
-        let color =
-            egui::Color32::from_rgb((r1 * 255.0) as u8, (g1 * 255.0) as u8, (b1 * 255.0) as u8);
-        let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::hover());
-        ui.painter().rect_filled(rect, 2.0, color);
     });
 }
