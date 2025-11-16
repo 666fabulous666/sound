@@ -159,15 +159,53 @@ impl GuiApp {
                                         } else {
                                             "Sequence name…"
                                         })
-                                        .desired_width(200.0),
+                                        .desired_width(100.0),
                                 );
                                 if resp.lost_focus()
                                     && ui.input(|i| i.key_pressed(egui::Key::Enter))
                                 {
                                     ui.memory_mut(|m| m.surrender_focus(resp.id));
                                 }
-                            });
 
+                                let mut hue_value = track_node_mut.hue;
+                                let h = hue_value / 60.0;
+                                let c = 1.0;
+                                let x = c * (1.0 - ((h % 2.0) - 1.0).abs());
+                                let (r1, g1, b1) = match h as i32 {
+                                    0 => (c, x, 0.0),
+                                    1 => (x, c, 0.0),
+                                    2 => (0.0, c, x),
+                                    3 => (0.0, x, c),
+                                    4 => (x, 0.0, c),
+                                    _ => (c, 0.0, x),
+                                };
+                                let color = egui::Color32::from_rgb(
+                                    (r1 * 255.0) as u8,
+                                    (g1 * 255.0) as u8,
+                                    (b1 * 255.0) as u8,
+                                );
+                                ui.menu_button(
+                                    egui::RichText::new("   ").background_color(color),
+                                    |ui| {
+                                        if slider_with_reset(
+                                            ui,
+                                            &mut hue_value,
+                                            0.0..=360.0,
+                                            "Hue",
+                                            None,
+                                            0.0,
+                                            false,
+                                        )
+                                        .changed()
+                                        {
+                                            track_node_mut.hue = hue_value.rem_euclid(360.0);
+                                            impact.register_behavior(
+                                                ParameterBehavior::AestheticImmediate,
+                                            );
+                                        }
+                                    },
+                                );
+                            });
                             mix::show_mix_section(ui, track_node_mut, &mut impact);
 
                             ui.separator();
