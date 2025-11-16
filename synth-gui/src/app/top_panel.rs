@@ -1,7 +1,5 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
-use cpal::traits::DeviceTrait;
-use egui::{Layout, RichText};
 use crate::{
     app::GuiApp,
     engine::{
@@ -10,6 +8,8 @@ use crate::{
     },
     layout_left, F0,
 };
+use cpal::traits::DeviceTrait;
+use egui::{Layout, RichText};
 #[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
 use synth_core::stream::stream;

@@ -56,10 +56,7 @@ mod native {
             let mut guard = self.inner.lock().expect("recorder mutex poisoned");
             if let Some(inner) = guard.take() {
                 let path = inner.path.clone();
-                inner
-                    .writer
-                    .finalize()
-                    .context("Failed to finalize WAV")?;
+                inner.writer.finalize().context("Failed to finalize WAV")?;
                 Ok(Some(path))
             } else {
                 Ok(None)

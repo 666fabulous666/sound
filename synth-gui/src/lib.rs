@@ -3,7 +3,6 @@
 //! This library provides a graphical editor for creating and manipulating audio synthesis scores.
 
 pub mod app;
-pub mod range_slider;
 pub mod shortcuts;
 pub mod texts;
 
