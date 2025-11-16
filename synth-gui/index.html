@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <base data-trunk-public-url/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>synth (web)</title>
+    <link data-trunk rel="rust" data-target-name="synth_gui" data-cargo-args="--lib" data-wasm-opt="4"/>
+    <link rel="icon" href="data:,">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #egui_canvas_container {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        inset: 0;
+      }
+
+      canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="the_canvas_id"></canvas>
+  </body>
+</html>

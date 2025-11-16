@@ -52,6 +52,7 @@ pub async fn start() -> Result<(), wasm_bindgen::JsValue> {
     use crate::app::GuiApp;
     use cpal::traits::HostTrait;
     use eframe::web_sys::HtmlCanvasElement;
+    use wasm_bindgen::JsCast;
 
     fn make_canvas(id: &str) -> Result<HtmlCanvasElement, wasm_bindgen::JsValue> {
         use eframe::web_sys::window;

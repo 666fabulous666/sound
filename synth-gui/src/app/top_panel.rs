@@ -1,12 +1,7 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
 use cpal::traits::DeviceTrait;
-#[cfg(target_arch = "wasm32")]
-use egui::Slider;
 use egui::{Layout, RichText};
-
-#[cfg(target_arch = "wasm32")]
-use crate::MAX_FPS;
 use crate::{
     app::GuiApp,
     engine::{
@@ -15,6 +10,7 @@ use crate::{
     },
     layout_left, F0,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
 use synth_core::stream::stream;
 
@@ -26,6 +22,8 @@ impl GuiApp {
         load: &mut bool,
         exit: &mut bool,
     ) {
+        #[cfg(target_arch = "wasm32")]
+        let _ = exit;
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
                 if let Some(logo) = &self.logo {
