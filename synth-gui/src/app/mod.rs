@@ -12,7 +12,7 @@ use crate::{
             probability::Probability,
             sequence::Sequence,
             track_node::{NodeKind, TrackNode},
-            Interval, NotesGroup, Score,
+            NotesGroup, Score,
         },
         waves::WaveType,
     },

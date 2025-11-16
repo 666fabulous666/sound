@@ -2,9 +2,11 @@ pub mod helpers;
 pub mod hover_texts;
 mod navigation;
 mod rhythm;
+mod sections;
 
 use egui::{Grid, RichText, ScrollArea, TextEdit};
-use helpers::{slider_with_reset, u32_cell};
+use helpers::{slider_with_reset, u32_cell, ParameterBehavior};
+use sections::mix;
 
 use crate::{
     app::{
@@ -68,7 +70,7 @@ impl Action {
 }
 
 #[derive(Default, Clone)]
-struct ParameterImpact {
+pub(super) struct ParameterImpact {
     needs_regeneration: bool,
     needs_mix_update: bool,
 }
@@ -88,6 +90,15 @@ impl ParameterImpact {
 
     fn needs_mix_update(&self) -> bool {
         self.needs_mix_update
+    }
+
+    fn register_behavior(&mut self, behavior: ParameterBehavior) {
+        match behavior {
+            ParameterBehavior::AestheticImmediate => {}
+            ParameterBehavior::StructuralImmediate => self.require_regeneration(),
+            ParameterBehavior::StructuralFutureOnly => {}
+            ParameterBehavior::Mix => self.require_mix_update(),
+        }
     }
 }
 
@@ -157,136 +168,7 @@ impl GuiApp {
                                 }
                             });
 
-                            // Volume control (common) - unified for both sequences and groups
-                            ui.horizontal(|ui| {
-                                let volume = track_node_mut.volume_mut();
-
-                                // Keyboard shortcuts for volume adjustment
-                                let kb_changed = ui.ctx().input(|i| {
-                                    let step = if i.modifiers.shift { 0.5 } else { 0.05 };
-                                    let mut changed = false;
-                                    if i.key_down(egui::Key::Plus) {
-                                        *volume = (*volume + step).min(32.0);
-                                        changed = true;
-                                    }
-                                    if i.key_down(egui::Key::Minus) {
-                                        *volume = (*volume - step).max(0.0);
-                                        changed = true;
-                                    }
-                                    changed
-                                });
-
-                                let vol_resp = slider_with_reset(
-                                    ui,
-                                    volume,
-                                    0.0..=5.0,
-                                    "Volume",
-                                    Some("+ / - (Shift×10)"),
-                                    default_volume(),
-                                    false,
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.label(egui::RichText::new("Hold + / - to change").weak());
-                                });
-
-                                if vol_resp.changed() || vol_resp.secondary_clicked() || kb_changed
-                                {
-                                    impact.require_mix_update();
-                                }
-                            });
-
-                            // Pan control (common) - unified for both sequences and groups
-                            ui.horizontal(|ui| {
-                                let pan = track_node_mut.pan_mut();
-
-                                let pan_resp = slider_with_reset(
-                                    ui,
-                                    pan,
-                                    0.0..=1.0,
-                                    "Pan",
-                                    None,
-                                    default_pan(),
-                                    false,
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.label("0.5 is centered, 0.0 is left, 1.0 is right");
-                                    ui.label(egui::RichText::new("Right-click to reset").weak());
-                                });
-
-                                if pan_resp.changed() || pan_resp.secondary_clicked() {
-                                    *pan = pan.clamp(0.0, 1.0);
-                                    impact.require_mix_update();
-                                }
-                            });
-
-                            // Proba control (common)
-                            ui.horizontal(|ui| {
-                                let mut proba_value = track_node_mut.proba().as_f64();
-                                let proba_resp = slider_with_reset(
-                                    ui,
-                                    &mut proba_value,
-                                    0.0..=1.0,
-                                    "Proba",
-                                    None,
-                                    default_proba().as_f64(),
-                                    false,
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.label(egui::RichText::new("Right-click to reset").weak());
-                                });
-
-                                if proba_resp.changed() || proba_resp.secondary_clicked() {
-                                    track_node_mut.set_proba(proba_value);
-                                    impact.require_regeneration();
-                                }
-                            });
-
-                            // Hue control (common)
-                            ui.horizontal(|ui| {
-                                let hue = &mut track_node_mut.hue;
-                                let hue_resp = slider_with_reset(
-                                    ui,
-                                    hue,
-                                    0.0..=360.0,
-                                    "Hue",
-                                    None,
-                                    0.0,
-                                    false,
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.label("Color hue in HSL space (0-360)");
-                                    ui.label(egui::RichText::new("Right-click to reset").weak());
-                                });
-
-                                if hue_resp.changed() || hue_resp.secondary_clicked() {
-                                    *hue = hue.rem_euclid(360.0);
-                                    impact.require_regeneration();
-                                }
-
-                                // Color preview square - Convert HSL to RGB
-                                let h = *hue / 60.0;
-                                let c = 1.0; // chroma at full saturation
-                                let x = c * (1.0 - ((h % 2.0) - 1.0).abs());
-                                let (r1, g1, b1) = match h as i32 {
-                                    0 => (c, x, 0.0),
-                                    1 => (x, c, 0.0),
-                                    2 => (0.0, c, x),
-                                    3 => (0.0, x, c),
-                                    4 => (x, 0.0, c),
-                                    _ => (c, 0.0, x),
-                                };
-                                let color = egui::Color32::from_rgb(
-                                    (r1 * 255.0) as u8,
-                                    (g1 * 255.0) as u8,
-                                    (b1 * 255.0) as u8,
-                                );
-
-                                let (rect, _) = ui.allocate_exact_size(
-                                    egui::vec2(20.0, 20.0),
-                                    egui::Sense::hover(),
-                                );
-                                ui.painter().rect_filled(rect, 2.0, color);
-                            });
+                            mix::show_mix_section(ui, track_node_mut, &mut impact);
 
                             ui.separator();
 
