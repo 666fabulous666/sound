@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use cpal::traits::{DeviceTrait, HostTrait};
 use std::path::PathBuf;
@@ -13,6 +13,7 @@ use synth_core::{
             Score,
         },
     },
+    recorder::Recorder,
     stream::stream,
     Token, TokenGen, F0, REVERB_BUFFER_LEN,
 };
@@ -32,6 +33,10 @@ struct Args {
     /// Precompute mode: render audio to buffer first, then play
     #[arg(short, long)]
     precompute: bool,
+
+    /// Record output to WAV file
+    #[arg(long)]
+    record: Option<PathBuf>,
 }
 
 #[derive(serde::Deserialize)]
@@ -248,6 +253,9 @@ fn main() -> Result<()> {
     let sample_rate = config.sample_rate().0 as f64;
 
     if args.precompute {
+        if args.record.is_some() {
+            bail!("Recording is not available in precompute mode");
+        }
         return precompute_and_play(score, &device, sample_rate, args.duration.max(5));
     }
 
@@ -257,6 +265,16 @@ fn main() -> Result<()> {
 
     // Use Score's built-in shared_notes and create shared_delays (like GUI)
     let shared_delays = Arc::new(arc_swap::ArcSwap::from_pointee(score.delays.clone()));
+
+    let recorder = if let Some(path) = &args.record {
+        let recorder = Arc::new(Recorder::new());
+        recorder
+            .start(path, sample_rate as u32)
+            .with_context(|| format!("failed to start recording to {}", path.display()))?;
+        Some(recorder)
+    } else {
+        None
+    };
 
     let _stream = stream(
         F0,
@@ -268,6 +286,7 @@ fn main() -> Result<()> {
             Reverb::<REVERB_BUFFER_LEN>::new(0.5, 0.5, sample_rate),
         ),
         shared_delays.clone(),
+        recorder.clone(),
     );
 
     println!("Playing... (Press Ctrl+C to stop)");
@@ -324,6 +343,10 @@ fn main() -> Result<()> {
         loop {
             thread::sleep(Duration::from_secs(1));
         }
+    }
+
+    if let Some(recorder) = recorder {
+        recorder.stop().context("Failed to finalize recording")?;
     }
 
     Ok(())

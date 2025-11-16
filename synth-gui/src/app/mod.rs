@@ -36,6 +36,8 @@ use std::{
     ops::DerefMut,
     sync::{atomic::AtomicU64, Arc},
 };
+#[cfg(not(target_arch = "wasm32"))]
+use synth_core::recorder::Recorder;
 
 const ALL_WAVES: [WaveType; 10] = [
     WaveType::Mute,
@@ -81,6 +83,10 @@ pub struct GuiApp {
     default_pick_idx: usize,
     logo: Option<TextureHandle>,
     property_panel_width: f32,
+    #[cfg(not(target_arch = "wasm32"))]
+    recorder: Arc<Recorder>,
+    #[cfg(not(target_arch = "wasm32"))]
+    record_error: Option<String>,
 }
 
 use serde::Deserializer;
@@ -170,6 +176,10 @@ impl GuiApp {
             logo: None,
             property_panel_width: 270.0,
             score: Score::new(),
+            #[cfg(not(target_arch = "wasm32"))]
+            recorder: Arc::new(Recorder::new()),
+            #[cfg(not(target_arch = "wasm32"))]
+            record_error: None,
         };
         app
     }
@@ -404,19 +414,13 @@ impl GuiApp {
         };
     }
 
-    fn regenerate_entire_score(&mut self) {
-        self.score.notes.clear();
-        self.score.generate_notes(self.now(), &mut self.rng);
-        self.update_all_volumes_from_tree();
-    }
-
     fn set_tempo_bpm(&mut self, bpm: f64) {
         let bpm = bpm.max(1.0);
         if (self.score.tempo().beats_per_minute() - bpm).abs() <= f64::EPSILON {
             return;
         }
-        self.score.set_tempo(Tempo::new(bpm));
-        self.regenerate_entire_score();
+        let anchor = self.now();
+        self.score.set_tempo(Tempo::new(bpm), anchor);
     }
 
     // Clone the subtree at `path`, retokenize all sequences, redraw, insert after original.

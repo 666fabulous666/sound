@@ -211,6 +211,7 @@ impl Sequence {
             windows.shuffle(rng);
         }
         let step_as_time = tempo.beats_to_time(step_in_beats);
+        let seq_start_beats = tempo.time_to_beats(seq_start);
         let loop_len_time = tempo.beats_to_time(self.loop_len);
         let tmp = windows.into_iter().map(|(t, d)| {
             let time_offset = tempo.beats_to_time(t);
@@ -219,6 +220,8 @@ impl Sequence {
             Note {
                 time: note_start,
                 duration: duration_time,
+                beat_time: seq_start_beats + t,
+                beat_duration: d,
                 interval: self.interval.clone(),
                 glide: None,
                 volume: volume / self.normalization
@@ -246,6 +249,7 @@ impl Sequence {
                     self.harmonise,
                     self.harmoniser,
                     step_as_time,
+                    step_in_beats,
                     self.arpegio,
                 )
             })
@@ -257,6 +261,7 @@ impl Sequence {
                         .iter()
                         .map(move |tmp| Note {
                             time: tmp.time + loop_len_time * i as f64,
+                            beat_time: tmp.beat_time + self.loop_len * i as f64,
                             ..tmp.clone()
                         })
                         .collect::<Vec<_>>()

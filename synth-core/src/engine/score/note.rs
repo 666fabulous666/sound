@@ -6,12 +6,20 @@ use serde::Deserialize;
 
 use super::Interval;
 
-use crate::{engine::score::NotesGroup, time_freq::Time, Token};
+use crate::{
+    engine::score::NotesGroup,
+    time_freq::{Beat, Time},
+    Token,
+};
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
     pub time: Time,
     pub duration: Time,
+    #[serde(default)]
+    pub beat_time: Beat,
+    #[serde(default)]
+    pub beat_duration: Beat,
     pub interval: Interval,
     pub glide: Option<Interval>,
     pub volume: f64,
@@ -30,6 +38,7 @@ impl Note {
         harmonise: bool,
         harmoniser: [u32; 7],
         step_as_time: Time,
+        step_in_beats: Beat,
         arpegio: f64,
     ) -> Vec<Self> {
         match &self.interval {
@@ -113,11 +122,16 @@ impl Note {
                 let new_notes = degree
                     .iter()
                     .enumerate()
-                    .map(|(n, d)| Self {
-                        interval: Interval::Tempered(*d, *octave),
-                        glide: self.glide.clone(),
-                        time: self.time + (step_as_time * arpegio * n as f64),
-                        ..*self
+                    .map(|(n, d)| {
+                        let delta_time = step_as_time * arpegio * n as f64;
+                        let delta_beats = step_in_beats * arpegio * n as f64;
+                        Self {
+                            interval: Interval::Tempered(*d, *octave),
+                            glide: self.glide.clone(),
+                            time: self.time + delta_time,
+                            beat_time: self.beat_time + delta_beats,
+                            ..*self
+                        }
                     })
                     .collect::<Vec<_>>();
 

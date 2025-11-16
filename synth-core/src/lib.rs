@@ -5,6 +5,7 @@
 
 pub mod engine;
 pub mod error;
+pub mod recorder;
 pub mod stream;
 pub mod time_freq;
 

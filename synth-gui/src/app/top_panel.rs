@@ -15,6 +15,7 @@ use crate::{
     },
     layout_left, F0,
 };
+use log::{error, info};
 use synth_core::stream::stream;
 
 impl GuiApp {
@@ -148,6 +149,35 @@ impl GuiApp {
                                 self.set_tempo_bpm(tempo_bpm);
                             }
                         });
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            ui.separator();
+                            ui.horizontal(|ui| {
+                                if self.recorder.is_recording() {
+                                    ui.colored_label(
+                                        egui::Color32::LIGHT_RED,
+                                        RichText::new("● Recording")
+                                            .strong()
+                                            .color(egui::Color32::LIGHT_RED),
+                                    );
+                                    if ui.button("Stop Recording").clicked() {
+                                        if let Err(err) = self.recorder.stop() {
+                                            error!("Failed to stop recording: {err:?}");
+                                            self.record_error = Some(err.to_string());
+                                        } else {
+                                            self.record_error = None;
+                                        }
+                                    }
+                                } else {
+                                    if ui.button("Record WAV…").clicked() {
+                                        self.start_recording_dialog();
+                                    }
+                                }
+                                if let Some(err) = &self.record_error {
+                                    ui.colored_label(egui::Color32::LIGHT_RED, err);
+                                }
+                            });
+                        }
                     }
                 });
             });
@@ -171,6 +201,32 @@ impl GuiApp {
                 Reverb::new(0.5, 0.5, sample_rate),
             ),
             self.shared_delays.clone(),
+            #[cfg(not(target_arch = "wasm32"))]
+            Some(self.recorder.clone()),
+            #[cfg(target_arch = "wasm32")]
+            None,
         ))
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn start_recording_dialog(&mut self) {
+        use rfd::FileDialog;
+        if let Some(path) = FileDialog::new()
+            .set_title("Record output to WAV")
+            .add_filter("wav", &["wav"])
+            .set_file_name("recording.wav")
+            .save_file()
+        {
+            match self.recorder.start(&path, self.sample_rate as u32) {
+                Ok(_) => {
+                    self.record_error = None;
+                    info!("Recording audio to {}", path.display());
+                }
+                Err(err) => {
+                    error!("Failed to start recording: {err}");
+                    self.record_error = Some(err.to_string());
+                }
+            }
+        }
     }
 }

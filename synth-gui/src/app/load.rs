@@ -1,6 +1,6 @@
 use crate::{
     app::{GuiApp, GuiState},
-    time_freq::Tempo,
+    time_freq::{Tempo, Time},
 };
 
 impl GuiApp {
@@ -50,6 +50,7 @@ impl GuiApp {
         use crate::{Token, TokenGen};
 
         self.new_score();
+        self.score.set_tempo(Tempo::new(state.tempo_bpm), Time(0.0));
         self.replace_root_with(state.seqs);
         self.score_mut().last_token = TokenGen(
             self.score
@@ -63,7 +64,6 @@ impl GuiApp {
         self.score_mut()
             .track_root
             .for_each_sequence_mut(|s| s.not_generate_until = None);
-        self.score.set_tempo(Tempo::new(state.tempo_bpm));
         self.score.generate_notes(self.now(), &mut self.rng);
         self.update_all_volumes_from_tree(); // Apply volumes based on tree structure
                                              // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());

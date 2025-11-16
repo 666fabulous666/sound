@@ -12,6 +12,7 @@ use crate::{
         score::{Interval, NotesGroup},
         waves::generate_wave,
     },
+    recorder::Recorder,
     time_freq::{DivByFreq, Freq, Time},
     Token, REVERB_BUFFER_LEN,
 };
@@ -26,6 +27,7 @@ pub fn stream(
     note_queue: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
     delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
+    recorder: Option<Arc<Recorder>>,
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
     if config.sample_format() != cpal::SampleFormat::F32 {
@@ -39,6 +41,7 @@ pub fn stream(
     let stream = {
         let mut lp_memories: HashMap<LpMemoryKey, [f64; 5]> = HashMap::new();
         let mut last_cleanup = crate::time_freq::Time(0.0);
+        let recorder = recorder.clone();
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
             let delays = delays.load();
@@ -114,6 +117,10 @@ pub fn stream(
 
                 let left = reverb_left.process(dry_left, &delays.0);
                 let right = reverb_right.process(dry_right, &delays.1);
+
+                if let Some(rec) = recorder.as_ref() {
+                    rec.write_frame(left as f32, right as f32);
+                }
 
                 if channels_usize >= 2 {
                     frame[0] = left as f32;

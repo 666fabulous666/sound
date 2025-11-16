@@ -144,8 +144,31 @@ impl Score {
         self.tempo
     }
 
-    pub fn set_tempo(&mut self, tempo: Tempo) {
+    pub fn set_tempo(&mut self, tempo: Tempo, anchor_time: Time) {
+        let old = self.tempo;
+        if (old.beats_per_minute() - tempo.beats_per_minute()).abs() <= f64::EPSILON {
+            return;
+        }
+        self.retime_notes(old, tempo, anchor_time);
         self.tempo = tempo;
+    }
+
+    fn retime_notes(&mut self, old: Tempo, new: Tempo, anchor_time: Time) {
+        let beat_anchor = old.time_to_beats(anchor_time);
+        for notes_group in self.notes.values_mut() {
+            for note in notes_group.notes.iter_mut() {
+                let beat_offset = note.beat_time - beat_anchor;
+                note.time = anchor_time + new.beats_to_time(beat_offset);
+                note.duration = new.beats_to_time(note.beat_duration);
+            }
+        }
+        self.track_root.for_each_sequence_mut(|seq| {
+            if let Some(until) = seq.not_generate_until {
+                let beat_until = old.time_to_beats(until);
+                let beat_offset = beat_until - beat_anchor;
+                seq.not_generate_until = Some(anchor_time + new.beats_to_time(beat_offset));
+            }
+        });
     }
     /// Product of volumes from the root down to (and including) the node at `path`.
     ///
