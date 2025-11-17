@@ -1,4 +1,4 @@
-use crate::engine::score::{default_proba, probability::Probability};
+use crate::engine::score::{default_proba, probability::Probability, scheduler::PlaybackScheduler};
 use core::marker::PhantomData;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,32 @@ fn default_pan() -> f64 {
     0.5
 }
 
+fn default_or_weight() -> f64 {
+    1.0
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GroupMode {
+    And,
+    Or,
+}
+
+impl Default for GroupMode {
+    fn default() -> Self {
+        GroupMode::And
+    }
+}
+
+#[derive(Clone, Copy, Serialize, Deserialize, Default)]
+pub struct AestheticLocks {
+    #[serde(default)]
+    pub lock_volume: bool,
+    #[serde(default)]
+    pub lock_pan: bool,
+    #[serde(default)]
+    pub lock_hue: bool,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum NodeKind {
     Group {
@@ -28,6 +54,10 @@ pub enum NodeKind {
         children: Vec<TrackNode>,
         #[serde(default)]
         not_generate_until: Option<Time>,
+        #[serde(default)]
+        mode: GroupMode,
+        #[serde(default)]
+        aesthetic: AestheticLocks,
     },
     Seq(Sequence),
 }
@@ -42,6 +72,8 @@ pub struct TrackNode {
     pub pan: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
     #[serde(default = "default_hue")]
     pub hue: f64, // HSL hue 0.0..=360.0
+    #[serde(default = "default_or_weight")]
+    pub or_weight: f64,
     #[serde(flatten)]
     pub kind: NodeKind,
 }
@@ -76,12 +108,15 @@ impl TrackNode {
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
+            or_weight: 1.0,
             kind: NodeKind::Group {
                 id: gen.next(),
                 muted: false,
                 collapsed: false,
                 children: Vec::new(),
                 not_generate_until: None,
+                mode: GroupMode::And,
+                aesthetic: AestheticLocks::default(),
             },
         }
     }
@@ -94,6 +129,7 @@ impl TrackNode {
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
+            or_weight: 1.0,
             kind: NodeKind::Seq(seq),
         }
     }
@@ -261,6 +297,7 @@ impl TrackNode {
     pub fn draw_node(
         &mut self,
         notes: &mut BTreeMap<Token, NotesGroup>,
+        scheduler: &mut PlaybackScheduler,
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
         tempo: Tempo,
@@ -268,12 +305,29 @@ impl TrackNode {
     ) {
         match &mut self.kind {
             NodeKind::Seq(seq) => {
-                seq.draw_sequence_core(notes, rng, now, self.pan, self.proba, tempo, note_id_gen);
+                if !scheduler.sequence_state_mut(seq.token).is_idle(now) {
+                    return;
+                }
+                if let Some(release) = seq.draw_sequence_core(
+                    notes,
+                    rng,
+                    now,
+                    self.pan,
+                    self.proba,
+                    tempo,
+                    note_id_gen,
+                ) {
+                    if let Some(ng) = notes.get(&seq.token) {
+                        scheduler.register_sequence_snapshot(seq, ng);
+                    }
+                    scheduler.sequence_state_mut(seq.token).busy_until = release;
+                }
             }
             NodeKind::Group {
                 children,
                 muted,
                 not_generate_until,
+                mode,
                 ..
             } => {
                 if *muted {
@@ -281,11 +335,115 @@ impl TrackNode {
                 }
                 if not_generate_until.map_or(true, |until| now >= until) {
                     if rng.gen_bool(self.proba.as_f64()) {
-                        for ch in children {
-                            ch.draw_node(notes, rng, now, tempo, note_id_gen);
+                        match mode {
+                            GroupMode::And => {
+                                for ch in children {
+                                    ch.draw_node(notes, scheduler, rng, now, tempo, note_id_gen);
+                                }
+                            }
+                            GroupMode::Or => {
+                                let busy_threshold = children
+                                    .iter()
+                                    .map(|child| child_busy_until(child, scheduler))
+                                    .reduce(Time::max)
+                                    .unwrap_or(Time(0.0));
+                                if busy_threshold > now {
+                                    return;
+                                }
+                                let candidates: Vec<usize> = children
+                                    .iter()
+                                    .enumerate()
+                                    .filter(|(_, child)| child_idle(child, scheduler, now))
+                                    .map(|(idx, _)| idx)
+                                    .collect();
+                                if let Some(idx) = select_or_child(children, &candidates, rng) {
+                                    if let Some(child) = children.get_mut(idx) {
+                                        child.draw_node(
+                                            notes,
+                                            scheduler,
+                                            rng,
+                                            now,
+                                            tempo,
+                                            note_id_gen,
+                                        );
+                                        let busy_until = child_busy_until(child, scheduler);
+                                        for (child_idx, sibling) in children.iter_mut().enumerate()
+                                        {
+                                            if child_idx != idx {
+                                                force_busy_until(sibling, scheduler, busy_until);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+fn select_or_child(
+    children: &[TrackNode],
+    candidates: &[usize],
+    rng: &mut rand::rngs::ThreadRng,
+) -> Option<usize> {
+    let mut total = 0.0;
+    for idx in candidates {
+        total += children[*idx].or_weight.max(0.0);
+    }
+    if total <= f64::EPSILON {
+        return None;
+    }
+    let mut pick = rng.gen_range(0.0..total);
+    for idx in candidates {
+        let weight = children[*idx].or_weight.max(0.0);
+        if pick < weight {
+            return Some(*idx);
+        }
+        pick -= weight;
+    }
+    None
+}
+
+fn child_idle(child: &TrackNode, scheduler: &PlaybackScheduler, now: Time) -> bool {
+    match &child.kind {
+        NodeKind::Seq(seq) => scheduler
+            .sequence_state(&seq.token)
+            .map(|state| state.is_idle(now))
+            .unwrap_or(true),
+        NodeKind::Group { children, .. } => {
+            children.iter().all(|ch| child_idle(ch, scheduler, now))
+        }
+    }
+}
+
+fn child_busy_until(child: &TrackNode, scheduler: &PlaybackScheduler) -> Time {
+    match &child.kind {
+        NodeKind::Seq(seq) => scheduler
+            .sequence_state(&seq.token)
+            .map(|state| state.busy_until)
+            .unwrap_or(Time(0.0)),
+        NodeKind::Group { children, .. } => children
+            .iter()
+            .map(|ch| child_busy_until(ch, scheduler))
+            .max()
+            .unwrap_or(Time(0.0)),
+    }
+}
+
+fn force_busy_until(child: &TrackNode, scheduler: &mut PlaybackScheduler, until: Time) {
+    match &child.kind {
+        NodeKind::Seq(seq) => {
+            let state = scheduler.sequence_state_mut(seq.token);
+            if state.busy_until < until {
+                state.busy_until = until;
+            }
+        }
+        NodeKind::Group { children, .. } => {
+            for ch in children {
+                force_busy_until(ch, scheduler, until);
             }
         }
     }

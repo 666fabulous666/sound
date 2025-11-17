@@ -341,7 +341,7 @@ impl Sequence {
         proba: Probability,
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
-    ) {
+    ) -> Option<Time> {
         let base = now + GENERATE_EARLY;
         let loop_len_time = tempo.beats_to_time(self.loop_len);
         let start = loop_len_time * (base / loop_len_time).floor();
@@ -351,13 +351,20 @@ impl Sequence {
             .as_ref()
             .map_or(true, |until| now >= *until)
         {
-            if rng.gen_bool(proba.as_f64()) {
+            let generated = if rng.gen_bool(proba.as_f64()) {
                 self.draw(notes, rng, start, pan, tempo, note_id_gen);
-            }
+                true
+            } else {
+                false
+            };
             self.not_generate_until = Some(
                 start + tempo.beats_to_time(self.t_min) + loop_len_time * self.repeat as f64
                     - GENERATE_EARLY,
             );
+            if generated {
+                return Some(start + loop_len_time - GENERATE_EARLY);
+            }
         }
+        None
     }
 }

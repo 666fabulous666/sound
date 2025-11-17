@@ -13,7 +13,11 @@ use sections::{
 
 use crate::{
     app::{property_panel::navigation::navigation, GuiApp, ALL_WAVES, DRUM_WAVES},
-    engine::score::{sequence::Sequence, track_node::NodeKind, Interval, NotesGroup},
+    engine::score::{
+        sequence::Sequence,
+        track_node::{GroupMode, NodeKind},
+        Interval, NotesGroup,
+    },
     layout_left,
     shortcuts::*,
     Token,
@@ -185,6 +189,11 @@ impl GuiApp {
                                 );
                             });
                             mix::show_mix_section(ui, track_node_mut, &mut impact);
+                            let weight_param = SliderParam::new("Selection weight", 0.0..=32.0)
+                                .default(1.0)
+                                .behavior(ParameterBehavior::StructuralImmediate)
+                                .tooltip("Used when the parent group operates in OR mode");
+                            weight_param.draw(ui, &mut track_node_mut.or_weight, &mut impact);
 
                             ui.separator();
 
@@ -281,28 +290,71 @@ impl GuiApp {
                                         GuiApp::edit_vec(ui, gens, default_val, layout_left());
                                     },
                                 );
-                            } else {
-                                // Group-specific controls
-                                match &mut track_node_mut.kind {
-                                    NodeKind::Group { collapsed, .. } => {
-                                        // Collapse / expand
-                                        if ui
-                                            .button(if *collapsed {
-                                                "Uncollapse"
-                                            } else {
-                                                "Collapse"
-                                            })
-                                            .on_hover_ui(|ui| {
-                                                ui.label(RichText::new(shortcut(COLLAPSE)).weak());
-                                            })
-                                            .clicked()
-                                            || (!ui.ctx().wants_keyboard_input()
-                                                && ui.input(|i| i.key_pressed(COLLAPSE)))
-                                        {
-                                            *collapsed = !*collapsed;
+                            } else if let NodeKind::Group {
+                                collapsed,
+                                mode,
+                                children,
+                                ..
+                            } = &mut track_node_mut.kind
+                            {
+                                ui.horizontal(|ui| {
+                                    ui.label("Group behavior:");
+                                    let previous = *mode;
+                                    egui::ComboBox::from_id_salt("group_mode_combo")
+                                        .selected_text(match mode {
+                                            GroupMode::And => "Play all children",
+                                            GroupMode::Or => "Pick one child",
+                                        })
+                                        .show_ui(ui, |ui| {
+                                            ui.selectable_value(
+                                                mode,
+                                                GroupMode::And,
+                                                "Play all children",
+                                            );
+                                            ui.selectable_value(
+                                                mode,
+                                                GroupMode::Or,
+                                                "Pick one child (OR mode)",
+                                            );
+                                        });
+                                    if *mode != previous {
+                                        impact.register_behavior(
+                                            ParameterBehavior::StructuralImmediate,
+                                        );
+                                    }
+                                });
+
+                                if matches!(*mode, GroupMode::Or) {
+                                    ui.separator();
+                                    ui.label("Child weights (used in OR mode):");
+                                    for (idx, child) in children.iter_mut().enumerate() {
+                                        let label = if child.name().is_empty() {
+                                            format!("Child {}", idx + 1)
+                                        } else {
+                                            child.name().to_owned()
+                                        };
+                                        let response = ui.add(
+                                            egui::Slider::new(&mut child.or_weight, 0.0..=32.0)
+                                                .text(label),
+                                        );
+                                        if response.changed() {
+                                            impact.register_behavior(
+                                                ParameterBehavior::StructuralImmediate,
+                                            );
                                         }
                                     }
-                                    NodeKind::Seq(_) => unreachable!(),
+                                }
+
+                                if ui
+                                    .button(if *collapsed { "Uncollapse" } else { "Collapse" })
+                                    .on_hover_ui(|ui| {
+                                        ui.label(RichText::new(shortcut(COLLAPSE)).weak());
+                                    })
+                                    .clicked()
+                                    || (!ui.ctx().wants_keyboard_input()
+                                        && ui.input(|i| i.key_pressed(COLLAPSE)))
+                                {
+                                    *collapsed = !*collapsed;
                                 }
                             }
                         }

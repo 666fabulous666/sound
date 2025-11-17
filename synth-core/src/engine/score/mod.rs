@@ -16,6 +16,7 @@
 pub mod default_params;
 pub mod note;
 pub mod probability;
+pub mod scheduler;
 pub mod sequence;
 pub mod time_quantum;
 pub mod track_node;
@@ -28,7 +29,8 @@ use crate::{
         score::{
             note::Note,
             probability::Probability,
-            track_node::{NodeKind, TrackNode},
+            scheduler::PlaybackScheduler,
+            track_node::{AestheticLocks, GroupMode, NodeKind, TrackNode},
         },
         waves::WaveType,
     },
@@ -182,6 +184,7 @@ pub struct Score {
     pub tempo: Tempo,
     pub shared_notes: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
     note_id_gen: NoteIdGen,
+    scheduler: PlaybackScheduler,
 }
 impl Score {
     pub fn new() -> Self {
@@ -194,6 +197,7 @@ impl Score {
             tempo: default_tempo(),
             shared_notes: Arc::new(ArcSwap::from_pointee(BTreeMap::new())),
             note_id_gen: NoteIdGen::default(),
+            scheduler: PlaybackScheduler::default(),
         }
     }
     pub fn tempo(&self) -> Tempo {
@@ -215,7 +219,15 @@ impl Score {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
     ) {
-        node.draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
+        node.draw_node(
+            &mut self.notes,
+            &mut self.scheduler,
+            rng,
+            now,
+            self.tempo,
+            &mut self.note_id_gen,
+        );
+        self.scheduler.tick(now);
     }
 
     pub fn draw_node_at_path(
@@ -225,7 +237,14 @@ impl Score {
         now: Time,
     ) {
         if let Some(node) = self.track_root.get_mut(path) {
-            node.draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
+            node.draw_node(
+                &mut self.notes,
+                &mut self.scheduler,
+                rng,
+                now,
+                self.tempo,
+                &mut self.note_id_gen,
+            );
         }
     }
 
@@ -442,12 +461,15 @@ impl Score {
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
+            or_weight: 1.0,
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
                 muted: false,
                 collapsed: false,
                 children: vec![node],
                 not_generate_until: None,
+                mode: GroupMode::And,
+                aesthetic: AestheticLocks::default(),
             },
         };
 
@@ -638,8 +660,14 @@ impl Score {
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
-        self.track_root
-            .draw_node(&mut self.notes, rng, now, self.tempo, &mut self.note_id_gen);
+        self.track_root.draw_node(
+            &mut self.notes,
+            &mut self.scheduler,
+            rng,
+            now,
+            self.tempo,
+            &mut self.note_id_gen,
+        );
     }
 }
 

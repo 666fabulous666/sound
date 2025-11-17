@@ -11,7 +11,7 @@ use crate::{
             default_params::{default_delays, default_tempo},
             probability::Probability,
             sequence::Sequence,
-            track_node::{NodeKind, TrackNode},
+            track_node::{AestheticLocks, GroupMode, NodeKind, TrackNode},
             NotesGroup, Score,
         },
         waves::WaveType,
@@ -112,12 +112,15 @@ where
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
+            or_weight: 1.0,
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
                 muted: false,
                 collapsed: false,
                 children,
                 not_generate_until: None,
+                mode: GroupMode::And,
+                aesthetic: AestheticLocks::default(),
             },
         },
         SequencesCompat::Seqs(seqs) => TrackNode {
@@ -126,12 +129,15 @@ where
             volume: 1.0,
             pan: 0.5,
             hue: 0.0,
+            or_weight: 1.0,
             kind: NodeKind::Group {
                 id: Token(0),
                 muted: false,
                 collapsed: false,
                 children: seqs.into_iter().map(TrackNode::from_sequence).collect(),
                 not_generate_until: None,
+                mode: GroupMode::And,
+                aesthetic: AestheticLocks::default(),
             },
         },
     })
@@ -400,12 +406,15 @@ impl GuiApp {
                 volume: 1.0,
                 pan: 0.5,
                 hue: 0.0,
+                or_weight: 1.0,
                 kind: NodeKind::Group {
                     id: self.score.last_token.next(),
                     muted: false,
                     collapsed: false,
                     children: vec![node],
                     not_generate_until: None,
+                    mode: GroupMode::And,
+                    aesthetic: AestheticLocks::default(),
                 },
             },
         };
