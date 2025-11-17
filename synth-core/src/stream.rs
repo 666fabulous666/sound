@@ -62,8 +62,9 @@ pub fn stream(
                         wave_type,
                         chorus,
                         attack_decay,
-                        lp_attack_decay,
                         cutoff_multiplier,
+                        lp_relaxation,
+                        lp_lfo,
                         pow_fact,
                         pan,
                         volume,
@@ -89,8 +90,9 @@ pub fn stream(
                                     t,
                                     note.duration,
                                     *attack_decay,
-                                    *lp_attack_decay,
                                     *cutoff_multiplier,
+                                    *lp_relaxation,
+                                    *lp_lfo,
                                     *bend,
                                     *vibrato,
                                     chorus,
@@ -99,6 +101,7 @@ pub fn stream(
                                     *lp_order,
                                     &mut memory.state,
                                     sample_rate,
+                                    now,
                                 );
                             dry_left += (1.0 - pan) * dry;
                             dry_right += pan * dry;

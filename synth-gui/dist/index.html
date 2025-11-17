@@ -7,8 +7,8 @@
     <title>synth (web)</title>
     
 <script type="module">
-import init, * as bindings from '/synth-gui-8b2cf64f60466f2d.js';
-const wasm = await init({ module_or_path: '/synth-gui-8b2cf64f60466f2d_bg.wasm' });
+import init, * as bindings from '/synth-gui-82013f01670bf490.js';
+const wasm = await init({ module_or_path: '/synth-gui-82013f01670bf490_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -41,7 +41,7 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
         touch-action: none;
       }
     </style>
-  <link rel="modulepreload" href="/synth-gui-8b2cf64f60466f2d.js" crossorigin="anonymous" integrity="sha384-WZWT7y4Jwl3eC29qpi+JtnMRqxZznYFGw3XVb9OSO1VDMc2e1SgGmoU5Sq6sizcb"><link rel="preload" href="/synth-gui-8b2cf64f60466f2d_bg.wasm" crossorigin="anonymous" integrity="sha384-ZWr92ZJZJ5GhgOdvDaq+5cLR7zmVriM5H8cqt3C6mZc2YSSzv4oYpBE6deaTGm75" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/synth-gui-82013f01670bf490.js" crossorigin="anonymous" integrity="sha384-8hlqMva88IlcH8z+GO1cEjZO3WimdY4jLXJKh4Dgxoz4pDUOXDaK1vTpaCosfJ+7"><link rel="preload" href="/synth-gui-82013f01670bf490_bg.wasm" crossorigin="anonymous" integrity="sha384-Cm9QXMsTYpIeCBfUaLa16u3Xs+oNa4NDxyW/A/5qdYysGy4PhrJQ385jjq78klLV" as="fetch" type="application/wasm"></head>
   <body>
     <canvas id="the_canvas_id"></canvas>
   </body>

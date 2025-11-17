@@ -7,7 +7,8 @@ mod sections;
 use egui::{RichText, ScrollArea, TextEdit};
 use helpers::{ParameterBehavior, SliderParam};
 use sections::{
-    accents, bend, chorus, envelope, harmony, mix, power, rhythm as rhythm_section, vibrato,
+    accents, bend, chorus, envelope, harmony, lowpass, mix, power, rhythm as rhythm_section,
+    vibrato,
 };
 
 use crate::{
@@ -217,6 +218,13 @@ impl GuiApp {
 
                                 let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
                                 envelope::show_envelope_section(
+                                    ui,
+                                    seq_mut,
+                                    &mut self.score.notes,
+                                    &mut impact,
+                                    is_drum,
+                                );
+                                lowpass::show_lowpass_section(
                                     ui,
                                     seq_mut,
                                     &mut self.score.notes,

@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    engine::score::ChorusParams,
+    engine::score::{ChorusParams, LowpassLfo, LowpassRelaxation},
     sign_f,
     time_freq::{Freq, Time},
 };
@@ -47,8 +47,9 @@ pub fn generate_wave(
     time: Time,
     duration: Time,
     attack_decay: (f64, f64),
-    lp_attack_decay: (f64, f64),
     cutoff_multiplier: f64,
+    lp_relaxation: LowpassRelaxation,
+    lp_lfo: LowpassLfo,
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
@@ -57,9 +58,9 @@ pub fn generate_wave(
     lp_order: u32,
     memory: &mut [f64; 5],
     sample_rate: Freq,
+    global_time: Time,
 ) -> f64 {
     let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
-    let lp_envelope = envelope(lp_attack_decay.0, lp_attack_decay.1, duration)(time);
     let time = if let Some(fg) = freq_glide {
         glide_mid(freq, fg, duration, time)
     } else {
@@ -68,6 +69,14 @@ pub fn generate_wave(
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
     let p = pow_fact.0 * (pow_fact.1 * time).exp2();
     let disto = |x: f64| x.powf(p);
+    let dynamic_multiplier = compute_cutoff_multiplier(
+        cutoff_multiplier,
+        &lp_relaxation,
+        &lp_lfo,
+        time,
+        global_time,
+        duration,
+    );
     match wave_type {
         WaveType::HiHat => {
             let mut signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
@@ -76,7 +85,7 @@ pub fn generate_wave(
                     signal = lowpass_step_cutoff(
                         signal,
                         &mut memory[i],
-                        freq * cutoff_multiplier,
+                        freq * dynamic_multiplier,
                         sample_rate,
                     );
                 }
@@ -90,7 +99,7 @@ pub fn generate_wave(
                     signal = lowpass_step_cutoff(
                         signal,
                         &mut memory[i],
-                        freq * cutoff_multiplier,
+                        freq * dynamic_multiplier,
                         sample_rate,
                     );
                 }
@@ -104,7 +113,7 @@ pub fn generate_wave(
                     signal = lowpass_step_cutoff(
                         signal,
                         &mut memory[i],
-                        freq * cutoff_multiplier,
+                        freq * dynamic_multiplier,
                         sample_rate,
                     );
                 }
@@ -118,7 +127,7 @@ pub fn generate_wave(
                     signal = lowpass_step_cutoff(
                         signal,
                         &mut memory[i],
-                        freq * cutoff_multiplier,
+                        freq * dynamic_multiplier,
                         sample_rate,
                     );
                 }
@@ -132,7 +141,7 @@ pub fn generate_wave(
                     signal = lowpass_step_cutoff(
                         signal,
                         &mut memory[i],
-                        freq * cutoff_multiplier,
+                        freq * dynamic_multiplier,
                         sample_rate,
                     );
                 }
@@ -185,17 +194,38 @@ pub fn generate_wave(
     let mut tmp = vol_envelope * sum_of_waves;
     if lowpass_enabled {
         for i in 0..lp_order.min(5) as usize {
-            tmp = lowpass_step_cutoff(
-                tmp,
-                &mut memory[i],
-                freq * cutoff_multiplier * (0.1 + 0.9 * lp_envelope),
-                // freq,
-                sample_rate,
-            );
+            tmp = lowpass_step_cutoff(tmp, &mut memory[i], freq * dynamic_multiplier, sample_rate);
         }
     }
     tmp
 }
+
+fn compute_cutoff_multiplier(
+    base: f64,
+    relaxation: &LowpassRelaxation,
+    lfo: &LowpassLfo,
+    note_time: Time,
+    global_time: Time,
+    duration: Time,
+) -> f64 {
+    let normalized = if duration.as_secs() <= 0.0 {
+        0.0
+    } else {
+        (note_time / duration).clamp(0.0, 1.0)
+    };
+    let relax_factor = relaxation.factor(normalized);
+    let lfo_time = if lfo.sync_with_clock {
+        global_time
+    } else {
+        note_time
+    };
+    let mut multiplier = base * relax_factor + lfo.contribution(lfo_time);
+    if !multiplier.is_finite() {
+        multiplier = 0.0;
+    }
+    multiplier.max(0.0)
+}
+
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
     move |time: Time| {
         let time_fraction = time / note_duration;

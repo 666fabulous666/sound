@@ -11,8 +11,8 @@ use crate::engine::score::default_params;
 use crate::engine::score::note::Note;
 use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
-use crate::engine::score::NotesGroup;
 use crate::engine::score::RdRythm;
+use crate::engine::score::{LowpassLfo, LowpassRelaxation, NotesGroup};
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
 use crate::engine::waves::WaveType;
@@ -55,6 +55,10 @@ pub struct Sequence {
     pub lp_attack_decay: (f64, f64),
     #[serde(default = "default_cutoff_multiplier")]
     pub cutoff_multiplier: f64,
+    #[serde(default = "default_lp_relaxation")]
+    pub lp_relaxation: LowpassRelaxation,
+    #[serde(default = "default_lp_lfo")]
+    pub lp_lfo: LowpassLfo,
     #[serde(default = "default_lowpass_enabled")]
     pub lowpass_enabled: bool,
     #[serde(default = "default_lp_order")]
@@ -105,6 +109,8 @@ impl Sequence {
             mute: default_mute(),
             attack_decay: default_attack_decay(),
             lp_attack_decay: default_attack_decay(),
+            lp_relaxation: default_lp_relaxation(),
+            lp_lfo: default_lp_lfo(),
             token,
             not_generate_until: None,
             bend: default_bend(),
@@ -295,6 +301,8 @@ impl Sequence {
             ng.pow_fact = self.pow_fact;
             ng.tolerance = self.tolerance;
             ng.cutoff_multiplier = self.cutoff_multiplier;
+            ng.lp_relaxation = self.lp_relaxation;
+            ng.lp_lfo = self.lp_lfo;
             ng.lowpass_enabled = self.lowpass_enabled;
             ng.lp_order = self.lp_order;
         } else {
@@ -313,6 +321,8 @@ impl Sequence {
                     volume: 1.0, // Initial volume - will be updated by volume application mechanism
                     tolerance: self.tolerance,
                     cutoff_multiplier: self.cutoff_multiplier,
+                    lp_relaxation: self.lp_relaxation,
+                    lp_lfo: self.lp_lfo,
                     lowpass_enabled: self.lowpass_enabled,
                     lp_order: self.lp_order,
                 },

@@ -91,8 +91,9 @@ fn precompute_and_play(
                             t,
                             note.duration,
                             ng.attack_decay,
-                            ng.lp_attack_decay,
                             ng.cutoff_multiplier,
+                            ng.lp_relaxation,
+                            ng.lp_lfo,
                             ng.bend,
                             ng.vibrato,
                             &ng.chorus,
@@ -101,6 +102,7 @@ fn precompute_and_play(
                             ng.lp_order,
                             &mut memory,
                             synth_core::time_freq::Freq(sample_rate),
+                            now,
                         );
 
                     left += (1.0 - ng.pan) * dry;

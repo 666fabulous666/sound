@@ -3,6 +3,7 @@ pub mod bend;
 pub mod chorus;
 pub mod envelope;
 pub mod harmony;
+pub mod lowpass;
 pub mod mix;
 pub mod power;
 pub mod rhythm;

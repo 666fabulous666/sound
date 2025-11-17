@@ -1,5 +1,6 @@
 use crate::engine::score::{
-    probability::Probability, time_quantum::TimeQuantum, ChorusParams, DetRythm, RdRythm,
+    probability::Probability, time_quantum::TimeQuantum, ChorusParams, DetRythm, LowpassLfo,
+    LowpassRelaxation, RdRythm,
 };
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
@@ -17,6 +18,12 @@ pub fn default_attack_decay() -> (f64, f64) {
 }
 pub fn default_cutoff_multiplier() -> f64 {
     4.0
+}
+pub fn default_lp_relaxation() -> LowpassRelaxation {
+    LowpassRelaxation::default()
+}
+pub fn default_lp_lfo() -> LowpassLfo {
+    LowpassLfo::default()
 }
 
 pub fn default_drum_attack_decay() -> (f64, f64) {

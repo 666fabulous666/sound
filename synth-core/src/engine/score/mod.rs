@@ -55,6 +55,58 @@ pub enum Rythm {
     Det(DetRythm),
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct LowpassRelaxation {
+    pub start: f64,
+    pub end: f64,
+    pub rate: f64,
+}
+
+impl Default for LowpassRelaxation {
+    fn default() -> Self {
+        Self {
+            start: 1.0,
+            end: 1.0,
+            rate: 1.0,
+        }
+    }
+}
+
+impl LowpassRelaxation {
+    pub fn factor(&self, normalized_time: f64) -> f64 {
+        let alpha = normalized_time.clamp(0.0, 1.0);
+        let exp = (-self.rate.max(0.0) * alpha).exp();
+        self.end + (self.start - self.end) * exp
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct LowpassLfo {
+    pub magnitude: f64,
+    pub frequency: Freq,
+    pub sync_with_clock: bool,
+}
+
+impl Default for LowpassLfo {
+    fn default() -> Self {
+        Self {
+            magnitude: 0.0,
+            frequency: Freq(0.5),
+            sync_with_clock: false,
+        }
+    }
+}
+
+impl LowpassLfo {
+    pub fn contribution(&self, reference_time: Time) -> f64 {
+        if self.magnitude == 0.0 {
+            0.0
+        } else {
+            self.magnitude * (self.frequency.phase(reference_time)).sin()
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChorusParams {
     pub voices: usize,
@@ -107,6 +159,8 @@ pub struct NotesGroup {
     pub attack_decay: (f64, f64),
     pub lp_attack_decay: (f64, f64),
     pub cutoff_multiplier: f64,
+    pub lp_relaxation: LowpassRelaxation,
+    pub lp_lfo: LowpassLfo,
     pub lowpass_enabled: bool,
     pub lp_order: u32,
     pub bend: (f64, f64),
