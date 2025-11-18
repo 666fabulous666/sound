@@ -4,6 +4,7 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::ser::Serializer;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
@@ -12,7 +13,7 @@ use crate::engine::score::note::Note;
 use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
-use crate::engine::score::{LowpassLfo, LowpassRelaxation, NotesGroup};
+use crate::engine::score::{node_params::ResolvedTrackParams, LowpassLfo, LowpassRelaxation, NotesGroup};
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
 use crate::engine::waves::WaveType;
@@ -32,7 +33,6 @@ use default_params::*;
 pub struct Sequence {
     pub t_min: Beat,
     pub t_max: Beat,
-    pub chorus: ChorusParams,
     pub inclusions: Rythm,
     pub exclusions: Rythm,
     pub interval: Interval,
@@ -47,28 +47,6 @@ pub struct Sequence {
     pub glide: bool,
     #[serde(default = "default_mute")]
     pub mute: bool,
-    #[serde(default = "default_normalization")]
-    pub normalization: f64,
-    #[serde(default = "default_attack_decay")]
-    pub attack_decay: (f64, f64),
-    #[serde(default = "default_attack_decay")]
-    pub lp_attack_decay: (f64, f64),
-    #[serde(default = "default_cutoff_multiplier")]
-    pub cutoff_multiplier: f64,
-    #[serde(default = "default_lp_relaxation")]
-    pub lp_relaxation: LowpassRelaxation,
-    #[serde(default = "default_lp_lfo")]
-    pub lp_lfo: LowpassLfo,
-    #[serde(default = "default_lowpass_enabled")]
-    pub lowpass_enabled: bool,
-    #[serde(default = "default_lp_order")]
-    pub lp_order: u32,
-    #[serde(default = "default_bend")]
-    pub bend: (f64, f64),
-    #[serde(default = "default_vibrato")]
-    pub vibrato: (f64, Freq),
-    #[serde(default = "default_pow_fact")]
-    pub pow_fact: (f64, Freq),
     #[serde(default = "default_loop_len")]
     pub loop_len: Beat,
     #[serde(default = "default_tail_multiplier")]
@@ -93,6 +71,8 @@ pub struct Sequence {
     pub reverse_prob: f64,
     #[serde(default = "default_shuffle_prob")]
     pub shuffle_prob: f64,
+    #[serde(default, flatten)]
+    legacy_params: LegacySequenceParams,
     pub not_generate_until: Option<Time>, // TODO: should be accessed through a method
     pub token: Token,
 }
@@ -109,34 +89,23 @@ impl Sequence {
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
             mute: default_mute(),
-            attack_decay: default_attack_decay(),
-            lp_attack_decay: default_attack_decay(),
-            lp_relaxation: default_lp_relaxation(),
-            lp_lfo: default_lp_lfo(),
             token,
             not_generate_until: None,
-            bend: default_bend(),
-            vibrato: default_vibrato(),
-            chorus: ChorusParams::default(),
-            pow_fact: default_pow_fact(),
             loop_len: default_loop_len(),
             tail_multiplier: default_tail_multiplier(),
             tolerance: default_tolerance(),
             repeat: default_repeat(),
             accents: default_accents(),
-            normalization: default_normalization(),
             shuffle: default_shuffle(),
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
             glide: default_glide(),
-            cutoff_multiplier: default_cutoff_multiplier(),
             chord: default_tension(),
             random_chord: default_random_chord(),
             arpegio: default_arpegio(),
             reverse_prob: default_reverse_prob(),
             shuffle_prob: default_shuffle_prob(),
-            lowpass_enabled: default_lowpass_enabled(),
-            lp_order: default_lp_order(),
+            legacy_params: LegacySequenceParams::default(),
         }
     }
     pub fn draw(
@@ -147,6 +116,7 @@ impl Sequence {
         pan: f64,
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
+        params: &ResolvedTrackParams,
     ) {
         // Volume is always 1.0 for note generation - actual volume is applied separately
         let volume = 1.0;
@@ -235,7 +205,7 @@ impl Sequence {
                 beat_duration: d,
                 interval: self.interval.clone(),
                 glide: None,
-                volume: volume / self.normalization
+                volume: volume / params.envelope.normalization
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
                     / (self.accents.0
                         + self
@@ -295,39 +265,39 @@ impl Sequence {
             // Volume is NOT set here - it will be computed separately based on tree structure.
             ng.notes.extend(tmp);
             ng.pan = pan;
-            ng.bend = self.bend;
-            ng.vibrato = self.vibrato;
+            ng.bend = (params.bend.magnitude, params.bend.speed);
+            ng.vibrato = (params.vibrato.magnitude, params.vibrato.frequency);
             ng.wave_type = self.wave_type.clone();
-            ng.chorus = self.chorus.clone();
-            ng.attack_decay = self.attack_decay;
-            ng.lp_attack_decay = self.lp_attack_decay;
-            ng.pow_fact = self.pow_fact;
+            ng.chorus = params.chorus.clone();
+            ng.attack_decay = (params.envelope.attack, params.envelope.decay);
+            ng.lp_attack_decay = params.lowpass.envelope;
+            ng.pow_fact = (params.power.initial, params.power.evolution);
             ng.tolerance = self.tolerance;
-            ng.cutoff_multiplier = self.cutoff_multiplier;
-            ng.lp_relaxation = self.lp_relaxation;
-            ng.lp_lfo = self.lp_lfo;
-            ng.lowpass_enabled = self.lowpass_enabled;
-            ng.lp_order = self.lp_order;
+            ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
+            ng.lp_relaxation = params.lowpass.relaxation;
+            ng.lp_lfo = params.lowpass.lfo;
+            ng.lowpass_enabled = params.lowpass.enabled;
+            ng.lp_order = params.lowpass.order;
         } else {
             notes_buffer.insert(
                 self.token,
                 NotesGroup {
-                    bend: self.bend,
-                    vibrato: self.vibrato,
+                    bend: (params.bend.magnitude, params.bend.speed),
+                    vibrato: (params.vibrato.magnitude, params.vibrato.frequency),
                     notes: tmp,
                     wave_type: self.wave_type.clone(),
-                    chorus: self.chorus.clone(),
-                    attack_decay: self.attack_decay,
-                    lp_attack_decay: self.lp_attack_decay,
-                    pow_fact: self.pow_fact,
+                    chorus: params.chorus.clone(),
+                    attack_decay: (params.envelope.attack, params.envelope.decay),
+                    lp_attack_decay: params.lowpass.envelope,
+                    pow_fact: (params.power.initial, params.power.evolution),
                     pan,
                     volume: 1.0, // Initial volume - will be updated by volume application mechanism
                     tolerance: self.tolerance,
-                    cutoff_multiplier: self.cutoff_multiplier,
-                    lp_relaxation: self.lp_relaxation,
-                    lp_lfo: self.lp_lfo,
-                    lowpass_enabled: self.lowpass_enabled,
-                    lp_order: self.lp_order,
+                    cutoff_multiplier: params.lowpass.cutoff_multiplier,
+                    lp_relaxation: params.lowpass.relaxation,
+                    lp_lfo: params.lowpass.lfo,
+                    lowpass_enabled: params.lowpass.enabled,
+                    lp_order: params.lowpass.order,
                 },
             );
         }
@@ -344,6 +314,7 @@ impl Sequence {
         proba: Probability,
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
+        params: &ResolvedTrackParams,
     ) -> Option<Time> {
         let base = now + GENERATE_EARLY;
         let loop_len_time = tempo.beats_to_time(self.loop_len);
@@ -355,7 +326,7 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             let generated = if rng.gen_bool(proba.as_f64()) {
-                self.draw(notes, rng, start, pan, tempo, note_id_gen);
+                self.draw(notes, rng, start, pan, tempo, note_id_gen, params);
                 true
             } else {
                 false
@@ -369,5 +340,48 @@ impl Sequence {
             }
         }
         None
+    }
+
+    pub(crate) fn take_legacy_params(&mut self) -> LegacySequenceParams {
+        std::mem::take(&mut self.legacy_params)
+    }
+}
+
+#[derive(Deserialize, Clone, Default, PartialEq)]
+pub(crate) struct LegacySequenceParams {
+    #[serde(default)]
+    pub bend: Option<(f64, f64)>,
+    #[serde(default)]
+    pub vibrato: Option<(f64, Freq)>,
+    #[serde(default)]
+    pub chorus: Option<ChorusParams>,
+    #[serde(default)]
+    pub attack_decay: Option<(f64, f64)>,
+    #[serde(default)]
+    pub lp_attack_decay: Option<(f64, f64)>,
+    #[serde(default)]
+    pub cutoff_multiplier: Option<f64>,
+    #[serde(default)]
+    pub lp_relaxation: Option<LowpassRelaxation>,
+    #[serde(default)]
+    pub lp_lfo: Option<LowpassLfo>,
+    #[serde(default)]
+    pub lowpass_enabled: Option<bool>,
+    #[serde(default)]
+    pub lp_order: Option<u32>,
+    #[serde(default)]
+    pub pow_fact: Option<(f64, Freq)>,
+    #[serde(default)]
+    pub normalization: Option<f64>,
+}
+
+impl Serialize for LegacySequenceParams {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeMap;
+        let map = serializer.serialize_map(Some(0))?;
+        map.end()
     }
 }

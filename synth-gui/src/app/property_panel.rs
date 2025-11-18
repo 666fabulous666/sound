@@ -14,9 +14,10 @@ use sections::{
 use crate::{
     app::{property_panel::navigation::navigation, GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::score::{
+        node_params::ParamResolution,
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
-        Interval, NotesGroup,
+        ChorusParams, Interval, NotesGroup,
     },
     layout_left,
     shortcuts::*,
@@ -67,6 +68,103 @@ impl Action {
 pub(super) struct ParameterImpact {
     needs_regeneration: bool,
     needs_mix_update: bool,
+}
+
+pub struct OverrideBinding<'a, T: Clone> {
+    resolved: T,
+    slot: &'a mut Option<T>,
+    locked_by_parent: bool,
+    active_here: bool,
+}
+
+fn group_override_section<T: Clone>(
+    ui: &mut egui::Ui,
+    title: &str,
+    tooltip: &str,
+    binding: &mut OverrideBinding<T>,
+    impact: &mut ParameterImpact,
+    render_controls: impl Fn(&mut egui::Ui, &mut T, &mut ParameterImpact, bool) -> bool,
+) -> bool {
+    let mut changed = false;
+    ui.collapsing(title, |ui| {
+        let mut active = binding.is_active_here();
+        let response = ui
+            .add_enabled_ui(!binding.is_locked(), |ui| {
+                ui.checkbox(&mut active, "Override for children")
+            })
+            .inner;
+        let response = response.on_hover_text(tooltip);
+        if response.changed() {
+            changed |= binding.set_override(active);
+        }
+
+        if binding.is_locked() || !binding.is_active_here() {
+            let mut preview = binding.resolved().clone();
+            ui.add_enabled_ui(false, |ui| {
+                render_controls(ui, &mut preview, impact, false);
+            });
+        } else if let Some(value) = binding.value_mut() {
+            changed |= render_controls(ui, value, impact, true);
+        }
+    });
+    changed
+}
+
+impl<'a, T: Clone> OverrideBinding<'a, T> {
+    pub fn new(
+        resolution: ParamResolution<T>,
+        slot: &'a mut Option<T>,
+        depth: usize,
+    ) -> Self {
+        let locked = resolution.locked_for_depth(depth);
+        let active_here = resolution.source_depth == Some(depth);
+        let resolved_value = resolution.value;
+        Self {
+            resolved: resolved_value,
+            slot,
+            locked_by_parent: locked,
+            active_here,
+        }
+    }
+
+    pub fn is_locked(&self) -> bool {
+        self.locked_by_parent
+    }
+
+    pub fn is_active_here(&self) -> bool {
+        self.active_here
+    }
+
+    pub fn resolved(&self) -> &T {
+        &self.resolved
+    }
+
+    pub fn value_mut(&mut self) -> Option<&mut T> {
+        if self.locked_by_parent {
+            return None;
+        }
+        if self.slot.is_none() {
+            *self.slot = Some(self.resolved.clone());
+        }
+        self.active_here = true;
+        self.slot.as_mut()
+    }
+
+    pub fn set_override(&mut self, enabled: bool) -> bool {
+        if enabled == self.active_here || self.locked_by_parent {
+            return false;
+        }
+        if enabled {
+            if self.slot.is_none() {
+                *self.slot = Some(self.resolved.clone());
+            }
+            self.active_here = true;
+        } else {
+            *self.slot = None;
+            self.active_here = false;
+        }
+        true
+    }
 }
 
 impl ParameterImpact {
@@ -129,6 +227,14 @@ impl GuiApp {
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
                     if let Some(sel) = self.selected.clone() {
+                        let depth = sel.len();
+                        let bend_resolution = self.score.track_root.resolve_bend(&sel);
+                        let vibrato_resolution = self.score.track_root.resolve_vibrato(&sel);
+                        let chorus_resolution = self.score.track_root.resolve_chorus(&sel);
+                        let envelope_resolution = self.score.track_root.resolve_envelope(&sel);
+                        let lowpass_resolution = self.score.track_root.resolve_lowpass(&sel);
+                        let power_resolution = self.score.track_root.resolve_power(&sel);
+                        let mut needs_override_refresh = false;
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
 
@@ -198,9 +304,9 @@ impl GuiApp {
                             ui.separator();
 
                             // === TYPE-SPECIFIC SECTION ===
-                            if let Some(seq_mut) = track_node_mut.as_seq_mut() {
-                                // Sequence-specific controls
-
+                            if let (NodeKind::Seq(seq_mut), overrides) =
+                                (&mut track_node_mut.kind, &mut track_node_mut.overrides)
+                            {
                                 ui.separator();
                                 ui.horizontal(|ui| {
                                     ui.label("Wave:");
@@ -226,46 +332,78 @@ impl GuiApp {
                                 });
 
                                 let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
-                                envelope::show_envelope_section(
+                                let mut overrides_dirty = false;
+
+                                let mut envelope_binding = OverrideBinding::new(
+                                    envelope_resolution.clone(),
+                                    &mut overrides.envelope,
+                                    depth,
+                                );
+                                overrides_dirty |= envelope::show_envelope_section(
                                     ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
+                                    &mut envelope_binding,
                                     &mut impact,
                                     is_drum,
                                 );
-                                lowpass::show_lowpass_section(
+
+                                let mut lowpass_binding = OverrideBinding::new(
+                                    lowpass_resolution.clone(),
+                                    &mut overrides.lowpass,
+                                    depth,
+                                );
+                                overrides_dirty |= lowpass::show_lowpass_section(
                                     ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
+                                    &mut lowpass_binding,
                                     &mut impact,
                                     is_drum,
                                 );
-                                bend::show_bend_section(
+
+                                let mut bend_binding = OverrideBinding::new(
+                                    bend_resolution.clone(),
+                                    &mut overrides.bend,
+                                    depth,
+                                );
+                                overrides_dirty |= bend::show_bend_section(
                                     ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
+                                    &mut bend_binding,
                                     &mut impact,
                                 );
-                                vibrato::show_vibrato_section(
+
+                                let mut vibrato_binding = OverrideBinding::new(
+                                    vibrato_resolution.clone(),
+                                    &mut overrides.vibrato,
+                                    depth,
+                                );
+                                overrides_dirty |= vibrato::show_vibrato_section(
                                     ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
+                                    &mut vibrato_binding,
                                     &mut impact,
                                 );
+
                                 if !DRUM_WAVES.contains(&seq_mut.wave_type) {
-                                    chorus::show_chorus_section(
+                                    let mut chorus_binding = OverrideBinding::new(
+                                        chorus_resolution.clone(),
+                                        &mut overrides.chorus,
+                                        depth,
+                                    );
+                                    overrides_dirty |= chorus::show_chorus_section(
                                         ui,
-                                        seq_mut,
-                                        &mut self.score.notes,
+                                        &mut chorus_binding,
                                         &mut impact,
                                     );
                                 }
-                                power::show_power_section(
+
+                                let mut power_binding = OverrideBinding::new(
+                                    power_resolution.clone(),
+                                    &mut overrides.power,
+                                    depth,
+                                );
+                                overrides_dirty |= power::show_power_section(
                                     ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
+                                    &mut power_binding,
                                     &mut impact,
                                 );
+
                                 let edit_vec_generators =
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
                                         GuiApp::edit_vec(ui, gens, default_val, layout_left());
@@ -290,12 +428,19 @@ impl GuiApp {
                                         GuiApp::edit_vec(ui, gens, default_val, layout_left());
                                     },
                                 );
-                            } else if let NodeKind::Group {
-                                collapsed,
-                                mode,
-                                children,
-                                ..
-                            } = &mut track_node_mut.kind
+
+                                if overrides_dirty {
+                                    needs_override_refresh = true;
+                                }
+                            } else if let (
+                                NodeKind::Group {
+                                    collapsed,
+                                    mode,
+                                    children,
+                                    ..
+                                },
+                                overrides,
+                            ) = (&mut track_node_mut.kind, &mut track_node_mut.overrides)
                             {
                                 ui.horizontal(|ui| {
                                     ui.label("Group behavior:");
@@ -356,7 +501,128 @@ impl GuiApp {
                                 {
                                     *collapsed = !*collapsed;
                                 }
+
+                                ui.separator();
+                                ui.heading("Child overrides");
+                                let mut group_overrides_dirty = false;
+
+                                let mut envelope_binding = OverrideBinding::new(
+                                    envelope_resolution.clone(),
+                                    &mut overrides.envelope,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Envelope",
+                                    "Force envelope parameters on descendants",
+                                    &mut envelope_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        envelope::draw_envelope_controls(
+                                            ui,
+                                            value,
+                                            impact,
+                                            false,
+                                            editable,
+                                        )
+                                    },
+                                );
+
+                                let mut lowpass_binding = OverrideBinding::new(
+                                    lowpass_resolution.clone(),
+                                    &mut overrides.lowpass,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Lowpass",
+                                    "Apply lowpass filter settings to all children",
+                                    &mut lowpass_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        lowpass::draw_lowpass_controls(ui, value, impact, editable)
+                                    },
+                                );
+
+                                let mut bend_binding = OverrideBinding::new(
+                                    bend_resolution.clone(),
+                                    &mut overrides.bend,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Bend",
+                                    "Override pitch bend for descendants",
+                                    &mut bend_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        let changed = bend::draw_bend_controls(ui, value, impact);
+                                        editable && changed
+                                    },
+                                );
+
+                                let mut vibrato_binding = OverrideBinding::new(
+                                    vibrato_resolution.clone(),
+                                    &mut overrides.vibrato,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Vibrato",
+                                    "Share vibrato settings with children",
+                                    &mut vibrato_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        vibrato::draw_vibrato_controls(ui, value, impact, editable)
+                                    },
+                                );
+
+                                let mut chorus_binding = OverrideBinding::new(
+                                    chorus_resolution.clone(),
+                                    &mut overrides.chorus,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Chorus",
+                                    "Override chorus detune for children",
+                                    &mut chorus_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        chorus::draw_chorus_controls(
+                                            ui,
+                                            value,
+                                            impact,
+                                            &ChorusParams::default(),
+                                            editable,
+                                        )
+                                    },
+                                );
+
+                                let mut power_binding = OverrideBinding::new(
+                                    power_resolution.clone(),
+                                    &mut overrides.power,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Power factor",
+                                    "Drive power-factor distortion for child sequences",
+                                    &mut power_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        power::draw_power_controls(ui, value, impact, editable)
+                                    },
+                                );
+
+                                if group_overrides_dirty {
+                                    needs_override_refresh = true;
+                                }
                             }
+                        }
+
+                        if needs_override_refresh {
+                            self.score.refresh_notes_for_path(&sel);
                         }
                     } else {
                         ui.label("Click a block to edit");

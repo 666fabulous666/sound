@@ -19,6 +19,7 @@ pub mod probability;
 pub mod scheduler;
 pub mod sequence;
 pub mod time_quantum;
+pub mod node_params;
 pub mod track_node;
 
 use std::collections::BTreeMap;
@@ -226,6 +227,8 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
+            node_params::ResolvedTrackParams::default(),
+            0,
         );
         self.scheduler.tick(now);
     }
@@ -236,6 +239,12 @@ impl Score {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
     ) {
+        let inherited = if path.is_empty() {
+            node_params::ResolvedTrackParams::default()
+        } else {
+            self.track_root
+                .resolved_params_for_path(&path[..path.len() - 1])
+        };
         if let Some(node) = self.track_root.get_mut(path) {
             node.draw_node(
                 &mut self.notes,
@@ -244,6 +253,8 @@ impl Score {
                 now,
                 self.tempo,
                 &mut self.note_id_gen,
+                inherited,
+                path.len(),
             );
         }
     }
@@ -462,6 +473,7 @@ impl Score {
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
+             overrides: node_params::NodeOverrides::default(),
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
                 muted: false,
@@ -659,6 +671,24 @@ impl Score {
             .for_each(|ng| ng.notes.retain(|n| n.time + NOTE_LINGER_TIME >= now));
     }
 
+    pub fn refresh_notes_for_path(&mut self, path: &[usize]) {
+        let inherited = if path.is_empty() {
+            node_params::ResolvedTrackParams::default()
+        } else {
+            self.track_root
+                .resolved_params_for_path(&path[..path.len() - 1])
+        };
+        if let Some(node) = self.track_root.get(path) {
+            let mut updates = Vec::new();
+            node.collect_sequences_with_params(inherited, path.len(), &mut updates);
+            for (token, params) in updates {
+                if let Some(group) = self.notes.get_mut(&token) {
+                    apply_params_to_notes_group(group, &params);
+                }
+            }
+        }
+    }
+
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
         self.track_root.draw_node(
             &mut self.notes,
@@ -667,14 +697,34 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
+            node_params::ResolvedTrackParams::default(),
+            0,
         );
     }
+}
+
+fn apply_params_to_notes_group(
+    ng: &mut NotesGroup,
+    params: &node_params::ResolvedTrackParams,
+) {
+    ng.bend = (params.bend.magnitude, params.bend.speed);
+    ng.vibrato = (params.vibrato.magnitude, params.vibrato.frequency);
+    ng.chorus = params.chorus.clone();
+    ng.attack_decay = (params.envelope.attack, params.envelope.decay);
+    ng.lp_attack_decay = params.lowpass.envelope;
+    ng.pow_fact = (params.power.initial, params.power.evolution);
+    ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
+    ng.lp_relaxation = params.lowpass.relaxation;
+    ng.lp_lfo = params.lowpass.lfo;
+    ng.lowpass_enabled = params.lowpass.enabled;
+    ng.lp_order = params.lowpass.order;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::engine::score::sequence::Sequence;
+    use crate::engine::score::node_params::BendParams;
 
     #[test]
     fn test_volume_chain_product_root() {
@@ -736,5 +786,26 @@ mod tests {
                 "Delay should be positive and finite"
             );
         }
+    }
+
+    #[test]
+    fn test_parameter_inheritance_prefers_parent_override() {
+        let mut score = Score::new();
+        let mut parent = TrackNode::new_node(&mut score.last_token, "group");
+        parent.overrides.bend = Some(BendParams {
+            magnitude: 0.75,
+            speed: 12.0,
+        });
+        let seq = Sequence::new(score.last_token.next());
+        let child = TrackNode::from_sequence(seq);
+        if let NodeKind::Group { children, .. } = &mut parent.kind {
+            children.push(child);
+        }
+        score.track_root = parent;
+
+        let resolution = score.track_root.resolve_bend(&[0]);
+        assert_eq!(resolution.source_depth, Some(0));
+        assert!((resolution.value.magnitude - 0.75).abs() < f64::EPSILON);
+        assert!((resolution.value.speed - 12.0).abs() < f64::EPSILON);
     }
 }

@@ -9,6 +9,7 @@ use crate::{
     engine::{
         score::{
             default_params::{default_delays, default_tempo},
+            node_params,
             probability::Probability,
             sequence::Sequence,
             track_node::{AestheticLocks, GroupMode, NodeKind, TrackNode},
@@ -113,6 +114,7 @@ where
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
+            overrides: node_params::NodeOverrides::default(),
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
                 muted: false,
@@ -130,6 +132,7 @@ where
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
+            overrides: node_params::NodeOverrides::default(),
             kind: NodeKind::Group {
                 id: Token(0),
                 muted: false,
@@ -140,6 +143,10 @@ where
                 aesthetic: AestheticLocks::default(),
             },
         },
+    })
+    .map(|mut root| {
+        root.migrate_legacy_overrides();
+        root
     })
 }
 
@@ -403,12 +410,13 @@ impl GuiApp {
             NodeKind::Seq(_) => TrackNode {
                 name: String::new(),
                 proba: Probability::default(),
-                volume: 1.0,
-                pan: 0.5,
-                hue: 0.0,
-                or_weight: 1.0,
-                kind: NodeKind::Group {
-                    id: self.score.last_token.next(),
+            volume: 1.0,
+            pan: 0.5,
+            hue: 0.0,
+            or_weight: 1.0,
+            overrides: node_params::NodeOverrides::default(),
+            kind: NodeKind::Group {
+                id: self.score.last_token.next(),
                     muted: false,
                     collapsed: false,
                     children: vec![node],

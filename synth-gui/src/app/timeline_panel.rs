@@ -223,6 +223,9 @@ impl GuiApp {
                             }
                         }
 
+                        let envelope_params =
+                            self.score.track_root.resolve_envelope(path).value;
+
                         // notes rendering
                         self.score
                             .notes
@@ -260,8 +263,8 @@ impl GuiApp {
                                     let es: Vec<_> = (0..tmp as _)
                                         .map(|i| {
                                             envelope(
-                                                seq.attack_decay.0,
-                                                seq.attack_decay.1,
+                                                envelope_params.attack,
+                                                envelope_params.decay,
                                                 n.duration,
                                             )(
                                                 n.duration * i as f64 * tmp_inv as f64
@@ -281,7 +284,9 @@ impl GuiApp {
                                         painter.rect_filled(
                                             tmp,
                                             0.0,
-                                            text_color.gamma_multiply(e / seq.normalization as f32),
+                                            text_color.gamma_multiply(
+                                                e / envelope_params.normalization as f32,
+                                            ),
                                         );
                                     }
                                 }

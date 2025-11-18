@@ -6,7 +6,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use crate::{
-    engine::score::{sequence::Sequence, NotesGroup},
+    engine::score::{
+        node_params::{
+            BendParams, EnvelopeParams, LowpassParams, NodeOverrides, PowerParams,
+            ResolvedTrackParams, VibratoParams,
+        },
+        sequence::Sequence,
+        NotesGroup,
+    },
+    rescale_factor,
     time_freq::{Tempo, Time},
     NoteIdGen, Token, TokenGen,
 };
@@ -74,6 +82,8 @@ pub struct TrackNode {
     pub hue: f64, // HSL hue 0.0..=360.0
     #[serde(default = "default_or_weight")]
     pub or_weight: f64,
+    #[serde(default)]
+    pub overrides: NodeOverrides,
     #[serde(flatten)]
     pub kind: NodeKind,
 }
@@ -109,6 +119,7 @@ impl TrackNode {
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
+            overrides: NodeOverrides::default(),
             kind: NodeKind::Group {
                 id: gen.next(),
                 muted: false,
@@ -130,7 +141,75 @@ impl TrackNode {
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
+            overrides: NodeOverrides::sequence_defaults(),
             kind: NodeKind::Seq(seq),
+        }
+    }
+
+    pub fn migrate_legacy_overrides(&mut self) {
+        match &mut self.kind {
+            NodeKind::Seq(seq) => {
+                let legacy = seq.take_legacy_params();
+                if let Some((magnitude, speed)) = legacy.bend {
+                    self.overrides.bend = Some(BendParams { magnitude, speed });
+                }
+                if let Some((magnitude, frequency)) = legacy.vibrato {
+                    self.overrides.vibrato = Some(VibratoParams {
+                        magnitude,
+                        frequency,
+                    });
+                }
+                if let Some(chorus) = legacy.chorus {
+                    self.overrides.chorus = Some(chorus);
+                }
+                if let Some((attack, decay)) = legacy.attack_decay {
+                    let normalization = legacy
+                        .normalization
+                        .unwrap_or_else(|| rescale_factor(1.0 / attack, 1.0 / decay));
+                    self.overrides.envelope = Some(EnvelopeParams {
+                        attack,
+                        decay,
+                        normalization,
+                    });
+                }
+                let mut lowpass = LowpassParams::default();
+                let mut lowpass_touched = false;
+                if let Some(envelope) = legacy.lp_attack_decay {
+                    lowpass.envelope = envelope;
+                    lowpass_touched = true;
+                }
+                if let Some(cutoff) = legacy.cutoff_multiplier {
+                    lowpass.cutoff_multiplier = cutoff;
+                    lowpass_touched = true;
+                }
+                if let Some(relax) = legacy.lp_relaxation {
+                    lowpass.relaxation = relax;
+                    lowpass_touched = true;
+                }
+                if let Some(lfo) = legacy.lp_lfo {
+                    lowpass.lfo = lfo;
+                    lowpass_touched = true;
+                }
+                if let Some(enabled) = legacy.lowpass_enabled {
+                    lowpass.enabled = enabled;
+                    lowpass_touched = true;
+                }
+                if let Some(order) = legacy.lp_order {
+                    lowpass.order = order;
+                    lowpass_touched = true;
+                }
+                if lowpass_touched {
+                    self.overrides.lowpass = Some(lowpass);
+                }
+                if let Some((initial, evolution)) = legacy.pow_fact {
+                    self.overrides.power = Some(PowerParams { initial, evolution });
+                }
+            }
+            NodeKind::Group { children, .. } => {
+                for child in children {
+                    child.migrate_legacy_overrides();
+                }
+            }
         }
     }
 
@@ -302,7 +381,10 @@ impl TrackNode {
         now: Time,
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
+        inherited_params: ResolvedTrackParams,
+        depth: usize,
     ) {
+        let current_params = inherited_params.with_overrides(&self.overrides, depth);
         match &mut self.kind {
             NodeKind::Seq(seq) => {
                 if !scheduler.sequence_state_mut(seq.token).is_idle(now) {
@@ -316,6 +398,7 @@ impl TrackNode {
                     self.proba,
                     tempo,
                     note_id_gen,
+                    &current_params,
                 ) {
                     if let Some(ng) = notes.get(&seq.token) {
                         scheduler.register_sequence_snapshot(seq, ng);
@@ -338,7 +421,16 @@ impl TrackNode {
                         match mode {
                             GroupMode::And => {
                                 for ch in children {
-                                    ch.draw_node(notes, scheduler, rng, now, tempo, note_id_gen);
+                                    ch.draw_node(
+                                        notes,
+                                        scheduler,
+                                        rng,
+                                        now,
+                                        tempo,
+                                        note_id_gen,
+                                        current_params.clone(),
+                                        depth + 1,
+                                    );
                                 }
                             }
                             GroupMode::Or => {
@@ -365,6 +457,8 @@ impl TrackNode {
                                             now,
                                             tempo,
                                             note_id_gen,
+                                            current_params.clone(),
+                                            depth + 1,
                                         );
                                         let busy_until = child_busy_until(child, scheduler);
                                         for (child_idx, sibling) in children.iter_mut().enumerate()
@@ -526,6 +620,25 @@ impl TrackNode {
         SequencesIterMut {
             inner: ptrs.into_iter(),
             _marker: PhantomData,
+        }
+    }
+}
+
+impl TrackNode {
+    pub fn collect_sequences_with_params(
+        &self,
+        inherited: ResolvedTrackParams,
+        depth: usize,
+        out: &mut Vec<(Token, ResolvedTrackParams)>,
+    ) {
+        let current = inherited.with_overrides(&self.overrides, depth);
+        match &self.kind {
+            NodeKind::Seq(seq) => out.push((seq.token, current)),
+            NodeKind::Group { children, .. } => {
+                for child in children {
+                    child.collect_sequences_with_params(current.clone(), depth + 1, out);
+                }
+            }
         }
     }
 }

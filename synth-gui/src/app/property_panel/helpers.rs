@@ -2,7 +2,7 @@ use egui::{Response, Ui};
 use std::marker::PhantomData;
 
 use crate::{
-    engine::score::{sequence::Sequence, NotesGroup},
+    engine::score::{node_params::EnvelopeParams, NotesGroup},
     rescale_factor, Token,
 };
 
@@ -198,6 +198,7 @@ pub fn u32_cell(
 }
 
 /// Update aesthetic parameter in NotesGroup by finding the matching token
+#[allow(dead_code)]
 pub fn update_notes_group<F>(
     notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
     token: Token,
@@ -211,11 +212,11 @@ pub fn update_notes_group<F>(
 }
 
 /// Rescale envelope normalization based on attack/decay values (exported for direct use)
-pub fn rescale_envelope(seq: &mut Sequence) {
-    let a = 1.0 / seq.attack_decay.0;
-    let b = 1.0 / seq.attack_decay.1;
+pub fn rescale_envelope(envelope: &mut EnvelopeParams) {
+    let a = 1.0 / envelope.attack;
+    let b = 1.0 / envelope.decay;
     let rescale_factor = rescale_factor(a, b);
     if rescale_factor.is_normal() {
-        seq.normalization = rescale_factor;
+        envelope.normalization = rescale_factor;
     }
 }
