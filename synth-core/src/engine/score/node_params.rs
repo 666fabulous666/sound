@@ -4,13 +4,14 @@ use crate::{
     engine::score::{
         default_params::*,
         sequence::Sequence,
-        track_node::{TrackNode, NodeKind},
         time_quantum::TimeQuantum,
+        track_node::{NodeKind, TrackNode},
         ChorusParams, Interval, LowpassLfo, LowpassRelaxation, RdRythm, Rythm,
     },
     engine::waves::WaveType,
+    rescale_factor,
     time_freq::{Beat, Freq, Time},
-    DEFAULT_LOOP_LEN, rescale_factor,
+    DEFAULT_LOOP_LEN,
 };
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -184,7 +185,9 @@ impl Default for RhythmParams {
 
 impl WaveParams {
     pub fn from_sequence(seq: &Sequence) -> Self {
-        Self { wave: seq.wave_type }
+        Self {
+            wave: seq.wave_type,
+        }
     }
 }
 
@@ -430,9 +433,7 @@ pub struct ParamResolution<T> {
 
 impl<T> ParamResolution<T> {
     pub fn locked_for_depth(&self, depth: usize) -> bool {
-        self.source_depth
-            .map(|src| src < depth)
-            .unwrap_or(false)
+        self.source_depth.map(|src| src < depth).unwrap_or(false)
     }
 
     pub fn provided_here(&self, depth: usize) -> bool {

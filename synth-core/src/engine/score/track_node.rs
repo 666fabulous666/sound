@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 use crate::{
     engine::score::{
         node_params::{
-            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, NodeOverrides,
-            PowerParams, ResolvedTrackParams, RhythmParams, VibratoParams,
+            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, NodeOverrides, PowerParams,
+            ResolvedTrackParams, RhythmParams, VibratoParams,
         },
         sequence::Sequence,
         NotesGroup,

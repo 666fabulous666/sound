@@ -2,9 +2,9 @@ use itertools::Itertools;
 use rand::seq::index::sample;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use serde::ser::Serializer;
 use serde::Deserialize;
 use serde::Serialize;
-use serde::ser::Serializer;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
@@ -14,7 +14,7 @@ use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
 use crate::engine::score::{
-    node_params::{HarmonyParams, RhythmParams, ResolvedTrackParams},
+    node_params::{HarmonyParams, ResolvedTrackParams, RhythmParams},
     LowpassLfo, LowpassRelaxation, NotesGroup,
 };
 use crate::time_freq::{Beat, Freq, Tempo, Time};
@@ -336,7 +336,18 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             let generated = if rng.gen_bool(proba.as_f64()) {
-                self.draw(notes, rng, start, pan, tempo, note_id_gen, params, rhythm, harmony, wave);
+                self.draw(
+                    notes,
+                    rng,
+                    start,
+                    pan,
+                    tempo,
+                    note_id_gen,
+                    params,
+                    rhythm,
+                    harmony,
+                    wave,
+                );
                 true
             } else {
                 false

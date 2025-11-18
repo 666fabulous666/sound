@@ -156,11 +156,7 @@ fn draw_harmony_override_controls(
 }
 
 impl<'a, T: Clone> OverrideBinding<'a, T> {
-    pub fn new(
-        resolution: ParamResolution<T>,
-        slot: &'a mut Option<T>,
-        depth: usize,
-    ) -> Self {
+    pub fn new(resolution: ParamResolution<T>, slot: &'a mut Option<T>, depth: usize) -> Self {
         let locked = resolution.locked_for_depth(depth);
         let active_here = resolution.source_depth == Some(depth);
         let resolved_value = resolution.value;
@@ -421,11 +417,8 @@ impl GuiApp {
                                     &mut overrides.bend,
                                     depth,
                                 );
-                                overrides_dirty |= bend::show_bend_section(
-                                    ui,
-                                    &mut bend_binding,
-                                    &mut impact,
-                                );
+                                overrides_dirty |=
+                                    bend::show_bend_section(ui, &mut bend_binding, &mut impact);
 
                                 let mut vibrato_binding = OverrideBinding::new(
                                     vibrato_resolution.clone(),
@@ -456,11 +449,8 @@ impl GuiApp {
                                     &mut overrides.power,
                                     depth,
                                 );
-                                overrides_dirty |= power::show_power_section(
-                                    ui,
-                                    &mut power_binding,
-                                    &mut impact,
-                                );
+                                overrides_dirty |=
+                                    power::show_power_section(ui, &mut power_binding, &mut impact);
 
                                 let edit_vec_generators =
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
@@ -612,11 +602,7 @@ impl GuiApp {
                                     &mut impact,
                                     |ui, value, impact, editable| {
                                         envelope::draw_envelope_controls(
-                                            ui,
-                                            value,
-                                            impact,
-                                            false,
-                                            editable,
+                                            ui, value, impact, false, editable,
                                         )
                                     },
                                 );

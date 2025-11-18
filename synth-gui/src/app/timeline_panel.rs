@@ -139,6 +139,14 @@ impl GuiApp {
                 let y0 = track_rect.top();
                 let y1 = track_rect.bottom();
 
+                let drag_resp = ui
+                    .interact(
+                        lane.track_rect,
+                        egui::Id::new(("lane_drag", &lane.path)),
+                        egui::Sense::click_and_drag(),
+                    )
+                    .on_hover_cursor(egui::CursorIcon::Grab);
+
                 let is_selected = self
                     .selected
                     .as_ref()
@@ -390,13 +398,6 @@ impl GuiApp {
                     }
                 }
 
-                let drag_resp = ui
-                    .interact(
-                        lane.track_rect,
-                        egui::Id::new(("lane_drag", &lane.path)),
-                        egui::Sense::click_and_drag(),
-                    )
-                    .on_hover_cursor(egui::CursorIcon::Grab);
                 self.handle_lane_widget_interaction(ctx, &lane.path, &drag_resp);
                 if drag_resp.clicked() {
                     self.selected = Some(lane.path.clone());
@@ -411,12 +412,7 @@ impl GuiApp {
                 paint_drop_preview(&painter, &preview);
             }
 
-            let dragging_seq_move = self
-                .sequence_drag
-                .as_ref()
-                .map(|s| matches!(s.kind, SequenceDragKind::Move))
-                .unwrap_or(false);
-            if self.tree_drag.is_some() || dragging_seq_move {
+            if self.tree_drag.is_some() {
                 ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
             }
 
@@ -557,27 +553,6 @@ impl GuiApp {
             SequenceDragKind::ResizeEnd,
             &end_resp,
         );
-
-        if block_rect.width() > 2.0 * handle_width {
-            let move_rect = egui::Rect::from_min_max(
-                egui::pos2(block_rect.left() + handle_width, block_rect.top()),
-                egui::pos2(block_rect.right() - handle_width, block_rect.bottom()),
-            );
-            let move_resp = ui
-                .interact(
-                    move_rect,
-                    egui::Id::new(("seq_move", &lane.path)),
-                    egui::Sense::click_and_drag(),
-                )
-                .on_hover_cursor(egui::CursorIcon::Grab);
-            self.process_sequence_handle_response(
-                ctx,
-                lane,
-                seq,
-                SequenceDragKind::Move,
-                &move_resp,
-            );
-        }
     }
 
     fn process_sequence_handle_response(
@@ -589,11 +564,7 @@ impl GuiApp {
         response: &egui::Response,
     ) {
         if response.drag_started() {
-            let cursor = match kind {
-                SequenceDragKind::Move => egui::CursorIcon::Grabbing,
-                _ => egui::CursorIcon::ResizeHorizontal,
-            };
-            ctx.set_cursor_icon(cursor);
+            ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
             let pointer_pos = response
                 .interact_pointer_pos()
                 .unwrap_or_else(|| response.rect.center());
@@ -605,6 +576,7 @@ impl GuiApp {
                 t_min_start: seq.t_min,
                 t_max_start: seq.t_max,
             });
+            self.selected = Some(lane.path.clone());
         }
 
         if let Some(state) = &self.sequence_drag {
@@ -612,11 +584,7 @@ impl GuiApp {
                 if response.drag_stopped() {
                     self.finish_sequence_drag();
                 } else if response.is_pointer_button_down_on() {
-                    let cursor = match kind {
-                        SequenceDragKind::Move => egui::CursorIcon::Grabbing,
-                        _ => egui::CursorIcon::ResizeHorizontal,
-                    };
-                    ctx.set_cursor_icon(cursor);
+                    ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
                 }
             }
         }
@@ -649,14 +617,8 @@ impl GuiApp {
                 let snapped_delta = (delta_beats / step).round() * step;
                 let mut new_min = state.t_min_start.as_beats();
                 let mut new_max = state.t_max_start.as_beats();
-                let span = new_max - new_min;
 
                 match state.kind {
-                    SequenceDragKind::Move => {
-                        let max_min = (seq.loop_len.as_beats() - span).max(0.0);
-                        new_min = (new_min + snapped_delta).clamp(0.0, max_min);
-                        new_max = (new_min + span).min(seq.loop_len.as_beats());
-                    }
                     SequenceDragKind::ResizeStart => {
                         new_min =
                             (new_min + snapped_delta).clamp(0.0, state.t_max_start.as_beats());
@@ -1197,7 +1159,6 @@ enum DropKind {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SequenceDragKind {
-    Move,
     ResizeStart,
     ResizeEnd,
 }
