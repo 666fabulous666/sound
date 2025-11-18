@@ -215,9 +215,6 @@ impl GuiApp {
                         let repeats =
                             (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
 
-                        let mut primary_block: Option<egui::Rect> = None;
-                        let mut last_block: Option<egui::Rect> = None;
-
                         for n in -repeats..repeats {
                             let shift = loop_len * (n as f64);
                             let s = start0 + shift;
@@ -245,10 +242,9 @@ impl GuiApp {
                                     egui::Stroke::new(1.0, egui::Color32::BLACK),
                                     egui::StrokeKind::Middle,
                                 );
-                                if primary_block.is_none() {
-                                    primary_block = Some(block_rect);
-                                }
-                                last_block = Some(block_rect);
+                                self.sequence_drag_handles(
+                                    ui, ctx, &painter, lane, &seq, block_rect, n,
+                                );
                             }
                         }
 
@@ -316,10 +312,6 @@ impl GuiApp {
                                     }
                                 }
                             });
-                        }
-
-                        if let Some(block_rect) = primary_block.or(last_block) {
-                            self.sequence_drag_handles(ui, ctx, &painter, lane, &seq, block_rect);
                         }
 
                         let bar_color = col.lerp_to_gamma(text_color, 0.5);
@@ -509,6 +501,7 @@ impl GuiApp {
         lane: &LaneGeometry,
         seq: &Sequence,
         block_rect: egui::Rect,
+        block_instance: i32,
     ) {
         let handle_width = block_rect.width().min(8.0).max(3.0);
         let left_rect = egui::Rect::from_min_max(
@@ -527,7 +520,7 @@ impl GuiApp {
         let start_resp = ui
             .interact(
                 left_rect,
-                egui::Id::new(("seq_start", &lane.path)),
+                egui::Id::new(("seq_start", &lane.path, block_instance)),
                 egui::Sense::click_and_drag(),
             )
             .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
@@ -542,7 +535,7 @@ impl GuiApp {
         let end_resp = ui
             .interact(
                 right_rect,
-                egui::Id::new(("seq_end", &lane.path)),
+                egui::Id::new(("seq_end", &lane.path, block_instance)),
                 egui::Sense::click_and_drag(),
             )
             .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
