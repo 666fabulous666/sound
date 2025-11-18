@@ -403,6 +403,9 @@ impl GuiApp {
             if let Some(preview) = self.update_tree_drag_preview(ctx, &lane_infos, rect) {
                 paint_drop_preview(&painter, &preview);
             }
+            if let Some(drag_state) = self.tree_drag.as_ref() {
+                self.paint_tree_drag_ghost(ui, &painter, rect, &lane_infos, drag_state);
+            }
 
             if self.tree_drag.is_some() {
                 ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
@@ -491,6 +494,70 @@ impl GuiApp {
             compute_drop_preview(drag_state.pointer_pos, lanes, rect, &drag_state.source_path);
         drag_state.drop_slot = preview.as_ref().map(|p| p.slot.clone());
         preview
+    }
+
+    fn paint_tree_drag_ghost(
+        &self,
+        ui: &egui::Ui,
+        painter: &egui::Painter,
+        panel_rect: egui::Rect,
+        lanes: &[LaneGeometry],
+        drag_state: &TreeDragState,
+    ) {
+        let Some(source_lane) = lanes
+            .iter()
+            .find(|lane| lane.path == drag_state.source_path)
+        else {
+            return;
+        };
+        let Some(node) = self.score.track_root.get(&source_lane.path) else {
+            return;
+        };
+
+        let width = panel_rect.width().max(1.0);
+        let height = source_lane
+            .lane_rect
+            .height()
+            .min(panel_rect.height())
+            .max(1.0);
+        let min_y = panel_rect.top() + height * 0.5;
+        let max_y = panel_rect.bottom() - height * 0.5;
+        let center_y = if min_y > max_y {
+            panel_rect.center().y
+        } else {
+            drag_state.pointer_pos.y.clamp(min_y, max_y)
+        };
+        let ghost_rect = egui::Rect::from_center_size(
+            egui::pos2(panel_rect.center().x, center_y),
+            egui::vec2(width, height),
+        );
+
+        let (accent, default_label) = match &node.kind {
+            NodeKind::Group { .. } => (GuiApp::group_color(node.hue), "Group".to_string()),
+            NodeKind::Seq(seq) => (
+                GuiApp::seq_color(&seq.wave_type, node.hue),
+                (&seq.wave_type).to_string(),
+            ),
+        };
+        let ghost_fill =
+            egui::Color32::from_rgba_unmultiplied(accent.r(), accent.g(), accent.b(), 70);
+        let ghost_border = egui::Stroke::new(1.5, accent.gamma_multiply(0.7));
+
+        painter.rect_filled(ghost_rect, 8.0, ghost_fill);
+        painter.rect_stroke(ghost_rect, 8.0, ghost_border, egui::StrokeKind::Inside);
+
+        let label = if node.name.trim().is_empty() {
+            default_label
+        } else {
+            node.name.clone()
+        };
+        painter.text(
+            ghost_rect.left_center() + egui::vec2(12.0, 0.0),
+            Align2::LEFT_CENTER,
+            label,
+            egui::TextStyle::Body.resolve(ui.style()),
+            ui.visuals().strong_text_color(),
+        );
     }
 
     fn sequence_drag_handles(
