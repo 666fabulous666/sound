@@ -1,9 +1,12 @@
-use super::super::ParameterImpact;
+use super::super::{
+    helpers::{ParameterBehavior, SliderParam},
+    ParameterImpact,
+};
 use crate::app::property_panel::hover_texts::{
     GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, REPEAT_TEXT, TIME_QUANTUM_TEXT,
 };
 use crate::app::property_panel::rhythm;
-use crate::engine::score::sequence::Sequence;
+use crate::engine::score::{default_params::default_tail_multiplier, sequence::Sequence};
 use crate::time_freq::Beat;
 use egui::Ui;
 use std::vec::Vec;
@@ -146,5 +149,10 @@ pub fn show_rhythm_section(
                 impact.require_regeneration();
             };
         });
+        let tail_param = SliderParam::new("Tail multiplier", 1.0..=10.0)
+            .default(default_tail_multiplier())
+            .behavior(ParameterBehavior::StructuralImmediate)
+            .tooltip("Extends the final note duration for each window");
+        tail_param.draw(ui, &mut seq.tail_multiplier, impact);
     });
 }

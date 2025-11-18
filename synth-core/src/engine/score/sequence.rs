@@ -71,6 +71,8 @@ pub struct Sequence {
     pub pow_fact: (f64, Freq),
     #[serde(default = "default_loop_len")]
     pub loop_len: Beat,
+    #[serde(default = "default_tail_multiplier")]
+    pub tail_multiplier: f64,
     #[serde(default = "default_arpegio")]
     pub arpegio: f64,
     #[serde(default = "default_tolerance")]
@@ -118,6 +120,7 @@ impl Sequence {
             chorus: ChorusParams::default(),
             pow_fact: default_pow_fact(),
             loop_len: default_loop_len(),
+            tail_multiplier: default_tail_multiplier(),
             tolerance: default_tolerance(),
             repeat: default_repeat(),
             accents: default_accents(),
@@ -208,7 +211,7 @@ impl Sequence {
                     };
                     let mut duration = next - current;
                     if idx + 1 == starts.len() {
-                        duration *= 3.0; // WARNING: hardcoded 3.0 ...
+                        duration *= self.tail_multiplier;
                     }
                     windows.push((current, duration));
                 }
