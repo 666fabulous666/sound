@@ -8,12 +8,13 @@ use std::collections::BTreeMap;
 use crate::{
     engine::score::{
         node_params::{
-            BendParams, EnvelopeParams, LowpassParams, NodeOverrides, PowerParams,
-            ResolvedTrackParams, VibratoParams,
+            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, NodeOverrides,
+            PowerParams, ResolvedTrackParams, RhythmParams, VibratoParams,
         },
         sequence::Sequence,
         NotesGroup,
     },
+    engine::waves::WaveType,
     rescale_factor,
     time_freq::{Tempo, Time},
     NoteIdGen, Token, TokenGen,
@@ -390,6 +391,21 @@ impl TrackNode {
                 if !scheduler.sequence_state_mut(seq.token).is_idle(now) {
                     return;
                 }
+                let rhythm_context = if current_params.has_rhythm_override() {
+                    current_params.rhythm.clone()
+                } else {
+                    RhythmParams::from_sequence(seq)
+                };
+                let harmony_context = if current_params.has_harmony_override() {
+                    current_params.harmony.clone()
+                } else {
+                    HarmonyParams::from_sequence(seq)
+                };
+                let wave_context: WaveType = if current_params.has_wave_override() {
+                    current_params.wave.wave
+                } else {
+                    seq.wave_type
+                };
                 if let Some(release) = seq.draw_sequence_core(
                     notes,
                     rng,
@@ -399,9 +415,12 @@ impl TrackNode {
                     tempo,
                     note_id_gen,
                     &current_params,
+                    &rhythm_context,
+                    &harmony_context,
+                    wave_context,
                 ) {
                     if let Some(ng) = notes.get(&seq.token) {
-                        scheduler.register_sequence_snapshot(seq, ng);
+                        scheduler.register_sequence_snapshot(seq, ng, rhythm_context.loop_len);
                     }
                     scheduler.sequence_state_mut(seq.token).busy_until = release;
                 }

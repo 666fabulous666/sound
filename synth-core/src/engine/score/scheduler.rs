@@ -56,14 +56,19 @@ impl PlaybackScheduler {
         self.sequence_states.get(token)
     }
 
-    pub fn register_sequence_snapshot(&mut self, sequence: &Sequence, notes_group: &NotesGroup) {
+    pub fn register_sequence_snapshot(
+        &mut self,
+        sequence: &Sequence,
+        notes_group: &NotesGroup,
+        loop_len: Beat,
+    ) {
         let state = self
             .sequence_states
             .entry(sequence.token)
             .or_insert_with(SequencePlaybackState::default);
         state.cached = Some(CachedNotes {
             notes: notes_group.notes.clone(),
-            loop_len: sequence.loop_len,
+            loop_len,
         });
     }
 

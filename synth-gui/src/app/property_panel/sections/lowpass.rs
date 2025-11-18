@@ -13,21 +13,9 @@ pub fn show_lowpass_section(
     let mut changed = false;
     ui.collapsing("Lowpass", |ui| {
         if binding.is_locked() {
-            let mut preview_enabled = binding.resolved().enabled;
-            ui.add_enabled_ui(false, |ui| {
-                ui.checkbox(&mut preview_enabled, "Enable lowpass");
-            });
             let mut preview = binding.resolved().clone();
             draw_lowpass_controls(ui, &mut preview, impact, false);
-            return;
-        }
-
-        if let Some(value) = binding.value_mut() {
-            let resp = ui.checkbox(&mut value.enabled, "Enable lowpass");
-            if resp.changed() {
-                impact.register_behavior(ParameterBehavior::AestheticImmediate);
-                changed = true;
-            }
+        } else if let Some(value) = binding.value_mut() {
             changed |= draw_lowpass_controls(ui, value, impact, true);
         }
     });
@@ -41,6 +29,19 @@ pub fn draw_lowpass_controls(
     editable: bool,
 ) -> bool {
     let mut changed = false;
+
+    if editable {
+        let enable_resp = ui.checkbox(&mut value.enabled, "Enable lowpass");
+        if enable_resp.changed() {
+            impact.register_behavior(ParameterBehavior::AestheticImmediate);
+            changed = true;
+        }
+    } else {
+        let mut preview_enabled = value.enabled;
+        ui.add_enabled_ui(false, |ui| {
+            ui.checkbox(&mut preview_enabled, "Enable lowpass");
+        });
+    }
 
     ui.add_enabled_ui(value.enabled && editable, |ui| {
         let order_param = SliderParam::new("Order", 1..=5)

@@ -713,6 +713,7 @@ fn apply_params_to_notes_group(
     ng.attack_decay = (params.envelope.attack, params.envelope.decay);
     ng.lp_attack_decay = params.lowpass.envelope;
     ng.pow_fact = (params.power.initial, params.power.evolution);
+    ng.wave_type = params.wave.wave;
     ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
     ng.lp_relaxation = params.lowpass.relaxation;
     ng.lp_lfo = params.lowpass.lfo;

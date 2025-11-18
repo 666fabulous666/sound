@@ -13,7 +13,10 @@ use crate::engine::score::note::Note;
 use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
-use crate::engine::score::{node_params::ResolvedTrackParams, LowpassLfo, LowpassRelaxation, NotesGroup};
+use crate::engine::score::{
+    node_params::{HarmonyParams, RhythmParams, ResolvedTrackParams},
+    LowpassLfo, LowpassRelaxation, NotesGroup,
+};
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
 use crate::engine::waves::WaveType;
@@ -117,10 +120,13 @@ impl Sequence {
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
         params: &ResolvedTrackParams,
+        rhythm: &RhythmParams,
+        harmony: &HarmonyParams,
+        wave: WaveType,
     ) {
         // Volume is always 1.0 for note generation - actual volume is applied separately
         let volume = 1.0;
-        let inclusions = match &self.inclusions {
+        let inclusions = match &rhythm.inclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
                 .map(|k| k + 1)
@@ -129,7 +135,7 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let exclusions = match &self.exclusions {
+        let exclusions = match &rhythm.exclusions {
             Rythm::Rd(rd_rythm) => sample(rng, rd_rythm.length, rd_rythm.amount)
                 .into_iter()
                 .map(|k| k + 2)
@@ -138,13 +144,14 @@ impl Sequence {
         }
         .into_iter()
         .collect_vec();
-        let step_in_beats = self.time_quantum.beat_step();
-        let limit_in_beats = self.t_max.min(self.loop_len);
+        let step_in_beats = rhythm.time_quantum.beat_step();
+        let limit_in_beats = rhythm.t_max.min(rhythm.loop_len);
         let mut windows: Vec<(Beat, Beat)> = Vec::new();
         let step_value = step_in_beats.as_beats();
-        let available = limit_in_beats - self.t_min;
+        let available = limit_in_beats - rhythm.t_min;
         if step_value.is_finite() && step_value > 0.0 && available.as_beats() > 0.0 {
-            let estimated_steps = ((available / step_in_beats).ceil() as usize).saturating_add(1);
+            let ratio = available.as_beats() / step_in_beats.as_beats();
+            let estimated_steps = (ratio.ceil() as usize).saturating_add(1);
             let mut starts = Vec::new();
             starts.reserve(estimated_steps.min(4096));
             for raw_idx in 0..estimated_steps {
@@ -152,19 +159,19 @@ impl Sequence {
                     Ok(value) => value,
                     Err(_) => break,
                 };
-                let beat_time = self.t_min + step_in_beats * raw_idx as f64;
+                let beat_time = rhythm.t_min + step_in_beats * raw_idx as f64;
                 if beat_time >= limit_in_beats {
                     break;
                 }
                 if !inclusions
                     .iter()
-                    .any(|p| (step_idx - self.beat_offset) % (*p as i32) == 0)
+                    .any(|p| (step_idx - rhythm.beat_offset) % (*p as i32) == 0)
                 {
                     continue;
                 }
                 if exclusions
                     .iter()
-                    .any(|s| (step_idx + 1 - self.beat_offset) % (*s as i32) == 0)
+                    .any(|s| (step_idx + 1 - rhythm.beat_offset) % (*s as i32) == 0)
                 {
                     continue;
                 }
@@ -177,22 +184,22 @@ impl Sequence {
                     let next = if idx + 1 < starts.len() {
                         starts[idx + 1]
                     } else {
-                        self.t_max
+                        rhythm.t_max
                     };
                     let mut duration = next - current;
                     if idx + 1 == starts.len() {
-                        duration *= self.tail_multiplier;
+                        duration *= rhythm.tail_multiplier;
                     }
                     windows.push((current, duration));
                 }
             }
         }
-        if self.shuffle {
+        if harmony.shuffle {
             windows.shuffle(rng);
         }
         let step_as_time = tempo.beats_to_time(step_in_beats);
         let seq_start_beats = tempo.time_to_beats(seq_start);
-        let loop_len_time = tempo.beats_to_time(self.loop_len);
+        let loop_len_time = tempo.beats_to_time(rhythm.loop_len);
         let tmp = windows.into_iter().map(|(t, d)| {
             let time_offset = tempo.beats_to_time(t);
             let duration_time = tempo.beats_to_time(d);
@@ -203,7 +210,7 @@ impl Sequence {
                 duration: duration_time,
                 beat_time: seq_start_beats + t,
                 beat_duration: d,
-                interval: self.interval.clone(),
+                interval: harmony.interval.clone(),
                 glide: None,
                 volume: volume / params.envelope.normalization
                     * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
@@ -214,10 +221,10 @@ impl Sequence {
                             .iter()
                             .map(|a| (note_start * *a).as_secs().fract())
                             .sum::<f64>()),
-                chord: self.chord,
-                random_chord: self.random_chord,
-                reverse_prob: self.reverse_prob,
-                shuffle_prob: self.shuffle_prob,
+                chord: harmony.chord,
+                random_chord: harmony.random_chord,
+                reverse_prob: harmony.reverse_prob,
+                shuffle_prob: harmony.shuffle_prob,
             }
         });
         let mut self_ctx = vec![];
@@ -240,15 +247,15 @@ impl Sequence {
         let mut tmp: Vec<Note> = Vec::new();
         for note in base_notes {
             tmp.push(note.clone());
-            for i in 1..self.repeat {
+            for i in 1..rhythm.repeat {
                 let mut clone = note.clone();
                 clone.id = note_id_gen.next();
                 clone.time += loop_len_time * i as f64;
-                clone.beat_time += self.loop_len * i as f64;
+                clone.beat_time += rhythm.loop_len * i as f64;
                 tmp.push(clone);
             }
         }
-        let tmp = if self.glide {
+        let tmp = if harmony.glide {
             let mut tmp = tmp;
             if tmp.len() > 1 {
                 for i in 0..tmp.len() - 1 {
@@ -267,12 +274,12 @@ impl Sequence {
             ng.pan = pan;
             ng.bend = (params.bend.magnitude, params.bend.speed);
             ng.vibrato = (params.vibrato.magnitude, params.vibrato.frequency);
-            ng.wave_type = self.wave_type.clone();
+            ng.wave_type = wave;
             ng.chorus = params.chorus.clone();
             ng.attack_decay = (params.envelope.attack, params.envelope.decay);
             ng.lp_attack_decay = params.lowpass.envelope;
             ng.pow_fact = (params.power.initial, params.power.evolution);
-            ng.tolerance = self.tolerance;
+            ng.tolerance = harmony.tolerance;
             ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
             ng.lp_relaxation = params.lowpass.relaxation;
             ng.lp_lfo = params.lowpass.lfo;
@@ -285,14 +292,14 @@ impl Sequence {
                     bend: (params.bend.magnitude, params.bend.speed),
                     vibrato: (params.vibrato.magnitude, params.vibrato.frequency),
                     notes: tmp,
-                    wave_type: self.wave_type.clone(),
+                    wave_type: wave,
                     chorus: params.chorus.clone(),
                     attack_decay: (params.envelope.attack, params.envelope.decay),
                     lp_attack_decay: params.lowpass.envelope,
                     pow_fact: (params.power.initial, params.power.evolution),
                     pan,
                     volume: 1.0, // Initial volume - will be updated by volume application mechanism
-                    tolerance: self.tolerance,
+                    tolerance: harmony.tolerance,
                     cutoff_multiplier: params.lowpass.cutoff_multiplier,
                     lp_relaxation: params.lowpass.relaxation,
                     lp_lfo: params.lowpass.lfo,
@@ -315,9 +322,12 @@ impl Sequence {
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
         params: &ResolvedTrackParams,
+        rhythm: &RhythmParams,
+        harmony: &HarmonyParams,
+        wave: WaveType,
     ) -> Option<Time> {
         let base = now + GENERATE_EARLY;
-        let loop_len_time = tempo.beats_to_time(self.loop_len);
+        let loop_len_time = tempo.beats_to_time(rhythm.loop_len);
         let start = loop_len_time * (base / loop_len_time).floor();
 
         if self
@@ -326,13 +336,13 @@ impl Sequence {
             .map_or(true, |until| now >= *until)
         {
             let generated = if rng.gen_bool(proba.as_f64()) {
-                self.draw(notes, rng, start, pan, tempo, note_id_gen, params);
+                self.draw(notes, rng, start, pan, tempo, note_id_gen, params, rhythm, harmony, wave);
                 true
             } else {
                 false
             };
             self.not_generate_until = Some(
-                start + tempo.beats_to_time(self.t_min) + loop_len_time * self.repeat as f64
+                start + tempo.beats_to_time(rhythm.t_min) + loop_len_time * rhythm.repeat as f64
                     - GENERATE_EARLY,
             );
             if generated {

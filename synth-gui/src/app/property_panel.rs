@@ -14,7 +14,7 @@ use sections::{
 use crate::{
     app::{property_panel::navigation::navigation, GuiApp, ALL_WAVES, DRUM_WAVES},
     engine::score::{
-        node_params::ParamResolution,
+        node_params::{HarmonyParams, ParamResolution, RhythmParams},
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
@@ -23,6 +23,7 @@ use crate::{
     shortcuts::*,
     Token,
 };
+use std::collections::BTreeMap;
 
 #[derive(Clone)]
 pub enum Action {
@@ -108,6 +109,50 @@ fn group_override_section<T: Clone>(
         }
     });
     changed
+}
+
+fn draw_rhythm_override_controls(
+    ui: &mut egui::Ui,
+    params: &mut RhythmParams,
+    impact: &mut ParameterImpact,
+    editable: bool,
+    edit_vec_fn: &dyn Fn(&mut egui::Ui, &mut Vec<usize>, usize),
+) -> bool {
+    let mut temp_seq = Sequence::new(Token(0));
+    params.apply_to_sequence(&mut temp_seq);
+    let before = params.clone();
+    ui.add_enabled_ui(editable, |ui| {
+        rhythm_section::show_rhythm_section(ui, &mut temp_seq, impact, edit_vec_fn);
+    });
+    let after = RhythmParams::from_sequence(&temp_seq);
+    if editable && after != before {
+        *params = after;
+        true
+    } else {
+        false
+    }
+}
+
+fn draw_harmony_override_controls(
+    ui: &mut egui::Ui,
+    params: &mut HarmonyParams,
+    impact: &mut ParameterImpact,
+    editable: bool,
+) -> bool {
+    let mut temp_seq = Sequence::new(Token(0));
+    params.apply_to_sequence(&mut temp_seq);
+    let before = params.clone();
+    let mut dummy_notes: BTreeMap<Token, NotesGroup> = BTreeMap::new();
+    ui.add_enabled_ui(editable, |ui| {
+        harmony::show_harmony_section(ui, &mut temp_seq, &mut dummy_notes, impact);
+    });
+    let after = HarmonyParams::from_sequence(&temp_seq);
+    if editable && after != before {
+        *params = after;
+        true
+    } else {
+        false
+    }
 }
 
 impl<'a, T: Clone> OverrideBinding<'a, T> {
@@ -234,6 +279,9 @@ impl GuiApp {
                         let envelope_resolution = self.score.track_root.resolve_envelope(&sel);
                         let lowpass_resolution = self.score.track_root.resolve_lowpass(&sel);
                         let power_resolution = self.score.track_root.resolve_power(&sel);
+                        let wave_resolution = self.score.track_root.resolve_wave(&sel);
+                        let harmony_resolution = self.score.track_root.resolve_harmony(&sel);
+                        let rhythm_resolution = self.score.track_root.resolve_rhythm(&sel);
                         let mut needs_override_refresh = false;
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
@@ -308,30 +356,40 @@ impl GuiApp {
                                 (&mut track_node_mut.kind, &mut track_node_mut.overrides)
                             {
                                 ui.separator();
+                                let wave_locked = wave_resolution.locked_for_depth(depth);
+                                let mut effective_wave = if wave_locked {
+                                    wave_resolution.value.wave
+                                } else {
+                                    seq_mut.wave_type
+                                };
                                 ui.horizontal(|ui| {
                                     ui.label("Wave:");
-                                    let mut w_choice = seq_mut.wave_type;
-
-                                    egui::ComboBox::from_id_salt("wave_type_combo")
-                                        .selected_text((&w_choice).to_string())
-                                        .show_ui(ui, |ui| {
-                                            for var in ALL_WAVES.iter() {
-                                                ui.selectable_value(
-                                                    &mut w_choice,
-                                                    *var,
-                                                    (&var).to_string(),
-                                                );
-                                            }
-                                        });
-                                    if w_choice != seq_mut.wave_type {
-                                        seq_mut.wave_type = w_choice;
-                                        if let Some(ng) = self.score.notes.get_mut(&seq_mut.token) {
-                                            ng.wave_type = seq_mut.wave_type;
+                                    ui.add_enabled_ui(!wave_locked, |ui| {
+                                        let mut w_choice = effective_wave;
+                                        egui::ComboBox::from_id_salt("wave_type_combo")
+                                            .selected_text((&w_choice).to_string())
+                                            .show_ui(ui, |ui| {
+                                                for var in ALL_WAVES.iter() {
+                                                    ui.selectable_value(
+                                                        &mut w_choice,
+                                                        *var,
+                                                        (&var).to_string(),
+                                                    );
+                                                }
+                                            });
+                                        if w_choice != effective_wave {
+                                            effective_wave = w_choice;
                                         }
-                                    }
+                                    });
                                 });
+                                if !wave_locked && effective_wave != seq_mut.wave_type {
+                                    seq_mut.wave_type = effective_wave;
+                                    if let Some(ng) = self.score.notes.get_mut(&seq_mut.token) {
+                                        ng.wave_type = seq_mut.wave_type;
+                                    }
+                                }
 
-                                let is_drum = DRUM_WAVES.contains(&seq_mut.wave_type);
+                                let is_drum = DRUM_WAVES.contains(&effective_wave);
                                 let mut overrides_dirty = false;
 
                                 let mut envelope_binding = OverrideBinding::new(
@@ -380,7 +438,7 @@ impl GuiApp {
                                     &mut impact,
                                 );
 
-                                if !DRUM_WAVES.contains(&seq_mut.wave_type) {
+                                if !DRUM_WAVES.contains(&effective_wave) {
                                     let mut chorus_binding = OverrideBinding::new(
                                         chorus_resolution.clone(),
                                         &mut overrides.chorus,
@@ -408,18 +466,53 @@ impl GuiApp {
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
                                         GuiApp::edit_vec(ui, gens, default_val, layout_left());
                                     };
-                                rhythm_section::show_rhythm_section(
-                                    ui,
-                                    seq_mut,
-                                    &mut impact,
-                                    &edit_vec_generators,
-                                );
-                                harmony::show_harmony_section(
-                                    ui,
-                                    seq_mut,
-                                    &mut self.score.notes,
-                                    &mut impact,
-                                );
+                                let rhythm_locked = rhythm_resolution.locked_for_depth(depth);
+                                if rhythm_locked {
+                                    let mut preview = seq_mut.clone();
+                                    rhythm_resolution
+                                        .value
+                                        .clone()
+                                        .apply_to_sequence(&mut preview);
+                                    ui.add_enabled_ui(false, |ui| {
+                                        rhythm_section::show_rhythm_section(
+                                            ui,
+                                            &mut preview,
+                                            &mut impact,
+                                            &edit_vec_generators,
+                                        );
+                                    });
+                                } else {
+                                    rhythm_section::show_rhythm_section(
+                                        ui,
+                                        seq_mut,
+                                        &mut impact,
+                                        &edit_vec_generators,
+                                    );
+                                }
+
+                                let harmony_locked = harmony_resolution.locked_for_depth(depth);
+                                if harmony_locked {
+                                    let mut preview = seq_mut.clone();
+                                    harmony_resolution
+                                        .value
+                                        .clone()
+                                        .apply_to_sequence(&mut preview);
+                                    ui.add_enabled_ui(false, |ui| {
+                                        harmony::show_harmony_section(
+                                            ui,
+                                            &mut preview,
+                                            &mut self.score.notes,
+                                            &mut impact,
+                                        );
+                                    });
+                                } else {
+                                    harmony::show_harmony_section(
+                                        ui,
+                                        seq_mut,
+                                        &mut self.score.notes,
+                                        &mut impact,
+                                    );
+                                }
                                 accents::show_accents_section(
                                     ui,
                                     seq_mut,
@@ -612,6 +705,84 @@ impl GuiApp {
                                     &mut impact,
                                     |ui, value, impact, editable| {
                                         power::draw_power_controls(ui, value, impact, editable)
+                                    },
+                                );
+
+                                let mut wave_binding = OverrideBinding::new(
+                                    wave_resolution.clone(),
+                                    &mut overrides.wave,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Wave type",
+                                    "Force all descendants to use this oscillator",
+                                    &mut wave_binding,
+                                    &mut impact,
+                                    |ui, value, _impact, editable| {
+                                        let mut changed = false;
+                                        ui.add_enabled_ui(editable, |ui| {
+                                            let mut choice = value.wave;
+                                            egui::ComboBox::from_id_salt("group_wave_type_combo")
+                                                .selected_text((&choice).to_string())
+                                                .show_ui(ui, |ui| {
+                                                    for var in ALL_WAVES.iter() {
+                                                        ui.selectable_value(
+                                                            &mut choice,
+                                                            *var,
+                                                            (&var).to_string(),
+                                                        );
+                                                    }
+                                                });
+                                            if choice != value.wave {
+                                                value.wave = choice;
+                                                changed = true;
+                                            }
+                                        });
+                                        changed
+                                    },
+                                );
+
+                                let edit_vec_generators =
+                                    |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
+                                        GuiApp::edit_vec(ui, gens, default_val, layout_left());
+                                    };
+
+                                let mut rhythm_binding = OverrideBinding::new(
+                                    rhythm_resolution.clone(),
+                                    &mut overrides.rhythm,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Rhythm",
+                                    "Override timing (windows, repeats, offsets) for descendants",
+                                    &mut rhythm_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        draw_rhythm_override_controls(
+                                            ui,
+                                            value,
+                                            impact,
+                                            editable,
+                                            &edit_vec_generators,
+                                        )
+                                    },
+                                );
+
+                                let mut harmony_binding = OverrideBinding::new(
+                                    harmony_resolution.clone(),
+                                    &mut overrides.harmony,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Harmony",
+                                    "Share harmony/shuffle settings with children",
+                                    &mut harmony_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        draw_harmony_override_controls(ui, value, impact, editable)
                                     },
                                 );
 

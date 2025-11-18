@@ -3,11 +3,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     engine::score::{
         default_params::*,
+        sequence::Sequence,
         track_node::{TrackNode, NodeKind},
-        ChorusParams, LowpassLfo, LowpassRelaxation,
+        time_quantum::TimeQuantum,
+        ChorusParams, Interval, LowpassLfo, LowpassRelaxation, RdRythm, Rythm,
     },
-    time_freq::Freq,
-    rescale_factor,
+    engine::waves::WaveType,
+    time_freq::{Beat, Freq, Time},
+    DEFAULT_LOOP_LEN, rescale_factor,
 };
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
@@ -104,6 +107,147 @@ impl Default for PowerParams {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct WaveParams {
+    pub wave: WaveType,
+}
+
+impl Default for WaveParams {
+    fn default() -> Self {
+        Self {
+            wave: WaveType::Sine,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct HarmonyParams {
+    pub glide: bool,
+    pub harmonise: bool,
+    pub tolerance: (Time, Time),
+    pub interval: Interval,
+    pub shuffle: bool,
+    pub harmoniser: [u32; 7],
+    pub arpegio: f64,
+    pub chord: usize,
+    pub random_chord: bool,
+    pub reverse_prob: f64,
+    pub shuffle_prob: f64,
+}
+
+impl Default for HarmonyParams {
+    fn default() -> Self {
+        Self {
+            glide: default_glide(),
+            harmonise: default_harmonise(),
+            tolerance: default_tolerance(),
+            interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
+            shuffle: default_shuffle(),
+            harmoniser: default_harmoniser(),
+            arpegio: default_arpegio(),
+            chord: default_tension(),
+            random_chord: default_random_chord(),
+            reverse_prob: default_reverse_prob(),
+            shuffle_prob: default_shuffle_prob(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct RhythmParams {
+    pub time_quantum: TimeQuantum,
+    pub t_min: Beat,
+    pub t_max: Beat,
+    pub loop_len: Beat,
+    pub tail_multiplier: f64,
+    pub inclusions: Rythm,
+    pub exclusions: Rythm,
+    pub beat_offset: i32,
+    pub repeat: usize,
+}
+
+impl Default for RhythmParams {
+    fn default() -> Self {
+        Self {
+            time_quantum: default_time_quantum(),
+            t_min: Beat(0.0),
+            t_max: Beat(DEFAULT_LOOP_LEN.as_secs()),
+            loop_len: default_loop_len(),
+            tail_multiplier: default_tail_multiplier(),
+            inclusions: Rythm::Rd(RdRythm::default()),
+            exclusions: Rythm::Rd(RdRythm::default()),
+            beat_offset: default_beat_offset(),
+            repeat: default_repeat(),
+        }
+    }
+}
+
+impl WaveParams {
+    pub fn from_sequence(seq: &Sequence) -> Self {
+        Self { wave: seq.wave_type }
+    }
+}
+
+impl HarmonyParams {
+    pub fn from_sequence(seq: &Sequence) -> Self {
+        Self {
+            glide: seq.glide,
+            harmonise: seq.harmonise,
+            tolerance: seq.tolerance,
+            interval: seq.interval.clone(),
+            shuffle: seq.shuffle,
+            harmoniser: seq.harmoniser,
+            arpegio: seq.arpegio,
+            chord: seq.chord,
+            random_chord: seq.random_chord,
+            reverse_prob: seq.reverse_prob,
+            shuffle_prob: seq.shuffle_prob,
+        }
+    }
+
+    pub fn apply_to_sequence(&self, seq: &mut Sequence) {
+        seq.glide = self.glide;
+        seq.harmonise = self.harmonise;
+        seq.tolerance = self.tolerance;
+        seq.interval = self.interval.clone();
+        seq.shuffle = self.shuffle;
+        seq.harmoniser = self.harmoniser;
+        seq.arpegio = self.arpegio;
+        seq.chord = self.chord;
+        seq.random_chord = self.random_chord;
+        seq.reverse_prob = self.reverse_prob;
+        seq.shuffle_prob = self.shuffle_prob;
+    }
+}
+
+impl RhythmParams {
+    pub fn from_sequence(seq: &Sequence) -> Self {
+        Self {
+            time_quantum: seq.time_quantum,
+            t_min: seq.t_min,
+            t_max: seq.t_max,
+            loop_len: seq.loop_len,
+            tail_multiplier: seq.tail_multiplier,
+            inclusions: seq.inclusions.clone(),
+            exclusions: seq.exclusions.clone(),
+            beat_offset: seq.beat_offset,
+            repeat: seq.repeat,
+        }
+    }
+
+    pub fn apply_to_sequence(&self, seq: &mut Sequence) {
+        seq.time_quantum = self.time_quantum;
+        seq.t_min = self.t_min;
+        seq.t_max = self.t_max;
+        seq.loop_len = self.loop_len;
+        seq.tail_multiplier = self.tail_multiplier;
+        seq.inclusions = self.inclusions.clone();
+        seq.exclusions = self.exclusions.clone();
+        seq.beat_offset = self.beat_offset;
+        seq.repeat = self.repeat;
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct NodeOverrides {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -129,6 +273,18 @@ pub struct NodeOverrides {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub power: Option<PowerParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub wave: Option<WaveParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub harmony: Option<HarmonyParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub rhythm: Option<RhythmParams>,
 }
 
 impl NodeOverrides {
@@ -140,6 +296,9 @@ impl NodeOverrides {
             envelope: Some(EnvelopeParams::default()),
             lowpass: Some(LowpassParams::default()),
             power: Some(PowerParams::default()),
+            wave: None,
+            harmony: None,
+            rhythm: None,
         }
     }
 }
@@ -158,6 +317,12 @@ pub struct ResolvedTrackParams {
     lowpass_depth: Option<usize>,
     pub power: PowerParams,
     power_depth: Option<usize>,
+    pub wave: WaveParams,
+    wave_depth: Option<usize>,
+    pub harmony: HarmonyParams,
+    harmony_depth: Option<usize>,
+    pub rhythm: RhythmParams,
+    rhythm_depth: Option<usize>,
 }
 
 impl Default for ResolvedTrackParams {
@@ -175,6 +340,12 @@ impl Default for ResolvedTrackParams {
             lowpass_depth: None,
             power: PowerParams::default(),
             power_depth: None,
+            wave: WaveParams::default(),
+            wave_depth: None,
+            harmony: HarmonyParams::default(),
+            harmony_depth: None,
+            rhythm: RhythmParams::default(),
+            rhythm_depth: None,
         }
     }
 }
@@ -217,7 +388,37 @@ impl ResolvedTrackParams {
                 self.power_depth = Some(depth);
             }
         }
+        if let Some(wave) = &overrides.wave {
+            if self.wave_depth.is_none() {
+                self.wave = wave.clone();
+                self.wave_depth = Some(depth);
+            }
+        }
+        if let Some(harmony) = &overrides.harmony {
+            if self.harmony_depth.is_none() {
+                self.harmony = harmony.clone();
+                self.harmony_depth = Some(depth);
+            }
+        }
+        if let Some(rhythm) = &overrides.rhythm {
+            if self.rhythm_depth.is_none() {
+                self.rhythm = rhythm.clone();
+                self.rhythm_depth = Some(depth);
+            }
+        }
         self
+    }
+
+    pub fn has_wave_override(&self) -> bool {
+        self.wave_depth.is_some()
+    }
+
+    pub fn has_harmony_override(&self) -> bool {
+        self.harmony_depth.is_some()
+    }
+
+    pub fn has_rhythm_override(&self) -> bool {
+        self.rhythm_depth.is_some()
     }
 }
 
@@ -271,6 +472,18 @@ impl TrackNode {
 
     pub fn resolve_power(&self, path: &[usize]) -> ParamResolution<PowerParams> {
         resolve_param(self, path, |o| o.power.as_ref())
+    }
+
+    pub fn resolve_wave(&self, path: &[usize]) -> ParamResolution<WaveParams> {
+        resolve_param(self, path, |o| o.wave.as_ref())
+    }
+
+    pub fn resolve_harmony(&self, path: &[usize]) -> ParamResolution<HarmonyParams> {
+        resolve_param(self, path, |o| o.harmony.as_ref())
+    }
+
+    pub fn resolve_rhythm(&self, path: &[usize]) -> ParamResolution<RhythmParams> {
+        resolve_param(self, path, |o| o.rhythm.as_ref())
     }
 
     pub fn resolved_params_for_path(&self, path: &[usize]) -> ResolvedTrackParams {
