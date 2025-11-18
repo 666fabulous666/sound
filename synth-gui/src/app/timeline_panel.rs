@@ -7,6 +7,7 @@ use crate::{
     app::GuiApp,
     engine::{
         score::{
+            sequence::Sequence,
             track_node::{all_paths, NodeKind},
             Interval,
         },
@@ -89,12 +90,17 @@ impl GuiApp {
                 tempo,
             );
 
-            // --- lanes: iterate owned paths, fetch node on-demand ---
-            let mut anchor_points_with_path = Vec::new();
+            let tree_band_rect = rect.with_max_x(rect.left() + rect.width() * 0.25);
+
+            let mut lane_infos = Vec::new();
             for (i, path) in visible_paths.iter().enumerate() {
                 let top = rect.top() + i as f32 * lane_h + lane_gap;
                 let y0 = top;
                 let y1 = top + block_h;
+                let lane_rect = egui::Rect::from_min_max(
+                    egui::pos2(rect.left(), y0),
+                    egui::pos2(rect.right(), y1),
+                );
                 let track_rect = egui::Rect::from_min_max(
                     egui::pos2(Self::t_to_x(rect, Time::new(0.0), track_display_length), y0),
                     egui::pos2(
@@ -102,19 +108,44 @@ impl GuiApp {
                         y1,
                     ),
                 );
+                let tree_rect = egui::Rect::from_min_max(
+                    egui::pos2(tree_band_rect.left(), y0),
+                    egui::pos2(tree_band_rect.right(), y1),
+                );
 
                 let node = match self.score.track_root.get(path) {
                     Some(n) => n,
                     None => continue,
                 };
 
+                lane_infos.push(LaneGeometry {
+                    path: path.clone(),
+                    lane_rect,
+                    track_rect,
+                    tree_rect,
+                    depth: path.len(),
+                    is_group: matches!(node.kind, NodeKind::Group { .. }),
+                    child_count: node.child_count(),
+                });
+            }
+
+            for lane in &lane_infos {
+                let Some(node) = self.score.track_root.get(&lane.path).cloned() else {
+                    continue;
+                };
+
+                let node_hue = node.hue;
+                let track_rect = lane.track_rect;
+                let y0 = track_rect.top();
+                let y1 = track_rect.bottom();
+
                 let is_selected = self
                     .selected
                     .as_ref()
-                    .map(|p| p.as_slice() == path.as_slice())
+                    .map(|p| p.as_slice() == lane.path.as_slice())
                     .unwrap_or(false);
 
-                match &node.kind {
+                match node.kind {
                     NodeKind::Group {
                         collapsed, muted, ..
                     } => {
@@ -123,21 +154,13 @@ impl GuiApp {
                             lane_gap,
                             track_rect,
                             is_selected,
-                            GuiApp::group_color(node.hue),
+                            GuiApp::group_color(node_hue),
                             ui.visuals().panel_fill,
                         );
-                        let group_prefix = path.clone();
-                        let (first_y, last_y) = first_last_y(
-                            &visible_paths,
-                            rect,
-                            lane_h,
-                            block_h,
-                            lane_gap,
-                            group_prefix,
-                        );
-
-                        if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
-                            let subbox_offset = TREE_DEPTH_WIDTH * path.len() as f32;
+                        if let Some((first_y, last_y)) =
+                            group_y_span(&lane_infos, lane.path.as_slice())
+                        {
+                            let subbox_offset = TREE_DEPTH_WIDTH * lane.depth as f32;
                             let left = rect.left() + subbox_offset;
                             let right = rect.right();
                             let encompass_rect = egui::Rect::from_min_max(
@@ -146,12 +169,11 @@ impl GuiApp {
                             );
 
                             if is_selected && !collapsed {
-                                highlight_group(text_color, &painter, encompass_rect, *muted);
+                                highlight_group(text_color, &painter, encompass_rect, muted);
                             }
 
-                            let header_rect = track_rect;
                             painter.rect_filled(
-                                header_rect,
+                                track_rect,
                                 6.0,
                                 if is_selected {
                                     col
@@ -160,18 +182,11 @@ impl GuiApp {
                                 },
                             );
                             painter.rect_stroke(
-                                header_rect,
+                                track_rect,
                                 6.0,
                                 egui::Stroke::new(1.0, text_color.gamma_multiply(0.5)),
                                 egui::StrokeKind::Middle,
                             );
-                        }
-
-                        if ui
-                            .interact(track_rect, egui::Id::new(("grp", i)), egui::Sense::click())
-                            .clicked()
-                        {
-                            self.selected = Some(path.to_vec());
                         }
                     }
 
@@ -181,10 +196,9 @@ impl GuiApp {
                             lane_gap,
                             track_rect,
                             is_selected,
-                            GuiApp::seq_color(&seq.wave_type, node.hue),
+                            GuiApp::seq_color(&seq.wave_type, node_hue),
                             ui.visuals().panel_fill,
                         );
-                        // Repeat window tiling modulo loop
                         let loop_len = tempo.beats_to_time(seq.loop_len);
                         let t_min_time = tempo.beats_to_time(seq.t_min);
                         let t_max_time = tempo.beats_to_time(seq.t_max);
@@ -192,6 +206,9 @@ impl GuiApp {
                         let start0 = (t_min_time - current_time).rem_euclid(loop_len) + playhead;
                         let repeats =
                             (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
+
+                        let mut primary_block: Option<egui::Rect> = None;
+                        let mut last_block: Option<egui::Rect> = None;
 
                         for n in -repeats..repeats {
                             let shift = loop_len * (n as f64);
@@ -220,21 +237,18 @@ impl GuiApp {
                                     egui::Stroke::new(1.0, egui::Color32::BLACK),
                                     egui::StrokeKind::Middle,
                                 );
+                                if primary_block.is_none() {
+                                    primary_block = Some(block_rect);
+                                }
+                                last_block = Some(block_rect);
                             }
                         }
 
                         let envelope_params =
-                            self.score.track_root.resolve_envelope(path).value;
+                            self.score.track_root.resolve_envelope(&lane.path).value;
 
-                        // notes rendering
-                        self.score
-                            .notes
-                            .iter()
-                            .filter(|(token, _)| **token == seq.token)
-                            .flat_map(|(_, ng)| ng.notes.iter())
-                            .collect::<Vec<_>>()
-                            .iter()
-                            .for_each(|n| {
+                        if let Some(group) = self.score.notes.get(&seq.token) {
+                            group.notes.iter().for_each(|n| {
                                 if let Interval::Tempered(degree, _) = n.interval {
                                     let dy = track_rect.top() - track_rect.bottom();
                                     let note_rect = egui::Rect::from_min_max(
@@ -259,6 +273,9 @@ impl GuiApp {
                                     );
 
                                     let tmp = 100f32.min(note_rect.width()).floor();
+                                    if tmp <= f32::EPSILON {
+                                        return;
+                                    }
                                     let tmp_inv = 1.0 / tmp;
                                     let es: Vec<_> = (0..tmp as _)
                                         .map(|i| {
@@ -291,10 +308,13 @@ impl GuiApp {
                                     }
                                 }
                             });
+                        }
+
+                        if let Some(block_rect) = primary_block.or(last_block) {
+                            self.sequence_drag_handles(ui, ctx, &painter, lane, &seq, block_rect);
+                        }
 
                         let bar_color = col.lerp_to_gamma(text_color, 0.5);
-
-                        // repeat bars
                         let rep_loop_len = tempo.beats_to_time(seq.loop_len * seq.repeat as f64);
                         let current = self.now();
                         if rep_loop_len.as_secs() > 0.0 {
@@ -367,36 +387,38 @@ impl GuiApp {
                                 bar_color,
                             );
                         }
-
-                        // click to select
-                        if ui
-                            .interact(track_rect, egui::Id::new(("seq", i)), egui::Sense::click())
-                            .clicked()
-                        {
-                            self.selected = Some(path.clone());
-                        }
                     }
                 }
-                anchor_points_with_path.push((
-                    egui::pos2(
-                        track_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
-                        0.5 * (track_rect.top() + track_rect.bottom()),
-                    ),
-                    path,
-                ));
+
+                let drag_resp = ui
+                    .interact(
+                        lane.track_rect,
+                        egui::Id::new(("lane_drag", &lane.path)),
+                        egui::Sense::click_and_drag(),
+                    )
+                    .on_hover_cursor(egui::CursorIcon::Grab);
+                self.handle_lane_widget_interaction(ctx, &lane.path, &drag_resp);
+                if drag_resp.clicked() {
+                    self.selected = Some(lane.path.clone());
+                }
             }
 
-            // tree
-            self.paint_tree_band(
-                ui,
-                &painter,
-                rect.with_max_x(rect.left() + rect.width() * 0.25), // left band for the tree
-                rect,
-                &visible_paths,
-                lane_h,
-                block_h,
-                lane_gap,
-            );
+            self.update_sequence_drag_runtime(ctx, &lane_infos, tempo, track_display_length);
+
+            self.paint_tree_band(ui, &painter, tree_band_rect, rect, &lane_infos);
+
+            if let Some(preview) = self.update_tree_drag_preview(ctx, &lane_infos, rect) {
+                paint_drop_preview(&painter, &preview);
+            }
+
+            let dragging_seq_move = self
+                .sequence_drag
+                .as_ref()
+                .map(|s| matches!(s.kind, SequenceDragKind::Move))
+                .unwrap_or(false);
+            if self.tree_drag.is_some() || dragging_seq_move {
+                ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
+            }
 
             // playhead
             let x = Self::t_to_x(rect, playhead, track_display_length);
@@ -406,16 +428,265 @@ impl GuiApp {
             );
         });
     }
+
+    fn handle_lane_widget_interaction(
+        &mut self,
+        ctx: &egui::Context,
+        path: &[usize],
+        response: &egui::Response,
+    ) {
+        if response.clicked() {
+            self.selected = Some(path.to_vec());
+        }
+
+        if response.drag_started() {
+            if path.is_empty() {
+                return;
+            }
+            let pointer_pos = response
+                .interact_pointer_pos()
+                .unwrap_or_else(|| response.rect.center());
+            self.tree_drag = Some(TreeDragState {
+                source_path: path.to_vec(),
+                source_id: response.id,
+                pointer_pos,
+                drop_slot: None,
+            });
+        }
+
+        if let Some(state) = &self.tree_drag {
+            if state.source_id == response.id && response.drag_stopped() {
+                self.finish_tree_drag();
+            }
+        }
+
+        if self
+            .tree_drag
+            .as_ref()
+            .map(|drag| drag.source_id == response.id)
+            .unwrap_or(false)
+        {
+            ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
+        }
+    }
+
+    fn finish_tree_drag(&mut self) {
+        if let Some(state) = self.tree_drag.take() {
+            if let Some(slot) = state.drop_slot {
+                eprintln!(
+                    "DND drop: source={:?}, target_parent={:?}, index={}, kind={:?}",
+                    state.source_path, slot.parent_path, slot.insert_index, slot.kind
+                );
+                if let Some(new_path) = self.score.move_node_to(
+                    &state.source_path,
+                    &slot.parent_path,
+                    slot.insert_index,
+                ) {
+                    eprintln!("DND result: new_path={:?}", new_path);
+                    self.selected = Some(new_path);
+                }
+            }
+        }
+    }
+
+    fn update_tree_drag_preview(
+        &mut self,
+        ctx: &egui::Context,
+        lanes: &[LaneGeometry],
+        rect: egui::Rect,
+    ) -> Option<DropPreview> {
+        let drag_state = self.tree_drag.as_mut()?;
+        if let Some(pos) = ctx.pointer_latest_pos() {
+            drag_state.pointer_pos = pos;
+        }
+        let preview =
+            compute_drop_preview(drag_state.pointer_pos, lanes, rect, &drag_state.source_path);
+        drag_state.drop_slot = preview.as_ref().map(|p| p.slot.clone());
+        preview
+    }
+
+    fn sequence_drag_handles(
+        &mut self,
+        ui: &mut egui::Ui,
+        ctx: &egui::Context,
+        painter: &egui::Painter,
+        lane: &LaneGeometry,
+        seq: &Sequence,
+        block_rect: egui::Rect,
+    ) {
+        let handle_width = block_rect.width().min(8.0).max(3.0);
+        let left_rect = egui::Rect::from_min_max(
+            block_rect.left_top(),
+            egui::pos2(block_rect.left() + handle_width, block_rect.bottom()),
+        );
+        let right_rect = egui::Rect::from_min_max(
+            egui::pos2(block_rect.right() - handle_width, block_rect.top()),
+            block_rect.right_bottom(),
+        );
+
+        let handle_color = ui.visuals().widgets.active.bg_fill.gamma_multiply(0.6);
+        painter.rect_filled(left_rect, 2.0, handle_color);
+        painter.rect_filled(right_rect, 2.0, handle_color);
+
+        let start_resp = ui
+            .interact(
+                left_rect,
+                egui::Id::new(("seq_start", &lane.path)),
+                egui::Sense::click_and_drag(),
+            )
+            .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
+        self.process_sequence_handle_response(
+            ctx,
+            lane,
+            seq,
+            SequenceDragKind::ResizeStart,
+            &start_resp,
+        );
+
+        let end_resp = ui
+            .interact(
+                right_rect,
+                egui::Id::new(("seq_end", &lane.path)),
+                egui::Sense::click_and_drag(),
+            )
+            .on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
+        self.process_sequence_handle_response(
+            ctx,
+            lane,
+            seq,
+            SequenceDragKind::ResizeEnd,
+            &end_resp,
+        );
+
+        if block_rect.width() > 2.0 * handle_width {
+            let move_rect = egui::Rect::from_min_max(
+                egui::pos2(block_rect.left() + handle_width, block_rect.top()),
+                egui::pos2(block_rect.right() - handle_width, block_rect.bottom()),
+            );
+            let move_resp = ui
+                .interact(
+                    move_rect,
+                    egui::Id::new(("seq_move", &lane.path)),
+                    egui::Sense::click_and_drag(),
+                )
+                .on_hover_cursor(egui::CursorIcon::Grab);
+            self.process_sequence_handle_response(
+                ctx,
+                lane,
+                seq,
+                SequenceDragKind::Move,
+                &move_resp,
+            );
+        }
+    }
+
+    fn process_sequence_handle_response(
+        &mut self,
+        ctx: &egui::Context,
+        lane: &LaneGeometry,
+        seq: &Sequence,
+        kind: SequenceDragKind,
+        response: &egui::Response,
+    ) {
+        if response.drag_started() {
+            let cursor = match kind {
+                SequenceDragKind::Move => egui::CursorIcon::Grabbing,
+                _ => egui::CursorIcon::ResizeHorizontal,
+            };
+            ctx.set_cursor_icon(cursor);
+            let pointer_pos = response
+                .interact_pointer_pos()
+                .unwrap_or_else(|| response.rect.center());
+            self.sequence_drag = Some(SequenceDragState {
+                path: lane.path.clone(),
+                source_id: response.id,
+                kind,
+                pointer_start: pointer_pos,
+                t_min_start: seq.t_min,
+                t_max_start: seq.t_max,
+            });
+        }
+
+        if let Some(state) = &self.sequence_drag {
+            if state.source_id == response.id {
+                if response.drag_stopped() {
+                    self.finish_sequence_drag();
+                } else if response.is_pointer_button_down_on() {
+                    let cursor = match kind {
+                        SequenceDragKind::Move => egui::CursorIcon::Grabbing,
+                        _ => egui::CursorIcon::ResizeHorizontal,
+                    };
+                    ctx.set_cursor_icon(cursor);
+                }
+            }
+        }
+    }
+
+    fn update_sequence_drag_runtime(
+        &mut self,
+        ctx: &egui::Context,
+        lanes: &[LaneGeometry],
+        tempo: Tempo,
+        track_display_length: Time,
+    ) {
+        let Some(state) = self.sequence_drag.as_ref() else {
+            return;
+        };
+        let Some(lane) = lanes.iter().find(|l| l.path == state.path) else {
+            return;
+        };
+        let Some(pointer) = ctx.pointer_latest_pos() else {
+            return;
+        };
+
+        let delta_ratio = (pointer.x - state.pointer_start.x) / lane.track_rect.width().max(1.0);
+        let delta_secs = track_display_length.as_secs() * delta_ratio as f64;
+        let delta_beats = tempo.time_to_beats(Time(delta_secs)).as_beats();
+
+        if let Some(node) = self.score.track_root.get_mut(&state.path) {
+            if let NodeKind::Seq(seq) = &mut node.kind {
+                let step = seq.time_quantum.beat_step().as_beats().max(f64::EPSILON);
+                let snapped_delta = (delta_beats / step).round() * step;
+                let mut new_min = state.t_min_start.as_beats();
+                let mut new_max = state.t_max_start.as_beats();
+                let span = new_max - new_min;
+
+                match state.kind {
+                    SequenceDragKind::Move => {
+                        let max_min = (seq.loop_len.as_beats() - span).max(0.0);
+                        new_min = (new_min + snapped_delta).clamp(0.0, max_min);
+                        new_max = (new_min + span).min(seq.loop_len.as_beats());
+                    }
+                    SequenceDragKind::ResizeStart => {
+                        new_min =
+                            (new_min + snapped_delta).clamp(0.0, state.t_max_start.as_beats());
+                        new_min = new_min.min(new_max);
+                    }
+                    SequenceDragKind::ResizeEnd => {
+                        new_max = (new_max + snapped_delta)
+                            .clamp(state.t_min_start.as_beats(), seq.loop_len.as_beats());
+                        new_max = new_max.max(new_min);
+                    }
+                }
+
+                seq.t_min = Beat(new_min);
+                seq.t_max = Beat(new_max);
+            }
+        }
+    }
+
+    fn finish_sequence_drag(&mut self) {
+        if let Some(state) = self.sequence_drag.take() {
+            self.score.refresh_notes_for_path(&state.path);
+        }
+    }
     fn paint_tree_band(
         &mut self,
         ui: &egui::Ui,
         painter: &egui::Painter,
-        band_rect: egui::Rect,        // gradient background area (left band)
-        rect: egui::Rect,             // whole timeline rect
-        visible_paths: &[Vec<usize>], // already filtered by collapsed parents
-        lane_h: f32,
-        block_h: f32,
-        lane_gap: f32,
+        band_rect: egui::Rect,
+        rect: egui::Rect,
+        lanes: &[LaneGeometry],
     ) {
         use crate::engine::score::Interval;
 
@@ -431,34 +702,28 @@ impl GuiApp {
         );
 
         // --- compute anchors (left X depends on depth) -----------------------
-        let mut anchors: Vec<(Pos2, &Vec<usize>)> = Vec::with_capacity(visible_paths.len());
-        for (i, path) in visible_paths.iter().enumerate() {
-            let top = rect.top() + i as f32 * lane_h + lane_gap;
-            let y0 = top;
-            let y1 = top + block_h;
-            let lane_rect =
-                egui::Rect::from_min_max(egui::pos2(rect.left(), y0), egui::pos2(rect.right(), y1));
-
+        let mut anchors: Vec<(Pos2, &LaneGeometry)> = Vec::with_capacity(lanes.len());
+        for lane in lanes {
             let anchor = egui::pos2(
-                lane_rect.left() + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
-                0.5 * (lane_rect.top() + lane_rect.bottom()),
+                rect.left() + TREE_DEPTH_WIDTH * (lane.depth + 1) as f32,
+                lane.lane_rect.center().y,
             );
-            anchors.push((anchor, path));
+            anchors.push((anchor, lane));
         }
 
         // --- lookup for parent anchors ---------------------------------------
         let mut anchor_by_path: std::collections::HashMap<Vec<usize>, Pos2> =
             std::collections::HashMap::with_capacity(anchors.len());
-        for (a, p) in &anchors {
-            anchor_by_path.insert(p.to_vec(), *a);
+        for (a, lane) in &anchors {
+            anchor_by_path.insert(lane.path.clone(), *a);
         }
 
         // --- draw connectors (roots have no parent) --------------------------
-        for (anchor, path) in &anchors {
-            if path.is_empty() {
+        for (anchor, lane) in &anchors {
+            if lane.path.is_empty() {
                 continue;
             }
-            let parent_path = &path[..path.len() - 1];
+            let parent_path = &lane.path[..lane.path.len() - 1];
             if let Some(parent_anchor) = anchor_by_path.get(parent_path) {
                 let stroke = Stroke::new(1.0, text_color);
                 let elbow = Pos2::new(parent_anchor.x, anchor.y);
@@ -469,18 +734,17 @@ impl GuiApp {
         }
 
         // --- draw labels in the band (group/seq info) ------------------------
-        for (i, (anchor, path)) in anchors.iter().enumerate() {
+        for (anchor, lane) in anchors.iter() {
             // Resolve node briefly
-            let Some(node) = self.score.track_root.get_mut(path) else {
+            let Some(node) = self.score.track_root.get_mut(&lane.path) else {
                 continue;
             };
 
-            // Baseline Y for text
-            let y = rect.top() + (i as f32 + 0.5) * lane_h;
+            let y = lane.lane_rect.center().y;
 
             // Left text X with a small padding beyond the vertical line
             let label_pos = egui::pos2(
-                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (path.len() + 1) as f32,
+                rect.left() + 8.0 + TREE_DEPTH_WIDTH * (lane.depth + 1) as f32,
                 y,
             );
 
@@ -490,7 +754,7 @@ impl GuiApp {
             let is_selected = self
                 .selected
                 .as_ref()
-                .map(|p| p.as_slice() == path.as_slice())
+                .map(|p| p.as_slice() == lane.path.as_slice())
                 .unwrap_or(false);
 
             let text_style = if is_selected {
@@ -538,7 +802,7 @@ impl GuiApp {
                                 *anchor,
                                 egui::vec2(bullet_radius * 2.5, bullet_radius * 2.5),
                             ),
-                            egui::Id::new(("circle", path)),
+                            egui::Id::new(("circle", &lane.path)),
                             egui::Sense::click(),
                         )
                         .on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -569,6 +833,15 @@ impl GuiApp {
                     painter.circle_stroke(*anchor, bullet_radius, Stroke::new(1.0, text_color));
                 }
             }
+
+            let tree_resp = ui
+                .interact(
+                    lane.tree_rect,
+                    egui::Id::new(("tree_lane", &lane.path)),
+                    egui::Sense::click_and_drag(),
+                )
+                .on_hover_cursor(egui::CursorIcon::Grab);
+            self.handle_lane_widget_interaction(ui.ctx(), &lane.path, &tree_resp);
         }
     }
 }
@@ -817,29 +1090,6 @@ fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect
     painter.add(egui::Shape::mesh(mesh));
 }
 
-fn first_last_y(
-    visible_paths: &Vec<Vec<usize>>,
-    rect: egui::Rect,
-    lane_h: f32,
-    block_h: f32,
-    lane_gap: f32,
-    group_prefix: Vec<usize>,
-) -> (f32, f32) {
-    let mut first_y = f32::MAX;
-    let mut last_y = f32::MIN;
-
-    // find visible children (and self)
-    for (j, child_path) in visible_paths.iter().enumerate() {
-        if child_path.starts_with(&group_prefix) {
-            let top_j = rect.top() + j as f32 * lane_h + lane_gap;
-            let bottom_j = top_j + block_h;
-            first_y = first_y.min(top_j);
-            last_y = last_y.max(bottom_j);
-        }
-    }
-    (first_y, last_y)
-}
-
 pub fn horizontal_fade_rect(painter: &Painter, rect: Rect, left_color: Color32) {
     let mut mesh = Mesh::default();
 
@@ -882,4 +1132,218 @@ pub fn horizontal_fade_rect(painter: &Painter, rect: Rect, left_color: Color32) 
     ]);
 
     painter.add(egui::Shape::mesh(mesh));
+}
+
+fn group_y_span(lanes: &[LaneGeometry], prefix: &[usize]) -> Option<(f32, f32)> {
+    let mut first_y = f32::MAX;
+    let mut last_y = f32::MIN;
+
+    for lane in lanes.iter().filter(|lane| lane.path.starts_with(prefix)) {
+        first_y = first_y.min(lane.lane_rect.top());
+        last_y = last_y.max(lane.lane_rect.bottom());
+    }
+
+    if first_y.is_finite() && last_y.is_finite() && last_y > first_y {
+        Some((first_y, last_y))
+    } else {
+        None
+    }
+}
+
+#[derive(Clone)]
+struct LaneGeometry {
+    path: Vec<usize>,
+    lane_rect: egui::Rect,
+    track_rect: egui::Rect,
+    tree_rect: egui::Rect,
+    depth: usize,
+    is_group: bool,
+    child_count: usize,
+}
+
+#[derive(Clone)]
+enum DropIndicator {
+    Line { y: f32, x_start: f32, x_end: f32 },
+    Rect { rect: egui::Rect },
+}
+
+#[derive(Clone)]
+struct DropPreview {
+    slot: DropSlot,
+    indicator: DropIndicator,
+}
+
+#[derive(Clone)]
+pub(super) struct DropSlot {
+    parent_path: Vec<usize>,
+    insert_index: usize,
+    kind: DropKind,
+}
+
+#[derive(Clone)]
+pub(super) struct TreeDragState {
+    source_path: Vec<usize>,
+    source_id: egui::Id,
+    pointer_pos: egui::Pos2,
+    drop_slot: Option<DropSlot>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DropKind {
+    Before,
+    After,
+    Into,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SequenceDragKind {
+    Move,
+    ResizeStart,
+    ResizeEnd,
+}
+
+#[derive(Clone)]
+pub(super) struct SequenceDragState {
+    path: Vec<usize>,
+    source_id: egui::Id,
+    kind: SequenceDragKind,
+    pointer_start: egui::Pos2,
+    t_min_start: Beat,
+    t_max_start: Beat,
+}
+
+fn compute_drop_preview(
+    pointer: egui::Pos2,
+    lanes: &[LaneGeometry],
+    rect: egui::Rect,
+    source_path: &[usize],
+) -> Option<DropPreview> {
+    if lanes.is_empty() || source_path.is_empty() {
+        return None;
+    }
+
+    #[derive(Clone, Copy)]
+    enum DropZone {
+        Before(usize),
+        After(usize),
+        Into(usize),
+    }
+
+    let mut zone: Option<DropZone> = None;
+    for (idx, lane) in lanes.iter().enumerate() {
+        if pointer.y < lane.lane_rect.top() {
+            zone = Some(DropZone::Before(idx));
+            break;
+        }
+        if pointer.y <= lane.lane_rect.bottom() {
+            let height = lane.lane_rect.height().max(1.0);
+            let frac = (pointer.y - lane.lane_rect.top()) / height;
+            if frac < 0.3 {
+                zone = Some(DropZone::Before(idx));
+            } else if frac > 0.7 {
+                zone = Some(DropZone::After(idx));
+            } else {
+                zone = Some(DropZone::Into(idx));
+            }
+            break;
+        }
+    }
+    if zone.is_none() {
+        zone = Some(DropZone::After(lanes.len() - 1));
+    }
+
+    let src_parent: Vec<usize> = source_path[..source_path.len() - 1].to_vec();
+    let src_idx = *source_path.last().unwrap();
+
+    let (slot, indicator) = match zone? {
+        DropZone::Before(idx) => {
+            let lane = &lanes[idx];
+            if lane.path.is_empty() {
+                return None;
+            }
+            let parent_path = lane.path[..lane.path.len() - 1].to_vec();
+            let insert_index = *lane.path.last().unwrap();
+            let indicator = DropIndicator::Line {
+                y: lane.lane_rect.top(),
+                x_start: rect.left() + TREE_DEPTH_WIDTH * lane.depth as f32,
+                x_end: rect.right(),
+            };
+            (
+                DropSlot {
+                    parent_path,
+                    insert_index,
+                    kind: DropKind::Before,
+                },
+                indicator,
+            )
+        }
+        DropZone::After(idx) => {
+            let lane = &lanes[idx];
+            if lane.path.is_empty() {
+                return None;
+            }
+            let parent_path = lane.path[..lane.path.len() - 1].to_vec();
+            let insert_index = lane.path.last().copied().unwrap() + 1;
+            let indicator = DropIndicator::Line {
+                y: lane.lane_rect.bottom(),
+                x_start: rect.left() + TREE_DEPTH_WIDTH * lane.depth as f32,
+                x_end: rect.right(),
+            };
+            (
+                DropSlot {
+                    parent_path,
+                    insert_index,
+                    kind: DropKind::After,
+                },
+                indicator,
+            )
+        }
+        DropZone::Into(idx) => {
+            let lane = &lanes[idx];
+            if !lane.is_group {
+                return None;
+            }
+            let parent_path = lane.path.clone();
+            let insert_index = lane.child_count;
+            let indicator = DropIndicator::Rect {
+                rect: lane.lane_rect,
+            };
+            (
+                DropSlot {
+                    parent_path,
+                    insert_index,
+                    kind: DropKind::Into,
+                },
+                indicator,
+            )
+        }
+    };
+
+    if slot.parent_path.starts_with(source_path) {
+        return None;
+    }
+    if slot.parent_path == src_parent
+        && (slot.insert_index == src_idx || slot.insert_index == src_idx + 1)
+    {
+        return None;
+    }
+
+    Some(DropPreview { slot, indicator })
+}
+
+fn paint_drop_preview(painter: &egui::Painter, preview: &DropPreview) {
+    match &preview.indicator {
+        DropIndicator::Line { y, x_start, x_end } => {
+            painter.line_segment(
+                [egui::pos2(*x_start, *y), egui::pos2(*x_end, *y)],
+                egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 210, 0)),
+            );
+        }
+        DropIndicator::Rect { rect } => {
+            let fill = egui::Color32::from_rgba_unmultiplied(255, 210, 0, 32);
+            let stroke = egui::Stroke::new(1.5, egui::Color32::from_rgb(255, 210, 0));
+            painter.rect_filled(*rect, 6.0, fill);
+            painter.rect_stroke(*rect, 6.0, stroke, egui::StrokeKind::Middle);
+        }
+    }
 }

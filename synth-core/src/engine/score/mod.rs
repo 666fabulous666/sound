@@ -14,12 +14,12 @@
 //! - Volume is multiplicative down the tree (parent volume × child volume)
 
 pub mod default_params;
+pub mod node_params;
 pub mod note;
 pub mod probability;
 pub mod scheduler;
 pub mod sequence;
 pub mod time_quantum;
-pub mod node_params;
 pub mod track_node;
 
 use std::collections::BTreeMap;
@@ -473,7 +473,7 @@ impl Score {
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
-             overrides: node_params::NodeOverrides::default(),
+            overrides: node_params::NodeOverrides::default(),
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
                 muted: false,
@@ -658,6 +658,44 @@ impl Score {
             None
         }
     }
+
+    /// Move the node located at `source_path` into `target_parent` at `target_index`.
+    /// Returns the new path of the moved node on success.
+    pub fn move_node_to(
+        &mut self,
+        source_path: &[usize],
+        target_parent: &[usize],
+        target_index: usize,
+    ) -> Option<Vec<usize>> {
+        if source_path.is_empty() || target_parent.starts_with(source_path) {
+            // Never move the root or into one of our own descendants.
+            return None;
+        }
+
+        let src_parent: Vec<usize> = source_path[..source_path.len() - 1].to_vec();
+        let src_idx = *source_path.last().unwrap();
+
+        // Dropping immediately before/after itself is a no-op.
+        if target_parent == src_parent && (target_index == src_idx || target_index == src_idx + 1) {
+            return None;
+        }
+
+        let mut insert_parent = target_parent.to_vec();
+        adjust_path_for_removal(&mut insert_parent, source_path);
+
+        let node = self.track_root.remove_at(source_path)?;
+
+        let parent = self.track_root.get_mut(&insert_parent)?;
+        let NodeKind::Group { children, .. } = &mut parent.kind else {
+            return None;
+        };
+
+        let insert_idx = target_index.min(children.len());
+        children.insert(insert_idx, node);
+        let mut new_path = insert_parent;
+        new_path.push(insert_idx);
+        Some(new_path)
+    }
     // /// Draw the node at `path` (recursively if it's a Group).
     // pub fn draw_node_at(&mut self, path: &[usize], now: Time, rng: &mut ThreadRng) {
     //     let volume_opt = self.volume_chain_product(path);
@@ -703,10 +741,23 @@ impl Score {
     }
 }
 
-fn apply_params_to_notes_group(
-    ng: &mut NotesGroup,
-    params: &node_params::ResolvedTrackParams,
-) {
+fn adjust_path_for_removal(path: &mut Vec<usize>, removed: &[usize]) {
+    if removed.is_empty() {
+        return;
+    }
+    let parent_depth = removed.len() - 1;
+    if path.len() <= parent_depth {
+        return;
+    }
+    if path[..parent_depth] != removed[..parent_depth] {
+        return;
+    }
+    if path[parent_depth] > removed[parent_depth] {
+        path[parent_depth] -= 1;
+    }
+}
+
+fn apply_params_to_notes_group(ng: &mut NotesGroup, params: &node_params::ResolvedTrackParams) {
     ng.bend = (params.bend.magnitude, params.bend.speed);
     ng.vibrato = (params.vibrato.magnitude, params.vibrato.frequency);
     ng.chorus = params.chorus.clone();
@@ -724,8 +775,8 @@ fn apply_params_to_notes_group(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::score::sequence::Sequence;
     use crate::engine::score::node_params::BendParams;
+    use crate::engine::score::sequence::Sequence;
 
     #[test]
     fn test_volume_chain_product_root() {

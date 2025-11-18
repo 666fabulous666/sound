@@ -5,6 +5,7 @@ mod start_page;
 mod timeline_panel;
 mod top_panel;
 
+use self::timeline_panel::{SequenceDragState, TreeDragState};
 use crate::{
     engine::{
         score::{
@@ -70,6 +71,8 @@ pub struct GuiApp {
     device: Device,
     sample_rate: f64,
     shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
+    tree_drag: Option<TreeDragState>,
+    sequence_drag: Option<SequenceDragState>,
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
     #[cfg(target_arch = "wasm32")]
@@ -174,6 +177,8 @@ impl GuiApp {
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
             device: device,
+            tree_drag: None,
+            sequence_drag: None,
             #[cfg(target_arch = "wasm32")]
             pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
             #[cfg(target_arch = "wasm32")]
@@ -410,13 +415,13 @@ impl GuiApp {
             NodeKind::Seq(_) => TrackNode {
                 name: String::new(),
                 proba: Probability::default(),
-            volume: 1.0,
-            pan: 0.5,
-            hue: 0.0,
-            or_weight: 1.0,
-            overrides: node_params::NodeOverrides::default(),
-            kind: NodeKind::Group {
-                id: self.score.last_token.next(),
+                volume: 1.0,
+                pan: 0.5,
+                hue: 0.0,
+                or_weight: 1.0,
+                overrides: node_params::NodeOverrides::default(),
+                kind: NodeKind::Group {
+                    id: self.score.last_token.next(),
                     muted: false,
                     collapsed: false,
                     children: vec![node],
