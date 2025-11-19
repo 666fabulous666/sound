@@ -579,10 +579,16 @@ impl GuiApp {
             egui::pos2(block_rect.right() - handle_width, block_rect.top()),
             block_rect.right_bottom(),
         );
+        let shift_height = (block_rect.height() * 0.35).clamp(4.0, 12.0);
+        let shift_rect = egui::Rect::from_min_max(
+            egui::pos2(block_rect.left(), block_rect.bottom() - shift_height),
+            block_rect.right_bottom(),
+        );
 
         let handle_color = ui.visuals().widgets.active.bg_fill.gamma_multiply(0.6);
         painter.rect_filled(left_rect, 2.0, handle_color);
         painter.rect_filled(right_rect, 2.0, handle_color);
+        painter.rect_filled(shift_rect, 2.0, handle_color.gamma_multiply(0.8));
 
         let start_resp = ui
             .interact(
@@ -613,6 +619,21 @@ impl GuiApp {
             SequenceDragKind::ResizeEnd,
             &end_resp,
         );
+
+        let shift_resp = ui
+            .interact(
+                shift_rect,
+                egui::Id::new(("seq_shift", &lane.path, block_instance)),
+                egui::Sense::click_and_drag(),
+            )
+            .on_hover_cursor(egui::CursorIcon::Grab);
+        self.process_sequence_handle_response(
+            ctx,
+            lane,
+            seq,
+            SequenceDragKind::MoveWindow,
+            &shift_resp,
+        );
     }
 
     fn process_sequence_handle_response(
@@ -623,8 +644,14 @@ impl GuiApp {
         kind: SequenceDragKind,
         response: &egui::Response,
     ) {
+        let cursor_icon = match kind {
+            SequenceDragKind::ResizeStart | SequenceDragKind::ResizeEnd => {
+                egui::CursorIcon::ResizeHorizontal
+            }
+            SequenceDragKind::MoveWindow => egui::CursorIcon::Grabbing,
+        };
         if response.drag_started() {
-            ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
+            ctx.set_cursor_icon(cursor_icon);
             let pointer_pos = response
                 .interact_pointer_pos()
                 .unwrap_or_else(|| response.rect.center());
@@ -644,7 +671,7 @@ impl GuiApp {
                 if response.drag_stopped() {
                     self.finish_sequence_drag();
                 } else if response.is_pointer_button_down_on() {
-                    ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
+                    ctx.set_cursor_icon(cursor_icon);
                 }
             }
         }
@@ -688,6 +715,13 @@ impl GuiApp {
                         new_max = (new_max + snapped_delta)
                             .clamp(state.t_min_start.as_beats(), seq.loop_len.as_beats());
                         new_max = new_max.max(new_min);
+                    }
+                    SequenceDragKind::MoveWindow => {
+                        let span =
+                            (state.t_max_start.as_beats() - state.t_min_start.as_beats()).max(0.0);
+                        let max_start = (seq.loop_len.as_beats() - span).max(0.0);
+                        new_min = (new_min + snapped_delta).clamp(0.0, max_start);
+                        new_max = (new_min + span).min(seq.loop_len.as_beats());
                     }
                 }
 
@@ -1221,6 +1255,7 @@ enum DropKind {
 enum SequenceDragKind {
     ResizeStart,
     ResizeEnd,
+    MoveWindow,
 }
 
 #[derive(Clone)]

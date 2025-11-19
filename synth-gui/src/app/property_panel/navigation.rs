@@ -5,7 +5,13 @@ use crate::shortcuts::{
 };
 use egui::Modifiers;
 
-const MOD_PREFIXES: [&str; 3] = ["", "Ctrl+", "Shift+"];
+const MOD_PREFIXES: [&str; 3] = ["", "Cmd+", "Shift+"];
+
+fn command_mods() -> Modifiers {
+    let mut mods = Modifiers::NONE;
+    mods.command = true;
+    mods
+}
 
 fn smart_button(
     ui: &mut egui::Ui,
@@ -21,7 +27,7 @@ fn smart_button(
             // emphasize the active row
             let active_idx = if mods.shift {
                 2
-            } else if mods.ctrl {
+            } else if mods.command {
                 1
             } else {
                 0
@@ -42,7 +48,7 @@ fn smart_button(
 fn up_variant(mods: Modifiers) -> (&'static str, Action) {
     if mods.shift {
         Action::GroupAbove.label_and_action()
-    } else if mods.ctrl {
+    } else if mods.command {
         Action::MoveUp.label_and_action()
     } else {
         Action::SelectUp.label_and_action()
@@ -51,7 +57,7 @@ fn up_variant(mods: Modifiers) -> (&'static str, Action) {
 fn down_variant(mods: Modifiers) -> (&'static str, Action) {
     if mods.shift {
         Action::GroupBelow.label_and_action()
-    } else if mods.ctrl {
+    } else if mods.command {
         Action::MoveDown.label_and_action()
     } else {
         Action::SelectDown.label_and_action()
@@ -60,104 +66,103 @@ fn down_variant(mods: Modifiers) -> (&'static str, Action) {
 fn parent_variant(mods: Modifiers) -> (&'static str, Action) {
     if mods.shift {
         Action::Dissolve.label_and_action()
-    } else if mods.ctrl {
-        Action::GroupAbove.label_and_action()
+    } else if mods.command {
+        Action::Promote.label_and_action()
     } else {
         Action::Parent.label_and_action()
     }
 }
 fn first_child_variant(mods: Modifiers) -> (&'static str, Action) {
-    if mods.shift {
+    if mods.command {
         Action::Wrap.label_and_action()
-    } else if mods.ctrl {
-        Action::Promote.label_and_action()
     } else {
         Action::FirstChild.label_and_action()
     }
 }
 
 pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut TrackNode) {
-    // Buttons row
-    ui.horizontal_wrapped(|ui| {
-        // Mute / Unmute
-        let mute_label = if track_node_mut.is_mute() {
-            "Unmute"
-        } else {
-            "Mute"
-        };
-        if ui
-            .button(mute_label)
-            .on_hover_text(shortcut(MUTE))
-            .clicked()
-        {
-            *action = Action::Mute;
-            // track_node_mut.toggle_mute();
-            // *edited_seq = true;
-        }
+    egui::CollapsingHeader::new("Navigation")
+        .default_open(true)
+        .show(ui, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                // Mute / Unmute
+                let mute_label = if track_node_mut.is_mute() {
+                    "Unmute"
+                } else {
+                    "Mute"
+                };
+                if ui
+                    .button(mute_label)
+                    .on_hover_text(shortcut(MUTE))
+                    .clicked()
+                {
+                    *action = Action::Mute;
+                }
 
-        // Delete
-        if ui
-            .button("Delete")
-            .on_hover_text(shortcut(DELETE))
-            .clicked()
-        {
-            *action = Action::Delete;
-        }
+                // Delete
+                if ui
+                    .button("Delete")
+                    .on_hover_text(shortcut(DELETE))
+                    .clicked()
+                {
+                    *action = Action::Delete;
+                }
 
-        // Clone
-        if ui.button("Clone").on_hover_text(shortcut(CLONE)).clicked() {
-            *action = Action::Clone;
-        }
+                // Clone
+                if ui.button("Clone").on_hover_text(shortcut(CLONE)).clicked() {
+                    *action = Action::Clone;
+                }
 
-        // Up
-        let tips_up = make_tooltips(
-            &SELECT_UP.name(),
-            [
-                up_variant(Modifiers::NONE).0,
-                up_variant(Modifiers::SHIFT).0,
-                up_variant(Modifiers::CTRL).0,
-            ],
-        );
-        if let Some(act) = smart_button(ui, up_variant, &tips_up) {
-            *action = act;
-        }
-        // Down
-        let tips_down = make_tooltips(
-            &SELECT_DOWN.name(),
-            [
-                down_variant(Modifiers::NONE).0,
-                down_variant(Modifiers::SHIFT).0,
-                down_variant(Modifiers::CTRL).0,
-            ],
-        );
-        if let Some(act) = smart_button(ui, down_variant, &tips_down) {
-            *action = act;
-        }
-        // Parent
-        let tips_parent = make_tooltips(
-            &PARENT.name(),
-            [
-                parent_variant(Modifiers::NONE).0,
-                parent_variant(Modifiers::SHIFT).0,
-                parent_variant(Modifiers::CTRL).0,
-            ],
-        );
-        if let Some(act) = smart_button(ui, parent_variant, &tips_parent) {
-            *action = act;
-        }
-        // First child
-        let tips_first_child = make_tooltips(
-            &FIRST_CHILD.name(),
-            [
-                first_child_variant(Modifiers::NONE).0,
-                first_child_variant(Modifiers::SHIFT).0,
-                first_child_variant(Modifiers::CTRL).0,
-            ],
-        );
-        if let Some(act) = smart_button(ui, first_child_variant, &tips_first_child) {
-            *action = act;
-        }
-    });
+                // Up
+                let tips_up = make_tooltips(
+                    &SELECT_UP.name(),
+                    [
+                        up_variant(Modifiers::NONE).0,
+                        up_variant(command_mods()).0,
+                        up_variant(Modifiers::SHIFT).0,
+                    ],
+                );
+                if let Some(act) = smart_button(ui, up_variant, &tips_up) {
+                    *action = act;
+                }
+                // Down
+                let tips_down = make_tooltips(
+                    &SELECT_DOWN.name(),
+                    [
+                        down_variant(Modifiers::NONE).0,
+                        down_variant(command_mods()).0,
+                        down_variant(Modifiers::SHIFT).0,
+                    ],
+                );
+                if let Some(act) = smart_button(ui, down_variant, &tips_down) {
+                    *action = act;
+                }
+                // Parent
+                let tips_parent = make_tooltips(
+                    &PARENT.name(),
+                    [
+                        parent_variant(Modifiers::NONE).0,
+                        parent_variant(command_mods()).0,
+                        parent_variant(Modifiers::SHIFT).0,
+                    ],
+                );
+                if let Some(act) = smart_button(ui, parent_variant, &tips_parent) {
+                    *action = act;
+                }
+                // First child
+                let tips_first_child = make_tooltips(
+                    &FIRST_CHILD.name(),
+                    [
+                        first_child_variant(Modifiers::NONE).0,
+                        first_child_variant(command_mods()).0,
+                        first_child_variant(Modifiers::SHIFT).0,
+                    ],
+                );
+                if let Some(act) = smart_button(ui, first_child_variant, &tips_first_child) {
+                    *action = act;
+                }
+            });
+        });
 
     // Keyboard handling
     if !ui.ctx().wants_keyboard_input() {
@@ -175,7 +180,7 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
         });
 
         let shift = mods.shift;
-        let ctrl = mods.ctrl;
+        let command = mods.command;
 
         if mute {
             *action = Action::Mute;
@@ -190,7 +195,7 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
         if sel_up {
             *action = if shift {
                 Action::GroupAbove
-            } else if ctrl {
+            } else if command {
                 Action::MoveUp
             } else {
                 Action::SelectUp
@@ -199,17 +204,15 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
         if sel_down {
             *action = if shift {
                 Action::GroupBelow
-            } else if ctrl {
+            } else if command {
                 Action::MoveDown
             } else {
                 Action::SelectDown
             };
         }
         if sel_ch {
-            *action = if shift {
+            *action = if command {
                 Action::Wrap
-            } else if ctrl {
-                Action::Promote
             } else {
                 Action::FirstChild
             };
@@ -217,8 +220,8 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
         if sel_par {
             *action = if shift {
                 Action::Dissolve
-            } else if ctrl {
-                Action::GroupAbove
+            } else if command {
+                Action::Promote
             } else {
                 Action::Parent
             };

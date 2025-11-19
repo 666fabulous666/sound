@@ -2,10 +2,10 @@ use egui::Key;
 
 pub const DELETE: Key = Key::D;
 pub const CLONE: Key = Key::I;
-pub const SELECT_UP: Key = Key::K;
-pub const SELECT_DOWN: Key = Key::J;
-pub const PARENT: Key = Key::H;
-pub const FIRST_CHILD: Key = Key::L;
+pub const SELECT_UP: Key = Key::ArrowUp;
+pub const SELECT_DOWN: Key = Key::ArrowDown;
+pub const PARENT: Key = Key::ArrowLeft;
+pub const FIRST_CHILD: Key = Key::ArrowRight;
 pub const WRAP: Key = Key::W;
 pub const GROUP: Key = Key::G;
 pub const COLLAPSE: Key = Key::C;

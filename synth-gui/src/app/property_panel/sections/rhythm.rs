@@ -67,41 +67,6 @@ pub fn show_rhythm_section(
             }
         });
 
-        if !ui.ctx().wants_keyboard_input() {
-            let (left, right, mods) = ui.ctx().input(|i| {
-                (
-                    i.key_pressed(egui::Key::ArrowLeft),
-                    i.key_pressed(egui::Key::ArrowRight),
-                    i.modifiers,
-                )
-            });
-            if left || right {
-                let dir = if left { -1.0 } else { 1.0 };
-                let mut new_min = seq.t_min.as_beats();
-                let mut new_max = seq.t_max.as_beats();
-                let s = step.as_beats();
-
-                match (mods.command, mods.alt) {
-                    (true, false) => {
-                        new_min = (new_min + dir * s).clamp(0.0, new_max);
-                    }
-                    (false, true) => {
-                        new_max = (new_max + dir * s).clamp(new_min, seq.loop_len.as_beats());
-                    }
-                    _ => {
-                        let span = new_max - new_min;
-                        new_min = (new_min + dir * s)
-                            .clamp(0.0, (seq.loop_len.as_beats() - span).max(0.0));
-                        new_max = (new_min + span).min(seq.loop_len.as_beats());
-                    }
-                }
-
-                seq.t_min = Beat(new_min);
-                seq.t_max = Beat(new_max);
-                impact.require_regeneration();
-            }
-        }
-
         ui.separator();
 
         if rhythm::inclusion_section(ui, seq, |ui, gens, default| {
