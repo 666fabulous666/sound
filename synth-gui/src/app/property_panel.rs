@@ -971,6 +971,7 @@ impl GuiApp {
                     prev.sequence != sequence
                         || prev.params != params
                         || prev.background != background
+                        || prev.log_freq != self.spectrogram_log_freq
                 });
         if !needs_render {
             return;
@@ -998,6 +999,7 @@ impl GuiApp {
                 existing.sequence = request.sequence.clone();
                 existing.params = request.params.clone();
                 existing.background = background;
+                existing.log_freq = self.spectrogram_log_freq;
             } else {
                 let size = image.size;
                 let texture = ctx.load_texture(
@@ -1014,6 +1016,7 @@ impl GuiApp {
                             sequence: request.sequence.clone(),
                             params: request.params.clone(),
                             background,
+                            log_freq: self.spectrogram_log_freq,
                         },
                     );
             }
@@ -1055,6 +1058,7 @@ impl GuiApp {
             min_freq,
             max_freq,
             background,
+            self.spectrogram_log_freq,
         ))
     }
 
@@ -1171,6 +1175,7 @@ fn samples_to_color_image(
     min_freq: f32,
     max_freq: f32,
     background: Color32,
+    log_freq: bool,
 ) -> ColorImage {
     let mut window = Vec::with_capacity(SPECTROGRAM_WINDOW);
     for i in 0..SPECTROGRAM_WINDOW {
@@ -1209,13 +1214,29 @@ fn samples_to_color_image(
         [width, visible_bins],
         vec![background; width * visible_bins],
     );
+    let denom = (visible_bins - 1).max(1) as f32;
     for (x, column) in columns.iter().enumerate() {
-        for (output_idx, src_idx) in (min_bin..max_bin).enumerate() {
+        for output_idx in 0..visible_bins {
+            let value = if log_freq {
+                let min_f = min_freq.max(1.0);
+                let max_f = max_freq.max(min_f + 1.0);
+                let ratio = max_f / min_f;
+                let frac = output_idx as f32 / denom;
+                let freq = min_f * ratio.powf(frac);
+                let target = (freq / bin_hz).clamp(min_bin as f32, (max_bin - 1) as f32);
+                let lower = target.floor() as usize;
+                let upper = (lower + 1).min(column.len().saturating_sub(1));
+                let t = target - lower as f32;
+                let low_val = column.get(lower).copied().unwrap_or(0.0);
+                let high_val = column.get(upper).copied().unwrap_or(low_val);
+                low_val + (high_val - low_val) * t
+            } else {
+                column
+                    .get(min_bin + output_idx)
+                    .copied()
+                    .unwrap_or(0.0)
+            };
             let y = visible_bins - 1 - output_idx.min(visible_bins - 1);
-            let value = column
-                .get(src_idx)
-                .copied()
-                .unwrap_or(0.0);
             image.pixels[y * width + x] = color_from_value(value, background);
         }
     }

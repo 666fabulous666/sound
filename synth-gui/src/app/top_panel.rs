@@ -158,6 +158,13 @@ impl GuiApp {
                                     self.spectrogram_render_requested = true;
                                 }
                             }
+                            if ui
+                                .checkbox(&mut self.spectrogram_log_freq, "Log freq scale")
+                                .on_hover_text("Display spectrogram frequencies on a logarithmic axis")
+                                .changed()
+                            {
+                                self.spectrogram_render_requested = true;
+                            }
                         });
                         #[cfg(not(target_arch = "wasm32"))]
                         {

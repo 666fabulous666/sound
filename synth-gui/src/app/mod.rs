@@ -90,6 +90,7 @@ pub struct GuiApp {
     property_panel_width: f32,
     spectrogram_render_requested: bool,
     show_spectrogram_panel: bool,
+    spectrogram_log_freq: bool,
     #[cfg(not(target_arch = "wasm32"))]
     recorder: Arc<Recorder>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -104,6 +105,7 @@ pub struct SpectrogramPreview {
     pub sequence: Sequence,
     pub params: ResolvedTrackParams,
     pub background: Color32,
+    pub log_freq: bool,
 }
 
 use serde::Deserializer;
@@ -208,6 +210,7 @@ impl GuiApp {
             property_panel_width: 270.0,
             spectrogram_render_requested: false,
             show_spectrogram_panel: true,
+            spectrogram_log_freq: false,
             score: Score::new(),
             #[cfg(not(target_arch = "wasm32"))]
             recorder: Arc::new(Recorder::new()),
