@@ -4,7 +4,8 @@ mod navigation;
 mod rhythm;
 mod sections;
 
-use egui::{RichText, ScrollArea, TextEdit};
+use egui::{Color32, ColorImage, DragValue, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
+use rustfft::{num_complex::Complex32, FftPlanner};
 use helpers::{ParameterBehavior, SliderParam};
 use sections::{
     accents, bend, chorus, envelope, harmony, lowpass, mix, power, rhythm as rhythm_section,
@@ -12,18 +13,22 @@ use sections::{
 };
 
 use crate::{
-    app::{property_panel::navigation::navigation, GuiApp, ALL_WAVES, DRUM_WAVES},
+    app::{
+        property_panel::navigation::navigation, GuiApp, SpectrogramPreview, ALL_WAVES, DRUM_WAVES,
+    },
     engine::score::{
-        node_params::{HarmonyParams, ParamResolution, RhythmParams},
+        node_params::{EnvelopeParams, HarmonyParams, ParamResolution, ResolvedTrackParams, RhythmParams},
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
     },
+    engine::waves::generate_wave,
     layout_left,
     shortcuts::*,
-    Token,
+    time_freq::{Freq, Time},
+    Token, F0,
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, f32::consts::TAU};
 
 #[derive(Clone)]
 pub enum Action {
@@ -69,6 +74,17 @@ impl Action {
 pub(super) struct ParameterImpact {
     needs_regeneration: bool,
     needs_mix_update: bool,
+}
+
+const SPECTROGRAM_WINDOW: usize = 1024;
+const SPECTROGRAM_HOP: usize = 256;
+const SPECTROGRAM_MIN_DB: f32 = -80.0;
+
+struct SpectrogramRequest {
+    token: Token,
+    path: Vec<usize>,
+    sequence: Sequence,
+    params: ResolvedTrackParams,
 }
 
 pub struct OverrideBinding<'a, T: Clone> {
@@ -515,6 +531,10 @@ impl GuiApp {
                                 if overrides_dirty {
                                     needs_override_refresh = true;
                                 }
+
+                                if impact.needs_regeneration() || impact.needs_mix_update() {
+                                    self.spectrogram_render_requested = true;
+                                }
                             } else if let (
                                 NodeKind::Group {
                                     collapsed,
@@ -781,6 +801,7 @@ impl GuiApp {
                         if needs_override_refresh {
                             self.score.refresh_notes_for_path(&sel);
                         }
+
                     } else {
                         ui.label("Click a block to edit");
                     }
@@ -923,5 +944,419 @@ impl GuiApp {
                 });
                 self.property_panel_width = ui.available_width();
             });
+    }
+
+    pub fn update_spectrogram_preview_if_needed(
+        &mut self,
+        ctx: &egui::Context,
+        background: Color32,
+    ) {
+        let Some(sel) = self.selected.clone() else {
+            return;
+        };
+        let Some(node) = self.score.track_root.get(&sel) else {
+            return;
+        };
+        let sequence = match &node.kind {
+            NodeKind::Seq(seq) => seq.clone(),
+            NodeKind::Group { .. } => return,
+        };
+        let params = self.score.track_root.resolved_params_for_path(&sel);
+        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
+        let note_time = self.spectrogram_note_time;
+        let needs_render = self
+            .spectrogram_render_requested
+            || self
+                .spectrogram_previews
+                .get(&sequence.token)
+                .map_or(true, |prev| {
+                    prev.sequence != sequence
+                        || prev.params != params
+                        || (prev.note_time - note_time).abs() > f32::EPSILON
+                        || (prev.min_freq - min_freq).abs() > f32::EPSILON
+                        || (prev.max_freq - max_freq).abs() > f32::EPSILON
+                        || prev.background != background
+                });
+        if !needs_render {
+            return;
+        }
+        let request = SpectrogramRequest {
+            token: sequence.token,
+            path: sel,
+            sequence,
+            params,
+        };
+        self.generate_spectrogram_preview(ctx, request, background);
+        self.spectrogram_render_requested = false;
+    }
+
+    fn generate_spectrogram_preview(
+        &mut self,
+        ctx: &egui::Context,
+        request: SpectrogramRequest,
+        background: Color32,
+    ) {
+        if let Some(image) = self.build_spectrogram_image(&request, background) {
+            let (min_freq, max_freq) = self.spectrogram_freq_bounds();
+            if let Some(existing) = self.spectrogram_previews.get_mut(&request.token) {
+                existing.texture.set(image.clone(), TextureOptions::LINEAR);
+                existing.size = image.size;
+                existing.sequence = request.sequence.clone();
+                existing.params = request.params.clone();
+                existing.note_time = self.spectrogram_note_time;
+                existing.min_freq = min_freq;
+                existing.max_freq = max_freq;
+                existing.background = background;
+            } else {
+                let size = image.size;
+                let texture = ctx.load_texture(
+                    format!("spectrogram_preview_{}", request.token.0),
+                    image,
+                    TextureOptions::LINEAR,
+                );
+                self.spectrogram_previews
+                    .insert(
+                        request.token,
+                        SpectrogramPreview {
+                            texture,
+                            size,
+                            sequence: request.sequence.clone(),
+                            params: request.params.clone(),
+                            note_time: self.spectrogram_note_time,
+                            min_freq,
+                            max_freq,
+                            background,
+                        },
+                    );
+            }
+        }
+    }
+
+    pub fn spectrogram_panel(&mut self, ctx: &egui::Context) {
+        egui::TopBottomPanel::bottom("spectrogram_panel")
+            .resizable(true)
+            .default_height(240.0)
+            .show(ctx, |ui| {
+                let selected_token = self
+                    .selected
+                    .as_ref()
+                    .and_then(|sel| self.score.track_root.get(sel))
+                    .and_then(|node| node.as_seq().map(|seq| seq.token));
+                let has_preview = selected_token
+                    .and_then(|token| self.spectrogram_previews.get(&token))
+                    .is_some();
+                ui.horizontal(|ui| {
+                    ui.heading("Spectrogram preview");
+                    if has_preview {
+                        ui.label("Updates automatically after edits.");
+                    }
+                    if ui
+                        .add_enabled_ui(selected_token.is_some(), |ui| ui.button("Render now"))
+                        .inner
+                        .clicked()
+                    {
+                        self.spectrogram_render_requested = true;
+                    }
+                    if selected_token.is_none() {
+                        ui.label("Select a sequence to generate a preview.");
+                    }
+                });
+
+                let mut settings_changed = false;
+                ui.horizontal(|ui| {
+                    ui.label("Note time (s):");
+                    let note_resp = ui
+                        .add(
+                            DragValue::new(&mut self.spectrogram_note_time)
+                                .range(0.0..=10.0)
+                                .speed(0.05),
+                        )
+                        .on_hover_text("Start offset inside the synthesized note.");
+                    if note_resp.changed() {
+                        settings_changed = true;
+                    }
+
+                    ui.separator();
+                    ui.label("Frequency range (Hz):");
+                    let min_resp = ui
+                        .add(
+                            DragValue::new(&mut self.spectrogram_min_freq)
+                                .range(0.0..=self.sample_rate as f32)
+                                .speed(10.0)
+                                .suffix(" Hz"),
+                        )
+                        .on_hover_text("Lowest frequency to display.");
+                    let max_resp = ui
+                        .add(
+                            DragValue::new(&mut self.spectrogram_max_freq)
+                                .range(0.0..=self.sample_rate as f32)
+                                .speed(10.0)
+                                .suffix(" Hz"),
+                        )
+                        .on_hover_text("Highest frequency to display.");
+                    if min_resp.changed() || max_resp.changed() {
+                        settings_changed = true;
+                    }
+                });
+                let prev_min = self.spectrogram_min_freq;
+                let prev_max = self.spectrogram_max_freq;
+                self.clamp_spectrogram_inputs();
+                if settings_changed
+                    || (self.spectrogram_min_freq - prev_min).abs() > f32::EPSILON
+                    || (self.spectrogram_max_freq - prev_max).abs() > f32::EPSILON
+                {
+                    self.spectrogram_render_requested = true;
+                }
+
+                ui.separator();
+                let preview = selected_token
+                    .and_then(|token| self.spectrogram_previews.get(&token));
+                if let Some(preview) = preview {
+                    let width = ui.available_width().max(64.0);
+                    let height = ui.available_height().max(120.0);
+                    ui.image((preview.texture.id(), Vec2::new(width, height)));
+                } else if selected_token.is_some() {
+                    ui.label("No preview yet. Click \"Render now\" to synthesize one.");
+                } else {
+                    ui.label("Spectrogram preview will appear here once a sequence is selected.");
+                }
+            });
+    }
+
+    fn build_spectrogram_image(
+        &self,
+        request: &SpectrogramRequest,
+        background: Color32,
+    ) -> Option<ColorImage> {
+        let samples = self.render_preview_samples(request)?;
+        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
+        Some(samples_to_color_image(
+            &samples,
+            self.sample_rate as f32,
+            min_freq,
+            max_freq,
+            background,
+        ))
+    }
+
+    fn render_preview_samples(&self, request: &SpectrogramRequest) -> Option<Vec<f32>> {
+        let sample_rate = self.sample_rate.max(1.0);
+        let sample_count = sample_rate.round() as usize;
+        if sample_count == 0 {
+            return None;
+        }
+        let harmony_params = if request.params.has_harmony_override() {
+            request.params.harmony.clone()
+        } else {
+            HarmonyParams::from_sequence(&request.sequence)
+        };
+        let octave = interval_octave(&harmony_params.interval);
+        let wave = if request.params.has_wave_override() {
+            request.params.wave.wave
+        } else {
+            request.sequence.wave_type
+        };
+        let note_interval = Interval::Tempered(0, octave);
+        let frequency = Freq(F0.as_hz() * note_interval.compute());
+        let duration = Time(1.0);
+        let mut memory = [0.0; 5];
+        let mut samples = Vec::with_capacity(sample_count + SPECTROGRAM_WINDOW);
+        let track_volume = self.cumulative_volume_for_path(&request.path);
+        let note_volume = preview_note_volume(&request.sequence, &request.params.envelope);
+        let volume_scale = sanitize_volume(track_volume) * note_volume.abs() * 0.1;
+        let sample_rate_freq = Freq(sample_rate);
+        let offset = self.spectrogram_note_time.max(0.0) as f64;
+        for i in 0..sample_count {
+            let t = Time(offset + i as f64 / sample_rate);
+            let raw = generate_wave(
+                &wave,
+                frequency,
+                None,
+                t,
+                duration,
+                (request.params.envelope.attack, request.params.envelope.decay),
+                request.params.lowpass.cutoff_multiplier,
+                request.params.lowpass.relaxation,
+                request.params.lowpass.lfo,
+                (request.params.bend.magnitude, request.params.bend.speed),
+                (
+                    request.params.vibrato.magnitude,
+                    request.params.vibrato.frequency,
+                ),
+                &request.params.chorus,
+                (request.params.power.initial, request.params.power.evolution),
+                request.params.lowpass.enabled,
+                request.params.lowpass.order,
+                &mut memory,
+                sample_rate_freq,
+                t,
+            );
+            samples.push((raw * volume_scale) as f32);
+        }
+        let target_len = samples.len().saturating_add(SPECTROGRAM_WINDOW);
+        samples.resize(target_len, 0.0);
+        Some(samples)
+    }
+
+    fn spectrogram_freq_bounds(&self) -> (f32, f32) {
+        let nyquist = (self.sample_rate.max(1.0) as f32 * 0.5).max(1.0);
+        let mut min_freq = self.spectrogram_min_freq.clamp(0.0, nyquist - 1.0);
+        let mut max_freq = self
+            .spectrogram_max_freq
+            .clamp((min_freq + 1.0).min(nyquist), nyquist);
+        if max_freq <= min_freq {
+            max_freq = (min_freq + 1.0).min(nyquist);
+            min_freq = (max_freq - 1.0).max(0.0);
+        }
+        (min_freq, max_freq)
+    }
+
+    fn clamp_spectrogram_inputs(&mut self) {
+        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
+        self.spectrogram_min_freq = min_freq;
+        self.spectrogram_max_freq = max_freq;
+    }
+
+    fn cumulative_volume_for_path(&self, path: &[usize]) -> f64 {
+        let mut cumulative = sanitize_volume(self.score.track_root.volume());
+        let mut current = &self.score.track_root;
+        for &idx in path {
+            match &current.kind {
+                NodeKind::Group { children, .. } => {
+                    if let Some(child) = children.get(idx) {
+                        cumulative = sanitize_volume(cumulative * child.volume());
+                        current = child;
+                    } else {
+                        break;
+                    }
+                }
+                NodeKind::Seq(_) => {
+                    cumulative = sanitize_volume(cumulative * current.volume());
+                    break;
+                }
+            }
+        }
+        cumulative
+    }
+}
+
+fn preview_note_volume(sequence: &Sequence, envelope: &EnvelopeParams) -> f64 {
+    let base = sequence.accents.0;
+    let extras: f64 = sequence.accents.1.iter().copied().sum();
+    let denominator = if base <= 0.0 { 1.0 } else { base };
+    let normalization = if envelope.normalization.is_finite() && envelope.normalization > 0.0 {
+        envelope.normalization
+    } else {
+        1.0
+    };
+    ((base + 0.5 * extras) / denominator) / normalization
+}
+
+fn interval_octave(interval: &Interval) -> i32 {
+    match interval {
+        Interval::Tempered(_, octave) => *octave,
+        Interval::RDTempered(_, _, octave) => *octave,
+    }
+}
+
+fn samples_to_color_image(
+    samples: &[f32],
+    sample_rate: f32,
+    min_freq: f32,
+    max_freq: f32,
+    background: Color32,
+) -> ColorImage {
+    let mut window = Vec::with_capacity(SPECTROGRAM_WINDOW);
+    for i in 0..SPECTROGRAM_WINDOW {
+        let phase = TAU * i as f32 / SPECTROGRAM_WINDOW as f32;
+        window.push(0.5 - 0.5 * phase.cos());
+    }
+    let mut planner = FftPlanner::<f32>::new();
+    let fft = planner.plan_fft_forward(SPECTROGRAM_WINDOW);
+    let height = SPECTROGRAM_WINDOW / 2;
+    let mut columns: Vec<Vec<f32>> = Vec::new();
+    let mut offset = 0usize;
+    while offset + SPECTROGRAM_WINDOW <= samples.len() {
+        let mut buffer: Vec<Complex32> = (0..SPECTROGRAM_WINDOW)
+            .map(|i| Complex32::new(samples[offset + i] * window[i], 0.0))
+            .collect();
+        fft.process(&mut buffer);
+        columns.push(
+            buffer[..height]
+                .iter()
+                .map(|c| magnitude_to_value(c.norm() / SPECTROGRAM_WINDOW as f32))
+                .collect(),
+        );
+        offset += SPECTROGRAM_HOP;
+    }
+    if columns.is_empty() {
+        columns.push(vec![0.0; height]);
+    }
+    let width = columns.len();
+    let bin_hz = (sample_rate / SPECTROGRAM_WINDOW as f32).max(1e-6);
+    let min_bin = (min_freq / bin_hz).floor().clamp(0.0, (height - 1) as f32) as usize;
+    let max_bin = (max_freq / bin_hz)
+        .ceil()
+        .clamp(min_bin as f32 + 1.0, height as f32) as usize;
+    let visible_bins = (max_bin.saturating_sub(min_bin)).max(1);
+    let mut image = ColorImage::new(
+        [width, visible_bins],
+        vec![background; width * visible_bins],
+    );
+    for (x, column) in columns.iter().enumerate() {
+        for (output_idx, src_idx) in (min_bin..max_bin).enumerate() {
+            let y = visible_bins - 1 - output_idx.min(visible_bins - 1);
+            let value = column
+                .get(src_idx)
+                .copied()
+                .unwrap_or(0.0);
+            image.pixels[y * width + x] = color_from_value(value, background);
+        }
+    }
+    image
+}
+
+fn magnitude_to_value(magnitude: f32) -> f32 {
+    let magnitude = magnitude.max(1e-8);
+    let db = 20.0 * magnitude.log10();
+    ((db - SPECTROGRAM_MIN_DB) / (0.0 - SPECTROGRAM_MIN_DB)).clamp(0.0, 1.0)
+}
+
+fn color_from_value(value: f32, background: Color32) -> Color32 {
+    let v = if value.is_finite() { value } else { 0.0 };
+    let v = v.clamp(0.0, 1.0);
+    let segment = 1.0 / 3.0;
+    if v <= segment {
+        let t = if segment == 0.0 { 0.0 } else { v / segment };
+        lerp_color(background, Color32::from_rgb(0, 0, 255), t)
+    } else if v <= 2.0 * segment {
+        let t = (v - segment) / segment;
+        lerp_color(Color32::from_rgb(0, 0, 255), Color32::from_rgb(0, 255, 0), t)
+    } else {
+        let t = (v - 2.0 * segment) / segment;
+        lerp_color(Color32::from_rgb(0, 255, 0), Color32::from_rgb(255, 0, 0), t)
+    }
+}
+
+fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
+    let clamped_t = t.clamp(0.0, 1.0);
+    let ar = a.r() as f32;
+    let ag = a.g() as f32;
+    let ab = a.b() as f32;
+    let br = b.r() as f32;
+    let bg = b.g() as f32;
+    let bb = b.b() as f32;
+    Color32::from_rgb(
+        (ar + (br - ar) * clamped_t) as u8,
+        (ag + (bg - ag) * clamped_t) as u8,
+        (ab + (bb - ab) * clamped_t) as u8,
+    )
+}
+
+fn sanitize_volume(value: f64) -> f64 {
+    if value.is_finite() && value >= 0.0 {
+        value
+    } else {
+        0.0
     }
 }

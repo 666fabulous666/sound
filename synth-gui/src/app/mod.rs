@@ -10,7 +10,7 @@ use crate::{
     engine::{
         score::{
             default_params::{default_delays, default_tempo},
-            node_params,
+            node_params::{self, ResolvedTrackParams},
             probability::Probability,
             sequence::Sequence,
             track_node::{AestheticLocks, GroupMode, NodeKind, TrackNode},
@@ -35,6 +35,7 @@ use instant::Instant;
 use rand::{rngs::ThreadRng, thread_rng};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     ops::DerefMut,
     sync::{atomic::AtomicU64, Arc},
 };
@@ -87,10 +88,27 @@ pub struct GuiApp {
     default_pick_idx: usize,
     logo: Option<TextureHandle>,
     property_panel_width: f32,
+    spectrogram_note_time: f32,
+    spectrogram_min_freq: f32,
+    spectrogram_max_freq: f32,
+    spectrogram_render_requested: bool,
     #[cfg(not(target_arch = "wasm32"))]
     recorder: Arc<Recorder>,
     #[cfg(not(target_arch = "wasm32"))]
     record_error: Option<String>,
+    spectrogram_previews: HashMap<Token, SpectrogramPreview>,
+}
+
+#[derive(Clone)]
+pub struct SpectrogramPreview {
+    pub texture: TextureHandle,
+    pub size: [usize; 2],
+    pub sequence: Sequence,
+    pub params: ResolvedTrackParams,
+    pub note_time: f32,
+    pub min_freq: f32,
+    pub max_freq: f32,
+    pub background: Color32,
 }
 
 use serde::Deserializer;
@@ -193,11 +211,16 @@ impl GuiApp {
             default_pick_idx: 0,
             logo: None,
             property_panel_width: 270.0,
+            spectrogram_note_time: 0.0,
+            spectrogram_min_freq: 20.0,
+            spectrogram_max_freq: 20_000.0,
+            spectrogram_render_requested: false,
             score: Score::new(),
             #[cfg(not(target_arch = "wasm32"))]
             recorder: Arc::new(Recorder::new()),
             #[cfg(not(target_arch = "wasm32"))]
             record_error: None,
+            spectrogram_previews: HashMap::new(),
         };
         app
     }
@@ -364,6 +387,7 @@ impl GuiApp {
         self.score = Score::new();
         self.score.notes.clear();
         self.clock.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.spectrogram_previews.clear();
     }
 
     fn visit_sequences<F>(node: &TrackNode, f: &mut F)
@@ -483,6 +507,7 @@ impl GuiApp {
         };
         for tk in tokens {
             self.drain_notes_from_seq(tk);
+            self.spectrogram_previews.remove(&tk);
         }
         let now = self.now();
         self.score.draw_node_at_path(path, &mut self.rng, now);
@@ -563,6 +588,7 @@ impl GuiApp {
         };
         for tk in tokens {
             self.drain_notes_from_seq(tk);
+            self.spectrogram_previews.remove(&tk);
         }
         self.score.track_root.remove_at(path);
     }
@@ -631,6 +657,7 @@ impl App for GuiApp {
         let mut style: egui::Style = (*ctx.style()).clone();
         style.interaction.tooltip_delay = 0.01;
         ctx.set_style(style);
+        let spectrogram_background = ctx.style().visuals.panel_fill;
         let mut save = false;
         let mut load = false;
         let mut exit = false;
@@ -692,6 +719,8 @@ impl App for GuiApp {
             };
         }
         self.property_panel(ctx);
+        self.update_spectrogram_preview_if_needed(ctx, spectrogram_background);
+        self.spectrogram_panel(ctx);
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.score.generate_notes(self.now(), &mut self.rng);

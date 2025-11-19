@@ -306,7 +306,7 @@ impl NodeOverrides {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct ResolvedTrackParams {
     pub bend: BendParams,
     bend_depth: Option<usize>,
