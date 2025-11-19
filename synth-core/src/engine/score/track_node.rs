@@ -652,7 +652,13 @@ impl TrackNode {
     ) {
         let current = inherited.with_overrides(&self.overrides, depth);
         match &self.kind {
-            NodeKind::Seq(seq) => out.push((seq.token, current)),
+            NodeKind::Seq(seq) => {
+                let mut final_params = current;
+                if !final_params.has_wave_override() {
+                    final_params.wave.wave = seq.wave_type;
+                }
+                out.push((seq.token, final_params));
+            }
             NodeKind::Group { children, .. } => {
                 for child in children {
                     child.collect_sequences_with_params(current.clone(), depth + 1, out);
