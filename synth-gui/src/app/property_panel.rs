@@ -4,7 +4,7 @@ mod navigation;
 mod rhythm;
 mod sections;
 
-use egui::{Color32, ColorImage, DragValue, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
+use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
 use rustfft::{num_complex::Complex32, FftPlanner};
 use helpers::{ParameterBehavior, SliderParam};
 use sections::{
@@ -962,8 +962,6 @@ impl GuiApp {
             NodeKind::Group { .. } => return,
         };
         let params = self.score.track_root.resolved_params_for_path(&sel);
-        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
-        let note_time = self.spectrogram_note_time;
         let needs_render = self
             .spectrogram_render_requested
             || self
@@ -972,9 +970,6 @@ impl GuiApp {
                 .map_or(true, |prev| {
                     prev.sequence != sequence
                         || prev.params != params
-                        || (prev.note_time - note_time).abs() > f32::EPSILON
-                        || (prev.min_freq - min_freq).abs() > f32::EPSILON
-                        || (prev.max_freq - max_freq).abs() > f32::EPSILON
                         || prev.background != background
                 });
         if !needs_render {
@@ -997,15 +992,11 @@ impl GuiApp {
         background: Color32,
     ) {
         if let Some(image) = self.build_spectrogram_image(&request, background) {
-            let (min_freq, max_freq) = self.spectrogram_freq_bounds();
             if let Some(existing) = self.spectrogram_previews.get_mut(&request.token) {
                 existing.texture.set(image.clone(), TextureOptions::LINEAR);
                 existing.size = image.size;
                 existing.sequence = request.sequence.clone();
                 existing.params = request.params.clone();
-                existing.note_time = self.spectrogram_note_time;
-                existing.min_freq = min_freq;
-                existing.max_freq = max_freq;
                 existing.background = background;
             } else {
                 let size = image.size;
@@ -1022,9 +1013,6 @@ impl GuiApp {
                             size,
                             sequence: request.sequence.clone(),
                             params: request.params.clone(),
-                            note_time: self.spectrogram_note_time,
-                            min_freq,
-                            max_freq,
                             background,
                         },
                     );
@@ -1033,92 +1021,23 @@ impl GuiApp {
     }
 
     pub fn spectrogram_panel(&mut self, ctx: &egui::Context) {
+        if !self.show_spectrogram_panel {
+            return;
+        }
         egui::TopBottomPanel::bottom("spectrogram_panel")
             .resizable(true)
             .default_height(240.0)
             .show(ctx, |ui| {
-                let selected_token = self
+                let preview = self
                     .selected
                     .as_ref()
                     .and_then(|sel| self.score.track_root.get(sel))
-                    .and_then(|node| node.as_seq().map(|seq| seq.token));
-                let has_preview = selected_token
-                    .and_then(|token| self.spectrogram_previews.get(&token))
-                    .is_some();
-                ui.horizontal(|ui| {
-                    ui.heading("Spectrogram preview");
-                    if has_preview {
-                        ui.label("Updates automatically after edits.");
-                    }
-                    if ui
-                        .add_enabled_ui(selected_token.is_some(), |ui| ui.button("Render now"))
-                        .inner
-                        .clicked()
-                    {
-                        self.spectrogram_render_requested = true;
-                    }
-                    if selected_token.is_none() {
-                        ui.label("Select a sequence to generate a preview.");
-                    }
-                });
-
-                let mut settings_changed = false;
-                ui.horizontal(|ui| {
-                    ui.label("Note time (s):");
-                    let note_resp = ui
-                        .add(
-                            DragValue::new(&mut self.spectrogram_note_time)
-                                .range(0.0..=10.0)
-                                .speed(0.05),
-                        )
-                        .on_hover_text("Start offset inside the synthesized note.");
-                    if note_resp.changed() {
-                        settings_changed = true;
-                    }
-
-                    ui.separator();
-                    ui.label("Frequency range (Hz):");
-                    let min_resp = ui
-                        .add(
-                            DragValue::new(&mut self.spectrogram_min_freq)
-                                .range(0.0..=self.sample_rate as f32)
-                                .speed(10.0)
-                                .suffix(" Hz"),
-                        )
-                        .on_hover_text("Lowest frequency to display.");
-                    let max_resp = ui
-                        .add(
-                            DragValue::new(&mut self.spectrogram_max_freq)
-                                .range(0.0..=self.sample_rate as f32)
-                                .speed(10.0)
-                                .suffix(" Hz"),
-                        )
-                        .on_hover_text("Highest frequency to display.");
-                    if min_resp.changed() || max_resp.changed() {
-                        settings_changed = true;
-                    }
-                });
-                let prev_min = self.spectrogram_min_freq;
-                let prev_max = self.spectrogram_max_freq;
-                self.clamp_spectrogram_inputs();
-                if settings_changed
-                    || (self.spectrogram_min_freq - prev_min).abs() > f32::EPSILON
-                    || (self.spectrogram_max_freq - prev_max).abs() > f32::EPSILON
-                {
-                    self.spectrogram_render_requested = true;
-                }
-
-                ui.separator();
-                let preview = selected_token
+                    .and_then(|node| node.as_seq().map(|seq| seq.token))
                     .and_then(|token| self.spectrogram_previews.get(&token));
                 if let Some(preview) = preview {
                     let width = ui.available_width().max(64.0);
                     let height = ui.available_height().max(120.0);
                     ui.image((preview.texture.id(), Vec2::new(width, height)));
-                } else if selected_token.is_some() {
-                    ui.label("No preview yet. Click \"Render now\" to synthesize one.");
-                } else {
-                    ui.label("Spectrogram preview will appear here once a sequence is selected.");
                 }
             });
     }
@@ -1160,14 +1079,15 @@ impl GuiApp {
         let frequency = Freq(F0.as_hz() * note_interval.compute());
         let duration = Time(1.0);
         let mut memory = [0.0; 5];
-        let mut samples = Vec::with_capacity(sample_count + SPECTROGRAM_WINDOW);
+        let pad_samples = sample_count;
+        let mut samples = Vec::with_capacity(sample_count + 2 * pad_samples + SPECTROGRAM_WINDOW);
+        samples.resize(pad_samples, 0.0);
         let track_volume = self.cumulative_volume_for_path(&request.path);
         let note_volume = preview_note_volume(&request.sequence, &request.params.envelope);
         let volume_scale = sanitize_volume(track_volume) * note_volume.abs() * 0.1;
         let sample_rate_freq = Freq(sample_rate);
-        let offset = self.spectrogram_note_time.max(0.0) as f64;
         for i in 0..sample_count {
-            let t = Time(offset + i as f64 / sample_rate);
+            let t = Time(i as f64 / sample_rate);
             let raw = generate_wave(
                 &wave,
                 frequency,
@@ -1193,28 +1113,14 @@ impl GuiApp {
             );
             samples.push((raw * volume_scale) as f32);
         }
+        samples.resize(samples.len().saturating_add(pad_samples), 0.0);
         let target_len = samples.len().saturating_add(SPECTROGRAM_WINDOW);
         samples.resize(target_len, 0.0);
         Some(samples)
     }
 
     fn spectrogram_freq_bounds(&self) -> (f32, f32) {
-        let nyquist = (self.sample_rate.max(1.0) as f32 * 0.5).max(1.0);
-        let mut min_freq = self.spectrogram_min_freq.clamp(0.0, nyquist - 1.0);
-        let mut max_freq = self
-            .spectrogram_max_freq
-            .clamp((min_freq + 1.0).min(nyquist), nyquist);
-        if max_freq <= min_freq {
-            max_freq = (min_freq + 1.0).min(nyquist);
-            min_freq = (max_freq - 1.0).max(0.0);
-        }
-        (min_freq, max_freq)
-    }
-
-    fn clamp_spectrogram_inputs(&mut self) {
-        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
-        self.spectrogram_min_freq = min_freq;
-        self.spectrogram_max_freq = max_freq;
+        (20.0, 20_000.0)
     }
 
     fn cumulative_volume_for_path(&self, path: &[usize]) -> f64 {

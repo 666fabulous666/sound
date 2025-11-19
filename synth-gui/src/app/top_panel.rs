@@ -147,6 +147,18 @@ impl GuiApp {
                                 self.set_tempo_bpm(tempo_bpm);
                             }
                         });
+                        ui.horizontal(|ui| {
+                            let prev = self.show_spectrogram_panel;
+                            if ui
+                                .checkbox(&mut self.show_spectrogram_panel, "Show spectrogram preview")
+                                .on_hover_text("Toggle the docked spectrogram panel at the bottom")
+                                .changed()
+                            {
+                                if self.show_spectrogram_panel && !prev {
+                                    self.spectrogram_render_requested = true;
+                                }
+                            }
+                        });
                         #[cfg(not(target_arch = "wasm32"))]
                         {
                             ui.separator();

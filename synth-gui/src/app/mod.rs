@@ -88,10 +88,8 @@ pub struct GuiApp {
     default_pick_idx: usize,
     logo: Option<TextureHandle>,
     property_panel_width: f32,
-    spectrogram_note_time: f32,
-    spectrogram_min_freq: f32,
-    spectrogram_max_freq: f32,
     spectrogram_render_requested: bool,
+    show_spectrogram_panel: bool,
     #[cfg(not(target_arch = "wasm32"))]
     recorder: Arc<Recorder>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -105,9 +103,6 @@ pub struct SpectrogramPreview {
     pub size: [usize; 2],
     pub sequence: Sequence,
     pub params: ResolvedTrackParams,
-    pub note_time: f32,
-    pub min_freq: f32,
-    pub max_freq: f32,
     pub background: Color32,
 }
 
@@ -211,10 +206,8 @@ impl GuiApp {
             default_pick_idx: 0,
             logo: None,
             property_panel_width: 270.0,
-            spectrogram_note_time: 0.0,
-            spectrogram_min_freq: 20.0,
-            spectrogram_max_freq: 20_000.0,
             spectrogram_render_requested: false,
+            show_spectrogram_panel: true,
             score: Score::new(),
             #[cfg(not(target_arch = "wasm32"))]
             recorder: Arc::new(Recorder::new()),
@@ -719,8 +712,10 @@ impl App for GuiApp {
             };
         }
         self.property_panel(ctx);
-        self.update_spectrogram_preview_if_needed(ctx, spectrogram_background);
-        self.spectrogram_panel(ctx);
+        if self.show_spectrogram_panel {
+            self.update_spectrogram_preview_if_needed(ctx, spectrogram_background);
+            self.spectrogram_panel(ctx);
+        }
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.score.generate_notes(self.now(), &mut self.rng);
