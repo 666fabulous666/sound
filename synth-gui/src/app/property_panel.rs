@@ -5,8 +5,8 @@ mod rhythm;
 mod sections;
 
 use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
-use rustfft::{num_complex::Complex32, FftPlanner};
 use helpers::{ParameterBehavior, SliderParam};
+use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
     accents, bend, chorus, envelope, harmony, lowpass, mix, power, rhythm as rhythm_section,
     vibrato,
@@ -17,7 +17,9 @@ use crate::{
         property_panel::navigation::navigation, GuiApp, SpectrogramPreview, ALL_WAVES, DRUM_WAVES,
     },
     engine::score::{
-        node_params::{EnvelopeParams, HarmonyParams, ParamResolution, ResolvedTrackParams, RhythmParams},
+        node_params::{
+            EnvelopeParams, HarmonyParams, ParamResolution, ResolvedTrackParams, RhythmParams,
+        },
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
@@ -801,7 +803,6 @@ impl GuiApp {
                         if needs_override_refresh {
                             self.score.refresh_notes_for_path(&sel);
                         }
-
                     } else {
                         ui.label("Click a block to edit");
                     }
@@ -962,8 +963,7 @@ impl GuiApp {
             NodeKind::Group { .. } => return,
         };
         let params = self.score.track_root.resolved_params_for_path(&sel);
-        let needs_render = self
-            .spectrogram_render_requested
+        let needs_render = self.spectrogram_render_requested
             || self
                 .spectrogram_previews
                 .get(&sequence.token)
@@ -1007,18 +1007,17 @@ impl GuiApp {
                     image,
                     TextureOptions::LINEAR,
                 );
-                self.spectrogram_previews
-                    .insert(
-                        request.token,
-                        SpectrogramPreview {
-                            texture,
-                            size,
-                            sequence: request.sequence.clone(),
-                            params: request.params.clone(),
-                            background,
-                            log_freq: self.spectrogram_log_freq,
-                        },
-                    );
+                self.spectrogram_previews.insert(
+                    request.token,
+                    SpectrogramPreview {
+                        texture,
+                        size,
+                        sequence: request.sequence.clone(),
+                        params: request.params.clone(),
+                        background,
+                        log_freq: self.spectrogram_log_freq,
+                    },
+                );
             }
         }
     }
@@ -1031,6 +1030,18 @@ impl GuiApp {
             .resizable(true)
             .default_height(240.0)
             .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Spectrogram").strong());
+                    ui.add_space(8.0);
+                    if ui
+                        .checkbox(&mut self.spectrogram_log_freq, "Log freq scale")
+                        .on_hover_text("Display spectrogram frequencies on a logarithmic axis")
+                        .changed()
+                    {
+                        self.spectrogram_render_requested = true;
+                    }
+                });
+                ui.separator();
                 let preview = self
                     .selected
                     .as_ref()
@@ -1041,6 +1052,8 @@ impl GuiApp {
                     let width = ui.available_width().max(64.0);
                     let height = ui.available_height().max(120.0);
                     ui.image((preview.texture.id(), Vec2::new(width, height)));
+                } else {
+                    ui.label("Select a sequence to preview its spectrum.");
                 }
             });
     }
@@ -1098,7 +1111,10 @@ impl GuiApp {
                 None,
                 t,
                 duration,
-                (request.params.envelope.attack, request.params.envelope.decay),
+                (
+                    request.params.envelope.attack,
+                    request.params.envelope.decay,
+                ),
                 request.params.lowpass.cutoff_multiplier,
                 request.params.lowpass.relaxation,
                 request.params.lowpass.lfo,
@@ -1231,10 +1247,7 @@ fn samples_to_color_image(
                 let high_val = column.get(upper).copied().unwrap_or(low_val);
                 low_val + (high_val - low_val) * t
             } else {
-                column
-                    .get(min_bin + output_idx)
-                    .copied()
-                    .unwrap_or(0.0)
+                column.get(min_bin + output_idx).copied().unwrap_or(0.0)
             };
             let y = visible_bins - 1 - output_idx.min(visible_bins - 1);
             image.pixels[y * width + x] = color_from_value(value, background);
@@ -1258,10 +1271,18 @@ fn color_from_value(value: f32, background: Color32) -> Color32 {
         lerp_color(background, Color32::from_rgb(0, 0, 255), t)
     } else if v <= 2.0 * segment {
         let t = (v - segment) / segment;
-        lerp_color(Color32::from_rgb(0, 0, 255), Color32::from_rgb(0, 255, 0), t)
+        lerp_color(
+            Color32::from_rgb(0, 0, 255),
+            Color32::from_rgb(0, 255, 0),
+            t,
+        )
     } else {
         let t = (v - 2.0 * segment) / segment;
-        lerp_color(Color32::from_rgb(0, 255, 0), Color32::from_rgb(255, 0, 0), t)
+        lerp_color(
+            Color32::from_rgb(0, 255, 0),
+            Color32::from_rgb(255, 0, 0),
+            t,
+        )
     }
 }
 

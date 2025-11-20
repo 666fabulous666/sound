@@ -87,10 +87,19 @@ pub struct GuiApp {
     show_default_picker: bool,
     default_pick_idx: usize,
     logo: Option<TextureHandle>,
+    tempo_icon: Option<TextureHandle>,
+    chrono_icon: Option<TextureHandle>,
+    new_score_icon: Option<TextureHandle>,
+    add_track_icon: Option<TextureHandle>,
+    load_icon: Option<TextureHandle>,
+    save_icon: Option<TextureHandle>,
+    toolbar_icon_dark_mode: Option<bool>,
     property_panel_width: f32,
     spectrogram_render_requested: bool,
     show_spectrogram_panel: bool,
     spectrogram_log_freq: bool,
+    show_new_score_confirm: bool,
+    show_exit_confirm: bool,
     #[cfg(not(target_arch = "wasm32"))]
     recorder: Arc<Recorder>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -207,10 +216,19 @@ impl GuiApp {
             show_default_picker: false,
             default_pick_idx: 0,
             logo: None,
+            tempo_icon: None,
+            chrono_icon: None,
+            new_score_icon: None,
+            add_track_icon: None,
+            load_icon: None,
+            save_icon: None,
+            toolbar_icon_dark_mode: None,
             property_panel_width: 270.0,
             spectrogram_render_requested: false,
             show_spectrogram_panel: true,
             spectrogram_log_freq: false,
+            show_new_score_confirm: false,
+            show_exit_confirm: false,
             score: Score::new(),
             #[cfg(not(target_arch = "wasm32"))]
             recorder: Arc::new(Recorder::new()),
@@ -690,13 +708,19 @@ impl App for GuiApp {
         if !self.show_start {
             self.top_panel(ctx, &mut save, &mut load, &mut exit);
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+                self.show_exit_confirm = true;
+            }
+        }
         if save {
             self.save_state();
         }
         if load {
             self.load_state(ctx);
         }
-        if exit || ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
+        if exit {
             self.exit(ctx);
         }
         if self.show_default_picker {
