@@ -1,3 +1,4 @@
+pub(crate) mod colormap;
 mod load;
 mod property_panel;
 mod save;

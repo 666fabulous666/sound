@@ -4,6 +4,7 @@ mod navigation;
 mod rhythm;
 mod sections;
 
+use super::colormap::color_from_value;
 use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
 use helpers::{ParameterBehavior, SliderParam};
 use rustfft::{num_complex::Complex32, FftPlanner};
@@ -1260,45 +1261,6 @@ fn magnitude_to_value(magnitude: f32) -> f32 {
     let magnitude = magnitude.max(1e-8);
     let db = 20.0 * magnitude.log10();
     ((db - SPECTROGRAM_MIN_DB) / (0.0 - SPECTROGRAM_MIN_DB)).clamp(0.0, 1.0)
-}
-
-fn color_from_value(value: f32, background: Color32) -> Color32 {
-    let v = if value.is_finite() { value } else { 0.0 };
-    let v = v.clamp(0.0, 1.0);
-    let segment = 1.0 / 3.0;
-    if v <= segment {
-        let t = if segment == 0.0 { 0.0 } else { v / segment };
-        lerp_color(background, Color32::from_rgb(0, 0, 255), t)
-    } else if v <= 2.0 * segment {
-        let t = (v - segment) / segment;
-        lerp_color(
-            Color32::from_rgb(0, 0, 255),
-            Color32::from_rgb(0, 255, 0),
-            t,
-        )
-    } else {
-        let t = (v - 2.0 * segment) / segment;
-        lerp_color(
-            Color32::from_rgb(0, 255, 0),
-            Color32::from_rgb(255, 0, 0),
-            t,
-        )
-    }
-}
-
-fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
-    let clamped_t = t.clamp(0.0, 1.0);
-    let ar = a.r() as f32;
-    let ag = a.g() as f32;
-    let ab = a.b() as f32;
-    let br = b.r() as f32;
-    let bg = b.g() as f32;
-    let bb = b.b() as f32;
-    Color32::from_rgb(
-        (ar + (br - ar) * clamped_t) as u8,
-        (ag + (bg - ag) * clamped_t) as u8,
-        (ab + (bb - ab) * clamped_t) as u8,
-    )
 }
 
 fn sanitize_volume(value: f64) -> f64 {

@@ -17,6 +17,12 @@ use crate::{
     NOTE_LINGER_TIME, TREE_DEPTH_WIDTH,
 };
 
+const LASER_STRIP_RATIOS: [f32; 7] = [0.0, 0.12, 0.3, 0.5, 0.7, 0.88, 1.0];
+const LASER_FALLOFF_POWER: f32 = 2.2;
+const LASER_CORE_COLOR: Color32 = Color32::from_rgb(184, 255, 255);
+const LASER_GLOW_COLOR: Color32 = Color32::from_rgb(32, 104, 255);
+const LASER_DEEP_COLOR: Color32 = Color32::from_rgb(6, 18, 64);
+
 impl GuiApp {
     pub fn timeline_panel(&mut self, ctx: &egui::Context) {
         // If there are no sequences at all, show a placeholder and bail out
@@ -276,39 +282,75 @@ impl GuiApp {
                                         ),
                                     );
 
-                                    let tmp = 100f32.min(note_rect.width()).floor();
-                                    if tmp <= f32::EPSILON {
+                                    let note_width = note_rect.width();
+                                    let note_height = note_rect.height();
+                                    if note_width <= f32::EPSILON || note_height <= f32::EPSILON {
                                         return;
                                     }
-                                    let tmp_inv = 1.0 / tmp;
-                                    let es: Vec<_> = (0..tmp as _)
+                                    let subdivisions = note_width.min(100.0).floor() as usize;
+                                    if subdivisions == 0 {
+                                        return;
+                                    }
+                                    let inv = 1.0 / subdivisions as f32;
+                                    let time_step = inv as f64;
+                                    let env_curve = envelope(
+                                        envelope_params.attack,
+                                        envelope_params.decay,
+                                        n.duration,
+                                    );
+                                    let envelope_values: Vec<f32> = (0..subdivisions)
                                         .map(|i| {
-                                            envelope(
-                                                envelope_params.attack,
-                                                envelope_params.decay,
-                                                n.duration,
-                                            )(
-                                                n.duration * i as f64 * tmp_inv as f64
-                                            ) as f32
+                                            (env_curve(n.duration * i as f64 * time_step)) as f32
                                         })
                                         .collect();
-                                    for (i, e) in es.iter().enumerate() {
-                                        let fract = i as f32 * tmp_inv;
-                                        let tmp = note_rect
-                                            .with_min_x(
-                                                note_rect.left() + note_rect.width() * fract,
-                                            )
-                                            .with_max_x(
-                                                note_rect.left()
-                                                    + note_rect.width() * (fract + tmp_inv),
+                                    let normalization = {
+                                        let value = envelope_params.normalization as f32;
+                                        if !value.is_finite() || value.abs() <= f32::EPSILON {
+                                            1.0
+                                        } else {
+                                            value
+                                        }
+                                    };
+                                    let note_left = note_rect.left();
+                                    let note_top = note_rect.top();
+                                    let mut mesh = Mesh::default();
+                                    let rows = LASER_STRIP_RATIOS.len();
+                                    for (i, e) in envelope_values.iter().enumerate() {
+                                        let base_value = (e / normalization).clamp(0.0, 1.0);
+                                        let left = note_left + note_width * (i as f32 * inv);
+                                        let right = note_left + note_width * ((i + 1) as f32 * inv);
+                                        let vertex_base = mesh.vertices.len() as u32;
+                                        for &ratio in LASER_STRIP_RATIOS.iter() {
+                                            let y = note_top + ratio * note_height;
+                                            let color = laser_color(
+                                                laser_value_at_ratio(base_value, ratio),
+                                                ratio,
                                             );
-                                        painter.rect_filled(
-                                            tmp,
-                                            0.0,
-                                            text_color.gamma_multiply(
-                                                e / envelope_params.normalization as f32,
-                                            ),
-                                        );
+                                            mesh.vertices.push(Vertex {
+                                                pos: egui::pos2(left, y),
+                                                uv: egui::Pos2::ZERO,
+                                                color,
+                                            });
+                                            mesh.vertices.push(Vertex {
+                                                pos: egui::pos2(right, y),
+                                                uv: egui::Pos2::ZERO,
+                                                color,
+                                            });
+                                        }
+                                        for row in 0..rows - 1 {
+                                            let idx = vertex_base + (row as u32) * 2;
+                                            mesh.indices.extend_from_slice(&[
+                                                idx,
+                                                idx + 2,
+                                                idx + 1,
+                                                idx + 1,
+                                                idx + 2,
+                                                idx + 3,
+                                            ]);
+                                        }
+                                    }
+                                    if !mesh.indices.is_empty() {
+                                        painter.add(egui::Shape::mesh(mesh));
                                     }
                                 }
                             });
@@ -1402,4 +1444,53 @@ fn paint_drop_preview(painter: &egui::Painter, preview: &DropPreview) {
             painter.rect_stroke(*rect, 6.0, stroke, egui::StrokeKind::Middle);
         }
     }
+}
+
+fn laser_value_at_ratio(base_value: f32, ratio: f32) -> f32 {
+    if base_value <= 0.0 {
+        return 0.0;
+    }
+    let normalized_ratio = ratio.clamp(0.0, 1.0);
+    let distance = ((normalized_ratio - 0.5).abs() / 0.5).min(1.0);
+    let falloff = (1.0 - distance).powf(LASER_FALLOFF_POWER);
+    base_value * falloff
+}
+
+fn laser_color(intensity: f32, ratio: f32) -> Color32 {
+    if !intensity.is_finite() || intensity <= f32::EPSILON {
+        return Color32::TRANSPARENT;
+    }
+    let normalized_ratio = ratio.clamp(0.0, 1.0);
+    let ridge = (1.0 - ((normalized_ratio - 0.5).abs() / 0.5).powf(1.4)).clamp(0.0, 1.0);
+    let glow_tint = lerp_rgba(LASER_GLOW_COLOR, LASER_CORE_COLOR, ridge.powf(1.2));
+    let color = lerp_rgba(LASER_DEEP_COLOR, glow_tint, ridge);
+    let alpha = (intensity.powf(0.85) * (0.35 + 0.65 * ridge)).clamp(0.0, 1.0);
+    color_with_alpha(color, alpha)
+}
+
+fn lerp_rgba(a: Color32, b: Color32, t: f32) -> Color32 {
+    let clamped = t.clamp(0.0, 1.0);
+    let ar = a.r() as f32;
+    let ag = a.g() as f32;
+    let ab = a.b() as f32;
+    let aa = a.a() as f32;
+    let br = b.r() as f32;
+    let bg = b.g() as f32;
+    let bb = b.b() as f32;
+    let ba = b.a() as f32;
+    Color32::from_rgba_unmultiplied(
+        (ar + (br - ar) * clamped) as u8,
+        (ag + (bg - ag) * clamped) as u8,
+        (ab + (bb - ab) * clamped) as u8,
+        (aa + (ba - aa) * clamped) as u8,
+    )
+}
+
+fn color_with_alpha(color: Color32, alpha: f32) -> Color32 {
+    Color32::from_rgba_unmultiplied(
+        color.r(),
+        color.g(),
+        color.b(),
+        (alpha.clamp(0.0, 1.0) * 255.0) as u8,
+    )
 }
