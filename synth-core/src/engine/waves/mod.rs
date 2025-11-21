@@ -3,7 +3,8 @@ use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    engine::score::{ChorusParams, LowpassLfo, LowpassRelaxation},
+    engine::score::ChorusParams,
+    engine::time_varying::TimeVarying,
     sign_f,
     time_freq::{Freq, Time},
 };
@@ -47,13 +48,11 @@ pub fn generate_wave(
     time: Time,
     duration: Time,
     attack_decay: (f64, f64),
-    cutoff_multiplier: f64,
-    lp_relaxation: LowpassRelaxation,
-    lp_lfo: LowpassLfo,
+    cutoff: &TimeVarying,
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
-    pow_fact: (f64, Freq),
+    power: &TimeVarying,
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
@@ -67,16 +66,9 @@ pub fn generate_wave(
         time
     };
     let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
-    let p = pow_fact.0 * (pow_fact.1 * time).exp2();
+    let p = power.evaluate(time, global_time, duration);
     let disto = |x: f64| x.powf(p);
-    let dynamic_multiplier = compute_cutoff_multiplier(
-        cutoff_multiplier,
-        &lp_relaxation,
-        &lp_lfo,
-        time,
-        global_time,
-        duration,
-    );
+    let dynamic_multiplier = cutoff.evaluate(time, global_time, duration);
     match wave_type {
         WaveType::HiHat => {
             let mut signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
@@ -198,32 +190,6 @@ pub fn generate_wave(
         }
     }
     tmp
-}
-
-fn compute_cutoff_multiplier(
-    base: f64,
-    relaxation: &LowpassRelaxation,
-    lfo: &LowpassLfo,
-    note_time: Time,
-    global_time: Time,
-    duration: Time,
-) -> f64 {
-    let normalized = if duration.as_secs() <= 0.0 {
-        0.0
-    } else {
-        (note_time / duration).clamp(0.0, 1.0)
-    };
-    let relax_factor = relaxation.factor(normalized);
-    let lfo_time = if lfo.sync_with_clock {
-        global_time
-    } else {
-        note_time
-    };
-    let mut multiplier = base * relax_factor + lfo.contribution(lfo_time);
-    if !multiplier.is_finite() {
-        multiplier = 0.0;
-    }
-    multiplier.max(0.0)
 }
 
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {

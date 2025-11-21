@@ -161,15 +161,13 @@ impl Interval {
 pub struct NotesGroup {
     pub attack_decay: (f64, f64),
     pub lp_attack_decay: (f64, f64),
-    pub cutoff_multiplier: f64,
-    pub lp_relaxation: LowpassRelaxation,
-    pub lp_lfo: LowpassLfo,
+    pub cutoff: crate::engine::time_varying::TimeVarying,
     pub lowpass_enabled: bool,
     pub lp_order: u32,
     pub bend: (f64, f64),
     pub chorus: ChorusParams,
     pub notes: Vec<Note>,
-    pub pow_fact: (f64, Freq),
+    pub power: crate::engine::time_varying::TimeVarying,
     pub pan: f64,
     pub tolerance: (Time, Time),
     pub vibrato: (f64, Freq),
@@ -763,11 +761,9 @@ fn apply_params_to_notes_group(ng: &mut NotesGroup, params: &node_params::Resolv
     ng.chorus = params.chorus.clone();
     ng.attack_decay = (params.envelope.attack, params.envelope.decay);
     ng.lp_attack_decay = params.lowpass.envelope;
-    ng.pow_fact = (params.power.initial, params.power.evolution);
+    ng.power = params.power.power;
     ng.wave_type = params.wave.wave;
-    ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
-    ng.lp_relaxation = params.lowpass.relaxation;
-    ng.lp_lfo = params.lowpass.lfo;
+    ng.cutoff = params.lowpass.cutoff;
     ng.lowpass_enabled = params.lowpass.enabled;
     ng.lp_order = params.lowpass.order;
 }

@@ -1,6 +1,6 @@
 use super::super::{OverrideBinding, ParameterImpact};
-use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam, ValueTransform};
-use crate::app::property_panel::hover_texts::{POW_FACT_EVOL_TEXT, POW_FACT_TEXT};
+use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
+use crate::app::property_panel::hover_texts::POW_FACT_TEXT;
 use crate::engine::score::{default_params::*, node_params::PowerParams};
 use crate::time_freq::Freq;
 use egui::Ui;
@@ -30,29 +30,51 @@ pub fn draw_power_controls(
     editable: bool,
 ) -> bool {
     let defaults = default_pow_fact();
-    let initial_param = SliderParam::new("Initial value", 0.0..=1000.0)
+    let base_param = SliderParam::new("Base", 0.01..=10.0)
         .default(defaults.0)
         .behavior(ParameterBehavior::AestheticImmediate)
         .logarithmic(true);
 
-    let evol_transform = ValueTransform {
-        to_exposed: |val: &Freq| {
-            let hz = val.as_hz();
-            Freq(hz.signum() * hz.abs().sqrt())
-        },
-        from_exposed: |val: Freq| {
-            let hz = val.as_hz();
-            Freq(hz.signum() * hz.powi(2))
-        },
-    };
-    let evol_param =
-        SliderParam::new_with_transform("Evolution", Freq(-10.0)..=Freq(10.0), evol_transform)
-            .default(defaults.1)
-            .behavior(ParameterBehavior::AestheticImmediate);
+    let base_resp = base_param.draw(ui, &mut value.power.base, impact);
+    let mut changed = base_resp.changed();
 
-    let initial_resp = initial_param.draw(ui, &mut value.initial, impact);
-    let evol_resp = evol_param.draw(ui, &mut value.evolution, impact);
-    let _ = evol_resp.clone().on_hover_text(POW_FACT_EVOL_TEXT);
+    ui.separator();
+    ui.label("Relaxation");
+    let relax_start = SliderParam::new("Start", 0.01..=10.0)
+        .default(1.0)
+        .behavior(ParameterBehavior::AestheticImmediate)
+        .logarithmic(true);
+    let relax_end = SliderParam::new("End", 0.01..=10.0)
+        .default(1.0)
+        .behavior(ParameterBehavior::AestheticImmediate)
+        .logarithmic(true);
+    let relax_rate = SliderParam::new("Rate", 0.0..=20.0)
+        .default(0.0)
+        .behavior(ParameterBehavior::AestheticImmediate);
 
-    editable && (initial_resp.changed() || evol_resp.changed())
+    let start_resp = relax_start.draw(ui, &mut value.power.relaxation.start, impact);
+    let end_resp = relax_end.draw(ui, &mut value.power.relaxation.end, impact);
+    let rate_resp = relax_rate.draw(ui, &mut value.power.relaxation.rate, impact);
+    changed |= start_resp.changed() || end_resp.changed() || rate_resp.changed();
+
+    ui.separator();
+    ui.label("Sinusoidal modulation");
+    let magnitude_param = SliderParam::new("Magnitude", 0.0..=10.0)
+        .default(0.0)
+        .behavior(ParameterBehavior::AestheticImmediate);
+    let freq_param = SliderParam::new("Frequency", Freq(0.001)..=Freq(20.0))
+        .default(Freq(0.5))
+        .behavior(ParameterBehavior::AestheticImmediate)
+        .logarithmic(true);
+    let magnitude_resp = magnitude_param.draw(ui, &mut value.power.lfo.magnitude, impact);
+    let freq_resp = freq_param.draw(ui, &mut value.power.lfo.frequency, impact);
+    changed |= magnitude_resp.changed() || freq_resp.changed();
+
+    let sync_resp = ui.checkbox(&mut value.power.lfo.sync_with_clock, "Sync with global clock");
+    if sync_resp.changed() {
+        impact.register_behavior(ParameterBehavior::AestheticImmediate);
+        changed = true;
+    }
+
+    editable && changed
 }

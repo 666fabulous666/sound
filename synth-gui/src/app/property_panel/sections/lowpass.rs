@@ -47,13 +47,13 @@ pub fn draw_lowpass_controls(
         let order_param = SliderParam::new("Order", 1..=5)
             .default(default_lp_order())
             .behavior(ParameterBehavior::AestheticImmediate);
-        let cutoff_param = SliderParam::new("Cutoff multiplier", 0.01..=100.0)
+        let cutoff_param = SliderParam::new("Base", 0.01..=100.0)
             .default(default_cutoff_multiplier())
             .behavior(ParameterBehavior::AestheticImmediate)
             .logarithmic(true);
 
         let order_resp = order_param.draw(ui, &mut value.order, impact);
-        let cutoff_resp = cutoff_param.draw(ui, &mut value.cutoff_multiplier, impact);
+        let cutoff_resp = cutoff_param.draw(ui, &mut value.cutoff.base, impact);
         changed |= order_resp.changed() || cutoff_resp.changed();
 
         ui.separator();
@@ -71,9 +71,9 @@ pub fn draw_lowpass_controls(
             .default(relax_defaults.rate)
             .behavior(ParameterBehavior::AestheticImmediate);
 
-        let start_resp = relax_start.draw(ui, &mut value.relaxation.start, impact);
-        let end_resp = relax_end.draw(ui, &mut value.relaxation.end, impact);
-        let rate_resp = relax_rate.draw(ui, &mut value.relaxation.rate, impact);
+        let start_resp = relax_start.draw(ui, &mut value.cutoff.relaxation.start, impact);
+        let end_resp = relax_end.draw(ui, &mut value.cutoff.relaxation.end, impact);
+        let rate_resp = relax_rate.draw(ui, &mut value.cutoff.relaxation.rate, impact);
         changed |= start_resp.changed() || end_resp.changed() || rate_resp.changed();
 
         ui.separator();
@@ -86,11 +86,11 @@ pub fn draw_lowpass_controls(
             .default(lfo_defaults.frequency)
             .behavior(ParameterBehavior::AestheticImmediate)
             .logarithmic(true);
-        let magnitude_resp = magnitude_param.draw(ui, &mut value.lfo.magnitude, impact);
-        let freq_resp = freq_param.draw(ui, &mut value.lfo.frequency, impact);
+        let magnitude_resp = magnitude_param.draw(ui, &mut value.cutoff.lfo.magnitude, impact);
+        let freq_resp = freq_param.draw(ui, &mut value.cutoff.lfo.frequency, impact);
         changed |= magnitude_resp.changed() || freq_resp.changed();
 
-        let sync_resp = ui.checkbox(&mut value.lfo.sync_with_clock, "Sync with global clock");
+        let sync_resp = ui.checkbox(&mut value.cutoff.lfo.sync_with_clock, "Sync with global clock");
         if sync_resp.changed() {
             impact.register_behavior(ParameterBehavior::AestheticImmediate);
             changed = true;
