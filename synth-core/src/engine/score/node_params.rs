@@ -6,8 +6,9 @@ use crate::{
         sequence::Sequence,
         time_quantum::TimeQuantum,
         track_node::{NodeKind, TrackNode},
-        ChorusParams, Interval, LowpassLfo, LowpassRelaxation, RdRythm, Rythm,
+        ChorusParams, Interval, RdRythm, Rythm,
     },
+    engine::time_varying::TimeVarying,
     engine::waves::WaveType,
     rescale_factor,
     time_freq::{Beat, Freq, Time},
@@ -75,20 +76,30 @@ impl EnvelopeParams {
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct LowpassParams {
     pub envelope: (f64, f64),
-    pub cutoff_multiplier: f64,
-    pub relaxation: LowpassRelaxation,
-    pub lfo: LowpassLfo,
+    pub cutoff: TimeVarying,
     pub enabled: bool,
     pub order: u32,
 }
 
 impl Default for LowpassParams {
     fn default() -> Self {
+        let lp_relax = default_lp_relaxation();
+        let lp_lfo = default_lp_lfo();
         Self {
             envelope: default_attack_decay(),
-            cutoff_multiplier: default_cutoff_multiplier(),
-            relaxation: default_lp_relaxation(),
-            lfo: default_lp_lfo(),
+            cutoff: TimeVarying {
+                base: default_cutoff_multiplier(),
+                relaxation: crate::engine::time_varying::Relaxation {
+                    start: lp_relax.start,
+                    end: lp_relax.end,
+                    rate: lp_relax.rate,
+                },
+                lfo: crate::engine::time_varying::Lfo {
+                    magnitude: lp_lfo.magnitude,
+                    frequency: lp_lfo.frequency,
+                    sync_with_clock: lp_lfo.sync_with_clock,
+                },
+            },
             enabled: default_lowpass_enabled(),
             order: default_lp_order(),
         }
@@ -97,14 +108,27 @@ impl Default for LowpassParams {
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct PowerParams {
-    pub initial: f64,
-    pub evolution: Freq,
+    pub power: TimeVarying,
 }
 
 impl Default for PowerParams {
     fn default() -> Self {
-        let (initial, evolution) = default_pow_fact();
-        Self { initial, evolution }
+        let (initial, _evolution) = default_pow_fact();
+        Self {
+            power: TimeVarying {
+                base: initial,
+                relaxation: crate::engine::time_varying::Relaxation {
+                    start: 1.0,
+                    end: 1.0,
+                    rate: 0.0,
+                },
+                lfo: crate::engine::time_varying::Lfo {
+                    magnitude: 0.0,
+                    frequency: Freq(0.5),
+                    sync_with_clock: false,
+                },
+            },
+        }
     }
 }
 

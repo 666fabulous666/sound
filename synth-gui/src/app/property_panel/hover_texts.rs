@@ -30,7 +30,6 @@ pub const UNISSON_DETUNE_TEXT: &str = concat!(
     "around the main frequency f₀\n",
     "to create width and motion.",
 );
-pub const POW_FACT_EVOL_TEXT: &str = "Increase/Decrease over time.";
 pub const POW_FACT_TEXT: &str = concat!(
     "Produces distortion or metallic timbre\n",
     "\n",

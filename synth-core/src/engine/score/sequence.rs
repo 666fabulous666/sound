@@ -278,11 +278,9 @@ impl Sequence {
             ng.chorus = params.chorus.clone();
             ng.attack_decay = (params.envelope.attack, params.envelope.decay);
             ng.lp_attack_decay = params.lowpass.envelope;
-            ng.pow_fact = (params.power.initial, params.power.evolution);
+            ng.power = params.power.power;
             ng.tolerance = harmony.tolerance;
-            ng.cutoff_multiplier = params.lowpass.cutoff_multiplier;
-            ng.lp_relaxation = params.lowpass.relaxation;
-            ng.lp_lfo = params.lowpass.lfo;
+            ng.cutoff = params.lowpass.cutoff;
             ng.lowpass_enabled = params.lowpass.enabled;
             ng.lp_order = params.lowpass.order;
         } else {
@@ -296,13 +294,11 @@ impl Sequence {
                     chorus: params.chorus.clone(),
                     attack_decay: (params.envelope.attack, params.envelope.decay),
                     lp_attack_decay: params.lowpass.envelope,
-                    pow_fact: (params.power.initial, params.power.evolution),
+                    power: params.power.power,
                     pan,
                     volume: 1.0, // Initial volume - will be updated by volume application mechanism
                     tolerance: harmony.tolerance,
-                    cutoff_multiplier: params.lowpass.cutoff_multiplier,
-                    lp_relaxation: params.lowpass.relaxation,
-                    lp_lfo: params.lowpass.lfo,
+                    cutoff: params.lowpass.cutoff,
                     lowpass_enabled: params.lowpass.enabled,
                     lp_order: params.lowpass.order,
                 },

@@ -180,15 +180,23 @@ impl TrackNode {
                     lowpass_touched = true;
                 }
                 if let Some(cutoff) = legacy.cutoff_multiplier {
-                    lowpass.cutoff_multiplier = cutoff;
+                    lowpass.cutoff.base = cutoff;
                     lowpass_touched = true;
                 }
                 if let Some(relax) = legacy.lp_relaxation {
-                    lowpass.relaxation = relax;
+                    lowpass.cutoff.relaxation = crate::engine::time_varying::Relaxation {
+                        start: relax.start,
+                        end: relax.end,
+                        rate: relax.rate,
+                    };
                     lowpass_touched = true;
                 }
                 if let Some(lfo) = legacy.lp_lfo {
-                    lowpass.lfo = lfo;
+                    lowpass.cutoff.lfo = crate::engine::time_varying::Lfo {
+                        magnitude: lfo.magnitude,
+                        frequency: lfo.frequency,
+                        sync_with_clock: lfo.sync_with_clock,
+                    };
                     lowpass_touched = true;
                 }
                 if let Some(enabled) = legacy.lowpass_enabled {
@@ -202,8 +210,10 @@ impl TrackNode {
                 if lowpass_touched {
                     self.overrides.lowpass = Some(lowpass);
                 }
-                if let Some((initial, evolution)) = legacy.pow_fact {
-                    self.overrides.power = Some(PowerParams { initial, evolution });
+                if let Some((_initial, _evolution)) = legacy.pow_fact {
+                    // Legacy power factor used exponential evolution, which is incompatible
+                    // with the new TimeVarying system. We just use the default.
+                    self.overrides.power = Some(PowerParams::default());
                 }
             }
             NodeKind::Group { children, .. } => {
