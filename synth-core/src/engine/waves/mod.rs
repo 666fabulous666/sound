@@ -57,6 +57,29 @@ fn apply_lowpass(
     signal
 }
 
+fn base_wave(wave_type: &WaveType, phase: f64) -> f64 {
+    match wave_type {
+        WaveType::Mute => 0.0,
+        WaveType::Sine => phase.sin(),
+        WaveType::Square => {
+            if phase % (2.0 * PI) < PI {
+                1.0
+            } else {
+                -1.0
+            }
+        }
+        WaveType::Triangle => {
+            let t = phase / (2.0 * PI);
+            2.0 * (t - (t + 0.75).floor() + 0.25).abs() - 1.0
+        }
+        WaveType::Sawtooth => {
+            let t = phase / (2.0 * PI);
+            t - (0.5 + t).floor()
+        }
+        _ => unreachable!(),
+    }
+}
+
 fn tonal_wave_sample(
     wave_type: &WaveType,
     phase: f64,
@@ -65,27 +88,6 @@ fn tonal_wave_sample(
     disto: impl Fn(f64) -> f64 + Copy,
     freq: Freq,
 ) -> f64 {
-    let base_wave = |t: f64| match wave_type {
-        WaveType::Mute => 0.0,
-        WaveType::Sine => t.sin(),
-        WaveType::Square => {
-            if t % (2.0 * PI) < PI {
-                1.0
-            } else {
-                -1.0
-            }
-        }
-        WaveType::Triangle => {
-            let t = t / (2.0 * PI);
-            2.0 * (t - (t + 0.75).floor() + 0.25).abs() - 1.0
-        }
-        WaveType::Sawtooth => {
-            let t = t / (2.0 * PI);
-            t - (0.5 + t).floor()
-        }
-        _ => unreachable!(),
-    };
-
     let mut norm = 0.0;
     let mut sum = 0.0;
     for k in 0..chorus.voices {
@@ -94,8 +96,8 @@ fn tonal_wave_sample(
         let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
         let sym_pow_k = chorus.sym.powi(k as i32);
         let asym_pow_k = chorus.asym.powi(k as i32);
-        let tmp1 = sign_f(base_wave(phase * delta1.powi(k as i32)), disto);
-        let tmp2 = sign_f(base_wave(phase / delta2.powi(k as i32)), disto);
+        let tmp1 = sign_f(base_wave(wave_type, phase * delta1.powi(k as i32)), disto);
+        let tmp2 = sign_f(base_wave(wave_type, phase / delta2.powi(k as i32)), disto);
         let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
         norm += factor;
         sum += sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
@@ -219,11 +221,16 @@ pub fn generate_wave_with_phase(
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
-    phase: &mut f64,
+    phases: &mut Vec<f64>,
     sample_rate: Freq,
     global_time: Time,
     sample_step: Time,
 ) -> f64 {
+    let needed_phases = chorus.voices.max(1) * 2;
+    if phases.len() != needed_phases {
+        phases.clear();
+        phases.resize(needed_phases, 0.0);
+    }
     let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let glided_time = if let Some(fg) = freq_glide {
         glide_mid(freq, fg, duration, time)
@@ -302,21 +309,44 @@ pub fn generate_wave_with_phase(
         _ => {}
     }
 
-    let current_phase = *phase;
-    let phase_increment = freq.phase(next_bend_vib_time - bend_vib_time);
-    let sum_of_waves =
-        tonal_wave_sample(wave_type, current_phase, glided_time, chorus, disto, freq);
-    let mut signal = vol_envelope * sum_of_waves;
-    signal = apply_lowpass(
+    let base_phase_increment = freq.phase(next_bend_vib_time - bend_vib_time);
+    let mut norm = 0.0;
+    let mut sum = 0.0;
+    for k in 0..chorus.voices {
+        let idx1 = 2 * k;
+        let idx2 = idx1 + 1;
+        let d = chorus.delta * (chorus.time_dependency * glided_time).exp2();
+        let delta1 = 1.0 + d * (1.0 + chorus.delta_shift);
+        let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
+        let sym_pow_k = chorus.sym.powi(k as i32);
+        let asym_pow_k = chorus.asym.powi(k as i32);
+
+        let inc1 = base_phase_increment * delta1.powi(k as i32);
+        let inc2 = base_phase_increment / delta2.powi(k as i32);
+
+        phases[idx1] = (phases[idx1] + inc1).rem_euclid(TAU);
+        phases[idx2] = (phases[idx2] + inc2).rem_euclid(TAU);
+
+        let tmp1 = sign_f(base_wave(wave_type, phases[idx1]), disto);
+        let tmp2 = sign_f(base_wave(wave_type, phases[idx2]), disto);
+        let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
+        norm += factor;
+        sum += sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
+    }
+
+    if norm == 0.0 {
+        norm = 1.0;
+    }
+
+    let signal = vol_envelope * (sum / norm.sqrt()) / (freq / Freq(440.0)).sqrt();
+    apply_lowpass(
         signal,
         lowpass_enabled,
         lp_order,
         memory,
         cutoff_freq,
         sample_rate,
-    );
-    *phase = (*phase + phase_increment).rem_euclid(TAU);
-    signal
+    )
 }
 
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {
