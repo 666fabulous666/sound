@@ -253,14 +253,27 @@ impl GuiApp {
                     ui.label("This discards the current score.");
                     ui.label("Consider saving first so no work is lost.");
                     ui.separator();
+
+                    // Handle keyboard shortcuts
+                    let enter_pressed = ctx.input(|i| i.key_pressed(egui::Key::Enter));
+                    let esc_pressed = ctx.input(|i| i.key_pressed(egui::Key::Escape));
+
+                    // Consume keys to prevent them from propagating to main UI
+                    if esc_pressed {
+                        ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
+                    }
+                    if enter_pressed {
+                        ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
+                    }
+
                     ui.horizontal(|ui| {
-                        if ui.button("Cancel").clicked() {
+                        if ui.button("Cancel").clicked() || esc_pressed {
                             self.show_new_score_confirm = false;
                         }
                         if ui.button("Save before closing").clicked() {
                             *save = true;
                         }
-                        if ui.button("Discard & start new").clicked() {
+                        if ui.button("Discard & start new").clicked() || enter_pressed {
                             self.new_score();
                             self.selected = None;
                             self.show_start = false;
@@ -284,14 +297,27 @@ impl GuiApp {
                     ui.label("Exiting closes the app.");
                     ui.label("Save your work before leaving.");
                     ui.separator();
+
+                    // Handle keyboard shortcuts
+                    let enter_pressed = ctx.input(|i| i.key_pressed(egui::Key::Enter));
+                    let esc_pressed = ctx.input(|i| i.key_pressed(egui::Key::Escape));
+
+                    // Consume keys to prevent them from propagating to main UI
+                    if esc_pressed {
+                        ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
+                    }
+                    if enter_pressed {
+                        ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
+                    }
+
                     ui.horizontal(|ui| {
-                        if ui.button("Cancel").clicked() {
+                        if ui.button("Cancel").clicked() || esc_pressed {
                             self.show_exit_confirm = false;
                         }
                         if ui.button("Save before exit").clicked() {
                             *save = true;
                         }
-                        if ui.button("Exit anyway").clicked() {
+                        if ui.button("Exit anyway").clicked() || enter_pressed {
                             self.show_exit_confirm = false;
                             *exit = true;
                         }
