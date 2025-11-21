@@ -1,4 +1,7 @@
-use std::sync::{atomic::AtomicU64, Arc};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
+};
 
 use crate::{
     app::GuiApp,
@@ -6,24 +9,13 @@ use crate::{
         reverb::Reverb,
         score::{sequence::Sequence, track_node::TrackNode},
     },
-    layout_left, F0,
+    layout_left, F0, TOOLBAR_ICON_SIZE,
 };
 use cpal::traits::DeviceTrait;
-use egui::{
-    Align2, ColorImage, ImageButton, Layout, RichText, TextureHandle, TextureOptions, Vec2,
-};
+use egui::{Align2, Area, Frame, Id, Layout, Order, RichText, Vec2};
 #[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
 use synth_core::stream::stream;
-
-const METRONOME_BRIGHT: &[u8] = include_bytes!("../../../assets/metronome_bright.gif");
-const METRONOME_DARK: &[u8] = include_bytes!("../../../assets/metronome_dark.gif");
-const CHRONO_BRIGHT: &[u8] = include_bytes!("../../../assets/chronometer_bright.gif");
-const CHRONO_DARK: &[u8] = include_bytes!("../../../assets/chronometer_dark.gif");
-const NEW_SCORE_BRIGHT: &[u8] = include_bytes!("../../../assets/new_score_bright.gif");
-const NEW_SCORE_DARK: &[u8] = include_bytes!("../../../assets/new_score_dark.gif");
-const ADD_TRACK_BRIGHT: &[u8] = include_bytes!("../../../assets/add_track_bright.gif");
-const ADD_TRACK_DARK: &[u8] = include_bytes!("../../../assets/add_track_dark.gif");
 
 impl GuiApp {
     pub fn top_panel(
@@ -35,7 +27,6 @@ impl GuiApp {
     ) {
         #[cfg(target_arch = "wasm32")]
         let _ = exit;
-        self.ensure_toolbar_icons(ctx);
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
                 if let Some(logo) = &self.logo {
@@ -47,20 +38,11 @@ impl GuiApp {
                 ui.vertical(|ui| {
                     ui.add_space(14.0);
                     ui.horizontal(|ui| {
-                        if toolbar_icon_button(ui, self.new_score_icon.as_ref(), "New score", "New")
-                            .clicked()
-                        {
+                        if toolbar_icon_button(ui, "🎼", "New score").clicked() {
                             self.show_new_score_confirm = true;
                         }
                         if !self.show_start {
-                            if toolbar_icon_button(
-                                ui,
-                                self.add_track_icon.as_ref(),
-                                "Add track",
-                                "Add",
-                            )
-                            .clicked()
-                            {
+                            if toolbar_icon_button(ui, "➕", "Add track").clicked() {
                                 let seq = TrackNode::from_sequence(Sequence::new(
                                     self.score.last_token.next(),
                                 ));
@@ -70,32 +52,27 @@ impl GuiApp {
                             }
                         }
 
+                        if !self.show_doc {
+                            if toolbar_icon_button(ui, "🎶", "Examples").clicked() {
+                                self.try_load_default(ctx);
+                            }
+                        }
                         *load = false;
-                        if toolbar_icon_button(ui, self.load_icon.as_ref(), "Load", "📂").clicked()
-                        {
+                        if toolbar_icon_button(ui, "📂", "Load").clicked() {
                             self.stream = None;
                             self.show_start = false;
                             *load = true;
                         }
 
-                        // NOTE: already tested
                         if !self.show_start {
-                            *save = false;
-                            if toolbar_icon_button(ui, self.save_icon.as_ref(), "Save", "💾")
-                                .clicked()
-                            {
-                                *save = true;
-                            }
-                            if ui
-                                .add(egui::Button::new(if self.stream.is_none() {
-                                    "▶"
-                                } else {
-                                    "⏸"
-                                }))
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new("Shortcut: Space bar").weak());
-                                })
-                                .clicked()
+                            *save = toolbar_icon_button(ui, "💾", "Save").clicked();
+                            let play_label = if self.stream.is_none() { "▶" } else { "⏸" };
+                            let play_tip = if self.stream.is_none() {
+                                "Play\nShortcut: Space bar"
+                            } else {
+                                "Pause\nShortcut: Space bar"
+                            };
+                            if toolbar_icon_button(ui, play_label, play_tip).clicked()
                                 || ui.input(|i| i.key_pressed(egui::Key::Space))
                             {
                                 if self.stream.is_some() {
@@ -106,43 +83,29 @@ impl GuiApp {
                             }
                             #[cfg(not(target_arch = "wasm32"))]
                             {
-                                ui.add_space(8.0);
                                 self.draw_record_controls(ui);
                             }
                         }
                         if !self.show_doc {
-                            if ui.button("Examples").clicked() {
-                                self.try_load_default(ctx);
-                            }
-                            if ui.button("README").clicked() {
+                            if toolbar_icon_button(ui, "📖", "README").clicked() {
                                 self.show_doc = true;
                             }
                         }
+                        let elapsed = self.now().as_secs();
+                        if toolbar_icon_button(ui, "🕛", "Reset elapsed time").clicked() {
+                            self.clock.store(0, Ordering::Relaxed);
+                        }
+                        ui.label(format!("{elapsed:.1}s"));
+                        if !self.show_start {
+                            self.draw_tempo_control(ui);
+                            self.draw_spectrogram_toggle(ui);
+                        }
+
                         #[cfg(not(target_arch = "wasm32"))]
                         {
-                            if ui
-                                .button("Exit")
-                                .on_hover_ui(|ui| {
-                                    ui.label(RichText::new("Shortcut: Escape").weak());
-                                })
-                                .clicked()
-                            {
+                            if toolbar_icon_button(ui, "❌", "Exit\nShortcut: Escape").clicked() {
                                 self.show_exit_confirm = true;
                             }
-                        }
-                        let elapsed = self.now().as_secs();
-                        ui.horizontal(|ui| {
-                            if let Some(icon) = self.chrono_icon.as_ref() {
-                                ui.image((icon.id(), Vec2::splat(32.0)))
-                                    .on_hover_text("Elapsed playback time");
-                            }
-                            ui.label(format!("{elapsed:.1}s"));
-                        });
-                        if !self.show_start {
-                            ui.separator();
-                            self.draw_tempo_control(ui);
-                            ui.separator();
-                            self.draw_spectrogram_toggle(ui);
                         }
                     });
                     if !self.show_start {
@@ -181,55 +144,82 @@ impl GuiApp {
                 });
             });
         });
+        self.render_tempo_popup(ctx);
         self.show_confirmation_dialogs(ctx, save, exit);
     }
 
     fn draw_tempo_control(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            if let Some(icon) = self.tempo_icon.as_ref() {
-                ui.image((icon.id(), Vec2::splat(32.0)))
-                    .on_hover_text("Metronome tempo");
-            }
-            ui.label("Tempo (BPM)");
-            let mut tempo_bpm = self.score.tempo().beats_per_minute();
-            let changed = ui
-                .add(
-                    egui::DragValue::new(&mut tempo_bpm)
-                        .range(20.0..=240.0)
-                        .speed(0.5),
-                )
-                .changed();
-            if changed {
-                self.set_tempo_bpm(tempo_bpm);
-            }
-        });
+        let response = toolbar_icon_button(ui, "💓", "Tempo control");
+        if response.clicked() {
+            self.tempo_popup_open = !self.tempo_popup_open;
+            self.tempo_popup_pos = Some(response.rect.left_bottom() + Vec2::new(0.0, 8.0));
+        }
+        let tempo = self.score.tempo().beats_per_minute();
+        ui.label(format!("{tempo:.0} BPM"));
     }
 
     fn draw_spectrogram_toggle(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            let prev = self.show_spectrogram_panel;
-            if ui
-                .checkbox(&mut self.show_spectrogram_panel, "Show spectrogram preview")
-                .on_hover_text("Toggle the docked spectrogram panel at the bottom")
-                .changed()
-            {
-                if self.show_spectrogram_panel && !prev {
-                    self.spectrogram_render_requested = true;
-                }
+        let prev = self.show_spectrogram_panel;
+        if toolbar_icon_button(
+            ui,
+            "📡",
+            if self.show_spectrogram_panel {
+                "Hide spectrogram preview"
+            } else {
+                "Show spectrogram preview"
+            },
+        )
+        .clicked()
+        {
+            self.show_spectrogram_panel = !self.show_spectrogram_panel;
+            if self.show_spectrogram_panel && !prev {
+                self.spectrogram_render_requested = true;
             }
-        });
+        }
+        let status = if self.show_spectrogram_panel {
+            "Spectrogram on"
+        } else {
+            "Spectrogram off"
+        };
+        ui.label(status);
+    }
+
+    fn render_tempo_popup(&mut self, ctx: &egui::Context) {
+        if !self.tempo_popup_open {
+            return;
+        }
+        let pos = self
+            .tempo_popup_pos
+            .unwrap_or_else(|| ctx.available_rect().left_top());
+        Area::new(Id::new("tempo_popup"))
+            .order(Order::Foreground)
+            .fixed_pos(pos)
+            .show(ctx, |ui| {
+                Frame::popup(ui.style()).show(ui, |ui| {
+                    ui.set_min_width(160.0);
+                    ui.label("Tempo");
+                    let mut tempo_bpm = self.score.tempo().beats_per_minute();
+                    let changed = ui
+                        .add(
+                            egui::Slider::new(&mut tempo_bpm, 20.0..=240.0)
+                                .logarithmic(false)
+                                .text("BPM"),
+                        )
+                        .changed();
+                    if changed {
+                        self.set_tempo_bpm(tempo_bpm);
+                    }
+                    if ui.button("Close").clicked() {
+                        self.tempo_popup_open = false;
+                    }
+                });
+            });
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     fn draw_record_controls(&mut self, ui: &mut egui::Ui) {
         if self.recorder.is_recording() {
-            ui.colored_label(
-                egui::Color32::LIGHT_RED,
-                RichText::new("● Recording")
-                    .strong()
-                    .color(egui::Color32::LIGHT_RED),
-            );
-            if ui.button("Stop").on_hover_text("Stop recording").clicked() {
+            if toolbar_icon_button(ui, "⏹", "Stop recording").clicked() {
                 if let Err(err) = self.recorder.stop() {
                     error!("Failed to stop recording: {err:?}");
                     self.record_error = Some(err.to_string());
@@ -237,11 +227,13 @@ impl GuiApp {
                     self.record_error = None;
                 }
             }
-        } else if ui
-            .button("Record WAV…")
-            .on_hover_text("Record master output to a WAV file")
-            .clicked()
-        {
+            ui.colored_label(
+                egui::Color32::LIGHT_RED,
+                RichText::new("Recording")
+                    .strong()
+                    .color(egui::Color32::LIGHT_RED),
+            );
+        } else if toolbar_icon_button(ui, "⏺", "Record master output to a WAV file").clicked() {
             self.start_recording_dialog();
         }
         if let Some(err) = &self.record_error {
@@ -311,39 +303,6 @@ impl GuiApp {
         }
     }
 
-    fn ensure_toolbar_icons(&mut self, ctx: &egui::Context) {
-        let dark_mode = ctx.style().visuals.dark_mode;
-        let needs_refresh = self.toolbar_icon_dark_mode != Some(dark_mode)
-            || self.tempo_icon.is_none()
-            || self.chrono_icon.is_none()
-            || self.new_score_icon.is_none()
-            || self.add_track_icon.is_none();
-        if !needs_refresh {
-            return;
-        }
-        self.tempo_icon = Some(load_toolbar_image(
-            ctx,
-            "toolbar_metronome",
-            themed_bytes(METRONOME_BRIGHT, METRONOME_DARK, dark_mode),
-        ));
-        self.chrono_icon = Some(load_toolbar_image(
-            ctx,
-            "toolbar_chrono",
-            themed_bytes(CHRONO_BRIGHT, CHRONO_DARK, dark_mode),
-        ));
-        self.new_score_icon = Some(load_toolbar_image(
-            ctx,
-            "toolbar_new_score",
-            themed_bytes(NEW_SCORE_BRIGHT, NEW_SCORE_DARK, dark_mode),
-        ));
-        self.add_track_icon = Some(load_toolbar_image(
-            ctx,
-            "toolbar_add_track",
-            themed_bytes(ADD_TRACK_BRIGHT, ADD_TRACK_DARK, dark_mode),
-        ));
-        self.toolbar_icon_dark_mode = Some(dark_mode);
-    }
-
     fn start_stream(&mut self, clock: Arc<AtomicU64>) {
         let sample_rate = self
             .device
@@ -391,34 +350,11 @@ impl GuiApp {
     }
 }
 
-fn toolbar_icon_button(
-    ui: &mut egui::Ui,
-    icon: Option<&TextureHandle>,
-    tooltip: &str,
-    fallback_label: &str,
-) -> egui::Response {
-    if let Some(texture) = icon {
-        ui.add(ImageButton::new((texture.id(), Vec2::splat(32.0))).frame(false))
-            .on_hover_text(tooltip)
-    } else {
-        ui.button(fallback_label).on_hover_text(tooltip)
-    }
-}
-
-fn themed_bytes<'a>(bright: &'a [u8], dark: &'a [u8], dark_mode: bool) -> &'a [u8] {
-    if dark_mode {
-        dark
-    } else {
-        bright
-    }
-}
-
-fn load_toolbar_image(ctx: &egui::Context, name: &str, bytes: &'static [u8]) -> TextureHandle {
-    let rgba = image::load_from_memory(bytes)
-        .expect("invalid toolbar icon")
-        .to_rgba8();
-    let (w, h) = rgba.dimensions();
-    let pixels = rgba.into_vec();
-    let image = ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &pixels);
-    ctx.load_texture(name, image, TextureOptions::LINEAR)
+fn toolbar_icon_button(ui: &mut egui::Ui, glyph: &str, tooltip: &str) -> egui::Response {
+    let text = RichText::new(glyph).size(TOOLBAR_ICON_SIZE * 0.4);
+    ui.add(
+        egui::Button::new(text)
+            .min_size(Vec2::new(TOOLBAR_ICON_SIZE * 0.6, TOOLBAR_ICON_SIZE * 0.6)),
+    )
+    .on_hover_text(tooltip)
 }

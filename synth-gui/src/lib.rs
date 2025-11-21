@@ -16,6 +16,7 @@ pub const MAX_FPS: f64 = 60.0;
 pub const MAX_FPS: f64 = 120.0;
 
 pub const TREE_DEPTH_WIDTH: f32 = 10.0;
+pub const TOOLBAR_ICON_SIZE: f32 = 64.0;
 
 /// Default preset grooves included with the application
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
