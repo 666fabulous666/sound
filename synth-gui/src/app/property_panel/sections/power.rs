@@ -70,7 +70,10 @@ pub fn draw_power_controls(
     let freq_resp = freq_param.draw(ui, &mut value.power.lfo.frequency, impact);
     changed |= magnitude_resp.changed() || freq_resp.changed();
 
-    let sync_resp = ui.checkbox(&mut value.power.lfo.sync_with_clock, "Sync with global clock");
+    let sync_resp = ui.checkbox(
+        &mut value.power.lfo.sync_with_clock,
+        "Sync with global clock",
+    );
     if sync_resp.changed() {
         impact.register_behavior(ParameterBehavior::AestheticImmediate);
         changed = true;

@@ -186,9 +186,6 @@ mod tests {
             },
         };
         // With constant relaxation (1.0) and no LFO, result should be base * 1.0 = 2.0
-        assert_eq!(
-            tv.evaluate(Time(0.0), Time(0.0), Time(1.0)),
-            2.0
-        );
+        assert_eq!(tv.evaluate(Time(0.0), Time(0.0), Time(1.0)), 2.0);
     }
 }

@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::f64::consts::{PI, TAU};
 
 use serde::{Deserialize, Serialize};
 
@@ -41,108 +41,31 @@ impl ToString for &WaveType {
     }
 }
 
-pub fn generate_wave(
-    wave_type: &WaveType,
-    freq: Freq,
-    freq_glide: Option<Freq>,
-    time: Time,
-    duration: Time,
-    attack_decay: (f64, f64),
-    cutoff: &TimeVarying,
-    bend: (f64, f64),
-    vibrato: (f64, Freq),
-    chorus: &ChorusParams,
-    power: &TimeVarying,
+fn apply_lowpass(
+    mut signal: f64,
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
+    cutoff_freq: Freq,
     sample_rate: Freq,
-    global_time: Time,
 ) -> f64 {
-    let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
-    let time = if let Some(fg) = freq_glide {
-        glide_mid(freq, fg, duration, time)
-    } else {
-        time
-    };
-    let bend_vib_time = time_bend_vibrato(time, bend.0, bend.1, vibrato.0, vibrato.1);
-    let p = power.evaluate(time, global_time, duration);
-    let disto = |x: f64| x.powf(p);
-    let dynamic_multiplier = cutoff.evaluate(time, global_time, duration);
-    match wave_type {
-        WaveType::HiHat => {
-            let mut signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
-            if lowpass_enabled {
-                for i in 0..lp_order.min(5) as usize {
-                    signal = lowpass_step_cutoff(
-                        signal,
-                        &mut memory[i],
-                        freq * dynamic_multiplier,
-                        sample_rate,
-                    );
-                }
-            }
-            return signal;
+    if lowpass_enabled {
+        for i in 0..lp_order.min(5) as usize {
+            signal = lowpass_step_cutoff(signal, &mut memory[i], cutoff_freq, sample_rate);
         }
-        WaveType::Kick => {
-            let mut signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
-            if lowpass_enabled {
-                for i in 0..lp_order.min(5) as usize {
-                    signal = lowpass_step_cutoff(
-                        signal,
-                        &mut memory[i],
-                        freq * dynamic_multiplier,
-                        sample_rate,
-                    );
-                }
-            }
-            return signal;
-        }
-        WaveType::Snare => {
-            let mut signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
-            if lowpass_enabled {
-                for i in 0..lp_order.min(5) as usize {
-                    signal = lowpass_step_cutoff(
-                        signal,
-                        &mut memory[i],
-                        freq * dynamic_multiplier,
-                        sample_rate,
-                    );
-                }
-            }
-            return signal;
-        }
-        WaveType::Ride => {
-            let mut signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
-            if lowpass_enabled {
-                for i in 0..lp_order.min(5) as usize {
-                    signal = lowpass_step_cutoff(
-                        signal,
-                        &mut memory[i],
-                        freq * dynamic_multiplier,
-                        sample_rate,
-                    );
-                }
-            }
-            return signal;
-        }
-        WaveType::Darbuka => {
-            let mut signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
-            if lowpass_enabled {
-                for i in 0..lp_order.min(5) as usize {
-                    signal = lowpass_step_cutoff(
-                        signal,
-                        &mut memory[i],
-                        freq * dynamic_multiplier,
-                        sample_rate,
-                    );
-                }
-            }
-            return signal;
-        }
-        _ => {}
     }
-    let f = |t: f64| match wave_type {
+    signal
+}
+
+fn tonal_wave_sample(
+    wave_type: &WaveType,
+    phase: f64,
+    time: Time,
+    chorus: &ChorusParams,
+    disto: impl Fn(f64) -> f64 + Copy,
+    freq: Freq,
+) -> f64 {
+    let base_wave = |t: f64| match wave_type {
         WaveType::Mute => 0.0,
         WaveType::Sine => t.sin(),
         WaveType::Square => {
@@ -162,34 +85,238 @@ pub fn generate_wave(
         }
         _ => unreachable!(),
     };
-    let phase = freq.phase(bend_vib_time);
+
     let mut norm = 0.0;
-    let sum_of_waves = (0..chorus.voices)
-        .map(|k| {
-            let d = chorus.delta * (chorus.time_dependency * time).exp2();
-            let delta1 = 1.0 + d * (1.0 + chorus.delta_shift);
-            let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
-            let sym_pow_k = chorus.sym.powi(k as i32);
-            let asym_pow_k = chorus.asym.powi(k as i32);
-            let tmp1 = f(phase * delta1.powi(k as i32));
-            let tmp2 = f(phase / delta2.powi(k as i32));
-            let tmp1 = sign_f(tmp1, disto);
-            let tmp2 = sign_f(tmp2, disto);
-            let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
-            norm += factor;
-            let tmp = sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
-            tmp
-        })
-        .sum::<f64>()
-        / norm.sqrt()
-        / (freq / Freq(440.0)).sqrt();
-    let mut tmp = vol_envelope * sum_of_waves;
-    if lowpass_enabled {
-        for i in 0..lp_order.min(5) as usize {
-            tmp = lowpass_step_cutoff(tmp, &mut memory[i], freq * dynamic_multiplier, sample_rate);
-        }
+    let mut sum = 0.0;
+    for k in 0..chorus.voices {
+        let d = chorus.delta * (chorus.time_dependency * time).exp2();
+        let delta1 = 1.0 + d * (1.0 + chorus.delta_shift);
+        let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
+        let sym_pow_k = chorus.sym.powi(k as i32);
+        let asym_pow_k = chorus.asym.powi(k as i32);
+        let tmp1 = sign_f(base_wave(phase * delta1.powi(k as i32)), disto);
+        let tmp2 = sign_f(base_wave(phase / delta2.powi(k as i32)), disto);
+        let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
+        norm += factor;
+        sum += sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
     }
-    tmp
+
+    let norm = norm.max(f64::MIN_POSITIVE);
+    sum / norm.sqrt() / (freq / Freq(440.0)).sqrt()
+}
+
+pub fn generate_wave(
+    wave_type: &WaveType,
+    freq: Freq,
+    freq_glide: Option<Freq>,
+    time: Time,
+    duration: Time,
+    attack_decay: (f64, f64),
+    cutoff: &TimeVarying,
+    bend: (f64, f64),
+    vibrato: (f64, Freq),
+    chorus: &ChorusParams,
+    power: &TimeVarying,
+    lowpass_enabled: bool,
+    lp_order: u32,
+    memory: &mut [f64; 5],
+    sample_rate: Freq,
+    global_time: Time,
+) -> f64 {
+    let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
+    let glided_time = if let Some(fg) = freq_glide {
+        glide_mid(freq, fg, duration, time)
+    } else {
+        time
+    };
+    let bend_vib_time = time_bend_vibrato(glided_time, bend.0, bend.1, vibrato.0, vibrato.1);
+    let p = power.evaluate(glided_time, global_time, duration);
+    let disto = |x: f64| x.powf(p);
+    let dynamic_multiplier = cutoff.evaluate(glided_time, global_time, duration);
+    let cutoff_freq = freq * dynamic_multiplier;
+    match wave_type {
+        WaveType::HiHat => {
+            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Kick => {
+            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Snare => {
+            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Ride => {
+            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Darbuka => {
+            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        _ => {}
+    }
+    let phase = freq.phase(bend_vib_time);
+    let sum_of_waves = tonal_wave_sample(wave_type, phase, glided_time, chorus, disto, freq);
+    apply_lowpass(
+        vol_envelope * sum_of_waves,
+        lowpass_enabled,
+        lp_order,
+        memory,
+        cutoff_freq,
+        sample_rate,
+    )
+}
+
+pub fn generate_wave_with_phase(
+    wave_type: &WaveType,
+    freq: Freq,
+    freq_glide: Option<Freq>,
+    time: Time,
+    duration: Time,
+    attack_decay: (f64, f64),
+    cutoff: &TimeVarying,
+    bend: (f64, f64),
+    vibrato: (f64, Freq),
+    chorus: &ChorusParams,
+    power: &TimeVarying,
+    lowpass_enabled: bool,
+    lp_order: u32,
+    memory: &mut [f64; 5],
+    phase: &mut f64,
+    sample_rate: Freq,
+    global_time: Time,
+    sample_step: Time,
+) -> f64 {
+    let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
+    let glided_time = if let Some(fg) = freq_glide {
+        glide_mid(freq, fg, duration, time)
+    } else {
+        time
+    };
+    let next_glided_time = if let Some(fg) = freq_glide {
+        glide_mid(freq, fg, duration, time + sample_step)
+    } else {
+        time + sample_step
+    };
+    let bend_vib_time = time_bend_vibrato(glided_time, bend.0, bend.1, vibrato.0, vibrato.1);
+    let next_bend_vib_time =
+        time_bend_vibrato(next_glided_time, bend.0, bend.1, vibrato.0, vibrato.1);
+    let p = power.evaluate(glided_time, global_time, duration);
+    let disto = |x: f64| x.powf(p);
+    let dynamic_multiplier = cutoff.evaluate(glided_time, global_time, duration);
+    let cutoff_freq = freq * dynamic_multiplier;
+
+    match wave_type {
+        WaveType::HiHat => {
+            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Kick => {
+            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Snare => {
+            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Ride => {
+            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        WaveType::Darbuka => {
+            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            return apply_lowpass(
+                signal,
+                lowpass_enabled,
+                lp_order,
+                memory,
+                cutoff_freq,
+                sample_rate,
+            );
+        }
+        _ => {}
+    }
+
+    let current_phase = *phase;
+    let phase_increment = freq.phase(next_bend_vib_time - bend_vib_time);
+    let sum_of_waves =
+        tonal_wave_sample(wave_type, current_phase, glided_time, chorus, disto, freq);
+    let mut signal = vol_envelope * sum_of_waves;
+    signal = apply_lowpass(
+        signal,
+        lowpass_enabled,
+        lp_order,
+        memory,
+        cutoff_freq,
+        sample_rate,
+    );
+    *phase = (*phase + phase_increment).rem_euclid(TAU);
+    signal
 }
 
 pub fn envelope(attack: f64, decay: f64, note_duration: Time) -> impl Fn(Time) -> f64 {

@@ -21,6 +21,7 @@ use crate::{
         node_params::{
             EnvelopeParams, HarmonyParams, ParamResolution, ResolvedTrackParams, RhythmParams,
         },
+        note::NoteVariant,
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
@@ -403,6 +404,36 @@ impl GuiApp {
                                         ng.wave_type = seq_mut.wave_type;
                                     }
                                 }
+
+                                ui.horizontal(|ui| {
+                                    ui.label("Phase mode:");
+                                    let mut variant = seq_mut.note_variant;
+                                    egui::ComboBox::from_id_salt("note_variant_combo")
+                                        .selected_text(match variant {
+                                            NoteVariant::PureTime => "Pure time",
+                                            NoteVariant::PhaseTracked => "Phase tracked",
+                                        })
+                                        .show_ui(ui, |ui| {
+                                            ui.selectable_value(
+                                                &mut variant,
+                                                NoteVariant::PureTime,
+                                                "Pure time",
+                                            );
+                                            ui.selectable_value(
+                                                &mut variant,
+                                                NoteVariant::PhaseTracked,
+                                                "Phase tracked",
+                                            );
+                                        });
+                                    if variant != seq_mut.note_variant {
+                                        seq_mut.note_variant = variant;
+                                        if let Some(ng) = self.score.notes.get_mut(&seq_mut.token) {
+                                            for n in ng.notes.iter_mut() {
+                                                n.variant = variant;
+                                            }
+                                        }
+                                    }
+                                });
 
                                 let is_drum = DRUM_WAVES.contains(&effective_wave);
                                 let mut overrides_dirty = false;

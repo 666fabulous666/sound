@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use crate::engine::score::default_params;
-use crate::engine::score::note::Note;
+use crate::engine::score::note::{Note, NoteVariant};
 use crate::engine::score::probability::Probability;
 use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
@@ -40,6 +40,8 @@ pub struct Sequence {
     pub exclusions: Rythm,
     pub interval: Interval,
     pub wave_type: WaveType,
+    #[serde(skip)]
+    pub note_variant: NoteVariant,
     #[serde(default = "default_time_quantum")]
     pub time_quantum: TimeQuantum,
     #[serde(default = "default_harmoniser")]
@@ -91,6 +93,7 @@ impl Sequence {
             beat_offset: default_beat_offset(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
+            note_variant: NoteVariant::default(),
             mute: default_mute(),
             token,
             not_generate_until: None,
@@ -225,6 +228,7 @@ impl Sequence {
                 random_chord: harmony.random_chord,
                 reverse_prob: harmony.reverse_prob,
                 shuffle_prob: harmony.shuffle_prob,
+                variant: self.note_variant,
             }
         });
         let mut self_ctx = vec![];

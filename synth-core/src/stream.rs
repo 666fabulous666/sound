@@ -7,7 +7,11 @@ use std::{
 };
 
 use crate::{
-    engine::{reverb::Reverb, score::NotesGroup, waves::generate_wave},
+    engine::{
+        reverb::Reverb,
+        score::{note::NoteVariant, NotesGroup},
+        waves::{generate_wave, generate_wave_with_phase},
+    },
     recorder::Recorder,
     time_freq::{DivByFreq, Freq, Time},
     NoteId, Token, REVERB_BUFFER_LEN,
@@ -15,7 +19,8 @@ use crate::{
 
 struct NoteMemory {
     start_time: Time,
-    state: [f64; 5],
+    lowpass_state: [f64; 5],
+    phase: f64,
 }
 
 pub fn stream(
@@ -45,6 +50,7 @@ pub fn stream(
             let delays = delays.load();
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
+            let sample_step = 1.0.div_by(sample_rate);
 
             let mut now =
                 (clock.load(std::sync::atomic::Ordering::Relaxed) as f64).div_by(sample_rate);
@@ -75,30 +81,53 @@ pub fn stream(
                     for note in notes_from_seq.iter() {
                         let memory = lp_memories.entry(note.id).or_insert_with(|| NoteMemory {
                             start_time: note.time,
-                            state: [0.0; 5],
+                            lowpass_state: [0.0; 5],
+                            phase: 0.0,
                         });
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
                             let volume = 0.1 * volume * note.volume;
                             let dry = volume
-                                * generate_wave(
-                                    wave_type,
-                                    freq0 * note.interval.compute(),
-                                    note.glide.as_ref().map(|g| freq0 * g.compute()),
-                                    t,
-                                    note.duration,
-                                    *attack_decay,
-                                    cutoff,
-                                    *bend,
-                                    *vibrato,
-                                    chorus,
-                                    power,
-                                    *lowpass_enabled,
-                                    *lp_order,
-                                    &mut memory.state,
-                                    sample_rate,
-                                    now,
-                                );
+                                * match note.variant {
+                                    NoteVariant::PureTime => generate_wave(
+                                        wave_type,
+                                        freq0 * note.interval.compute(),
+                                        note.glide.as_ref().map(|g| freq0 * g.compute()),
+                                        t,
+                                        note.duration,
+                                        *attack_decay,
+                                        cutoff,
+                                        *bend,
+                                        *vibrato,
+                                        chorus,
+                                        power,
+                                        *lowpass_enabled,
+                                        *lp_order,
+                                        &mut memory.lowpass_state,
+                                        sample_rate,
+                                        now,
+                                    ),
+                                    NoteVariant::PhaseTracked => generate_wave_with_phase(
+                                        wave_type,
+                                        freq0 * note.interval.compute(),
+                                        note.glide.as_ref().map(|g| freq0 * g.compute()),
+                                        t,
+                                        note.duration,
+                                        *attack_decay,
+                                        cutoff,
+                                        *bend,
+                                        *vibrato,
+                                        chorus,
+                                        power,
+                                        *lowpass_enabled,
+                                        *lp_order,
+                                        &mut memory.lowpass_state,
+                                        &mut memory.phase,
+                                        sample_rate,
+                                        now,
+                                        sample_step,
+                                    ),
+                                };
                             dry_left += (1.0 - pan) * dry;
                             dry_right += pan * dry;
                         }
@@ -127,7 +156,7 @@ pub fn stream(
                     frame[0] = (left + right) as f32;
                 }
 
-                now += 1.0.div_by(sample_rate);
+                now += sample_step;
             }
 
             clock.fetch_add(frames as u64, std::sync::atomic::Ordering::Relaxed);

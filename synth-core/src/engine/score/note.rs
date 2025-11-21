@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 use rand::{seq::SliceRandom, Rng};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::Interval;
 
@@ -11,6 +11,13 @@ use crate::{
     time_freq::{Beat, Time},
     NoteId, Token,
 };
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NoteVariant {
+    #[default]
+    PureTime,
+    PhaseTracked,
+}
 
 #[derive(Deserialize, Clone)]
 pub struct Note {
@@ -30,6 +37,8 @@ pub struct Note {
     pub reverse_prob: f64,
     #[serde(default)]
     pub shuffle_prob: f64,
+    #[serde(default)]
+    pub variant: NoteVariant,
 }
 impl Note {
     pub fn draw(
