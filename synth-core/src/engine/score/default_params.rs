@@ -162,3 +162,6 @@ pub fn default_delays() -> (Vec<f64>, Vec<f64>) {
 pub fn default_harmoniser() -> [u32; 7] {
     [10, 11, 11, 4, 3, 0, 8]
 }
+pub fn default_skip_harmonised() -> usize {
+    0
+}

@@ -159,6 +159,13 @@ pub fn show_harmony_section(
                 impact.require_regeneration();
             }
             if ui
+                .add(egui::Slider::new(&mut seq.skip_harmonised, 0..=100).text("Skip harmonised"))
+                .on_hover_text("Number of most harmonious note combinations to skip. Higher values create more dissonance/tension.")
+                .changed()
+            {
+                impact.require_regeneration();
+            }
+            if ui
                 .add(egui::Slider::new(&mut seq.arpegio, -4.0..=4.0).text("Arpegio"))
                 .changed()
             {
