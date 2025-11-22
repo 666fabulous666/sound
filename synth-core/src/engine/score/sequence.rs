@@ -48,6 +48,8 @@ pub struct Sequence {
     pub time_quantum: TimeQuantum,
     #[serde(default = "default_harmoniser")]
     pub harmoniser: [u32; 7],
+    #[serde(default = "default_melodiser")]
+    pub melodiser: [i32; 7],
     #[serde(default = "default_beat_offset")]
     pub beat_offset: i32,
     #[serde(default = "default_glide")]
@@ -64,6 +66,10 @@ pub struct Sequence {
     pub tolerance: (Time, Time),
     #[serde(default = "default_harmonise")]
     pub harmonise: bool,
+    #[serde(default = "default_melodise")]
+    pub melodise: bool,
+    #[serde(default = "default_melody_order_affinity")]
+    pub melody_order_affinity: i32,
     #[serde(default = "default_repeat")]
     pub repeat: usize,
     #[serde(default = "default_accents")]
@@ -108,7 +114,10 @@ impl Sequence {
             shuffle: default_shuffle(),
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
+            melodiser: default_melodiser(),
             glide: default_glide(),
+            melodise: default_melodise(),
+            melody_order_affinity: default_melody_order_affinity(),
             chord: default_tension(),
             random_chord: default_random_chord(),
             arpegio: default_arpegio(),
@@ -206,50 +215,58 @@ impl Sequence {
         let step_as_time = tempo.beats_to_time(step_in_beats);
         let seq_start_beats = tempo.time_to_beats(seq_start);
         let loop_len_time = tempo.beats_to_time(rhythm.loop_len);
-        let tmp = windows.into_iter().map(|(t, d)| {
-            let time_offset = tempo.beats_to_time(t);
-            let duration_time = tempo.beats_to_time(d);
-            let note_start = seq_start + time_offset;
-            Note {
-                id: note_id_gen.next(),
-                time: note_start,
-                duration: duration_time,
-                beat_time: seq_start_beats + t,
-                beat_duration: d,
-                interval: harmony.interval.clone(),
-                glide: None,
-                volume: volume / params.envelope.normalization
-                    * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
-                    / (self.accents.0
-                        + self
-                            .accents
-                            .1
-                            .iter()
-                            .map(|a| (note_start * *a).as_secs().fract())
-                            .sum::<f64>()),
-                chord: harmony.chord,
-                random_chord: harmony.random_chord,
-                reverse_prob: harmony.reverse_prob,
-                shuffle_prob: harmony.shuffle_prob,
-                variant: self.note_variant,
-                harmonics: params.harmonics.clone(),
-            }
-        });
+        let base_triggers: Vec<Note> = windows
+            .into_iter()
+            .map(|(t, d)| {
+                let time_offset = tempo.beats_to_time(t);
+                let duration_time = tempo.beats_to_time(d);
+                let note_start = seq_start + time_offset;
+                Note {
+                    id: note_id_gen.next(),
+                    time: note_start,
+                    duration: duration_time,
+                    beat_time: seq_start_beats + t,
+                    beat_duration: d,
+                    interval: harmony.interval.clone(),
+                    glide: None,
+                    volume: volume / params.envelope.normalization
+                        * (self.accents.0 + 0.5 * self.accents.1.iter().sum::<f64>())
+                        / (self.accents.0
+                            + self
+                                .accents
+                                .1
+                                .iter()
+                                .map(|a| (note_start * *a).as_secs().fract())
+                                .sum::<f64>()),
+                    chord: harmony.chord,
+                    random_chord: harmony.random_chord,
+                    reverse_prob: harmony.reverse_prob,
+                    shuffle_prob: harmony.shuffle_prob,
+                    variant: self.note_variant,
+                    harmonics: params.harmonics.clone(),
+                }
+            })
+            .collect();
         let mut self_ctx = vec![];
-        let base_notes: Vec<Note> = tmp
-            .map(|n| {
+        let base_notes: Vec<Note> = base_triggers
+            .into_iter()
+            .flat_map(|n| {
                 n.draw(
                     &notes_buffer,
                     &mut self_ctx,
                     rng,
+                    note_id_gen,
                     self.harmonise,
                     self.harmoniser,
+                    self.melodise,
+                    self.melodiser,
+                    self.melody_order_affinity,
+                    self.tolerance,
                     step_as_time,
                     step_in_beats,
                     self.arpegio,
                 )
             })
-            .flatten()
             .collect();
 
         let mut tmp: Vec<Note> = Vec::new();

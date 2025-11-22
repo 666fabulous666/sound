@@ -197,6 +197,27 @@ pub fn u32_cell(
     resp
 }
 
+pub fn i32_cell(
+    ui: &mut Ui,
+    v: &mut i32,
+    range: std::ops::RangeInclusive<i32>,
+    reset_to: i32,
+) -> Response {
+    let mut resp = ui
+        .add(
+            egui::Slider::new(v, range)
+                .clamping(egui::SliderClamping::Edits)
+                .step_by(1.0)
+                .show_value(true),
+        )
+        .on_hover_text("Right-click to reset");
+    if resp.secondary_clicked() {
+        *v = reset_to;
+        resp.mark_changed();
+    }
+    resp
+}
+
 /// Update aesthetic parameter in NotesGroup by finding the matching token
 #[allow(dead_code)]
 pub fn update_notes_group<F>(

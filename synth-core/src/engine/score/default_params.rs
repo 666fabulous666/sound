@@ -70,6 +70,18 @@ pub fn default_harmonise() -> bool {
     false
 }
 
+pub fn default_melodise() -> bool {
+    false
+}
+
+pub fn default_melodiser() -> [i32; 7] {
+    [0; 7]
+}
+
+pub fn default_melody_order_affinity() -> i32 {
+    0
+}
+
 pub fn default_beat_offset() -> i32 {
     0
 }
