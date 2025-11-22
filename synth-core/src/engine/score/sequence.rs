@@ -44,6 +44,8 @@ pub struct Sequence {
     pub time_quantum: TimeQuantum,
     #[serde(default = "default_harmoniser")]
     pub harmoniser: [u32; 7],
+    #[serde(default = "default_skip_harmonised")]
+    pub skip_harmonised: usize,
     #[serde(default = "default_beat_offset")]
     pub beat_offset: i32,
     #[serde(default = "default_glide")]
@@ -102,6 +104,7 @@ impl Sequence {
             shuffle: default_shuffle(),
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
+            skip_harmonised: default_skip_harmonised(),
             glide: default_glide(),
             chord: default_tension(),
             random_chord: default_random_chord(),
@@ -236,6 +239,7 @@ impl Sequence {
                     rng,
                     self.harmonise,
                     self.harmoniser,
+                    self.skip_harmonised,
                     step_as_time,
                     step_in_beats,
                     self.arpegio,

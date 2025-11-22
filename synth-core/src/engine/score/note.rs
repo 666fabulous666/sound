@@ -39,6 +39,7 @@ impl Note {
         rng: &mut rand::prelude::ThreadRng,
         harmonise: bool,
         harmoniser: [u32; 7],
+        skip_harmonised: usize,
         step_as_time: Time,
         step_in_beats: Beat,
         arpegio: f64,
@@ -99,17 +100,46 @@ impl Note {
 
                 // 4. Compute new degrees
                 let mut degree = if harmonise {
-                    (-11..12i32)
-                        .combinations(if self.random_chord {
-                            rng.gen_range(1..=self.chord)
-                        } else {
-                            self.chord
-                        })
-                        .min_by_key(|d| {
-                            (tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
-                                * 1024.0) as i64
-                        })
-                        .unwrap()
+                    let chord_size = if self.random_chord {
+                        rng.gen_range(1..=self.chord)
+                    } else {
+                        self.chord
+                    };
+
+                    if skip_harmonised == 0 {
+                        // Original behavior: pick minimum tension
+                        (-11..12i32)
+                            .combinations(chord_size)
+                            .min_by_key(|d| {
+                                (tension_family(others.iter().cloned(), d.iter().cloned(), harmoniser)
+                                    * 1024.0) as i64
+                            })
+                            .unwrap()
+                    } else {
+                        // New behavior: skip the n most harmonious combinations
+                        let mut candidates: Vec<_> = (-11..12i32)
+                            .combinations(chord_size)
+                            .map(|d| {
+                                let tension = (tension_family(
+                                    others.iter().cloned(),
+                                    d.iter().cloned(),
+                                    harmoniser,
+                                ) * 1024.0) as i64;
+                                (tension, d)
+                            })
+                            .collect();
+
+                        // Sort by tension (ascending - most harmonious first)
+                        candidates.sort_by_key(|(tension, _)| *tension);
+
+                        // Skip the most harmonious ones and take the next
+                        candidates
+                            .into_iter()
+                            .skip(skip_harmonised)
+                            .next()
+                            .map(|(_, d)| d)
+                            .unwrap_or_else(|| vec![seed])
+                    }
                 } else {
                     vec![(0..*n_rd_steps).fold(seed, |acc, _| acc + base.choose(rng).unwrap()) % 12]
                 };
