@@ -149,15 +149,18 @@ impl Default for WaveParams {
 pub struct HarmonyParams {
     pub glide: bool,
     pub harmonise: bool,
+    pub melodise: bool,
     pub tolerance: (Time, Time),
     pub interval: Interval,
     pub shuffle: bool,
     pub harmoniser: [u32; 7],
+    pub melodiser: [i32; 7],
     pub arpegio: f64,
     pub chord: usize,
     pub random_chord: bool,
     pub reverse_prob: f64,
     pub shuffle_prob: f64,
+    pub melody_order_affinity: i32,
 }
 
 impl Default for HarmonyParams {
@@ -165,15 +168,18 @@ impl Default for HarmonyParams {
         Self {
             glide: default_glide(),
             harmonise: default_harmonise(),
+            melodise: default_melodise(),
             tolerance: default_tolerance(),
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             shuffle: default_shuffle(),
             harmoniser: default_harmoniser(),
+            melodiser: default_melodiser(),
             arpegio: default_arpegio(),
             chord: default_tension(),
             random_chord: default_random_chord(),
             reverse_prob: default_reverse_prob(),
             shuffle_prob: default_shuffle_prob(),
+            melody_order_affinity: default_melody_order_affinity(),
         }
     }
 }
@@ -220,30 +226,36 @@ impl HarmonyParams {
         Self {
             glide: seq.glide,
             harmonise: seq.harmonise,
+            melodise: seq.melodise,
             tolerance: seq.tolerance,
             interval: seq.interval.clone(),
             shuffle: seq.shuffle,
             harmoniser: seq.harmoniser,
+            melodiser: seq.melodiser,
             arpegio: seq.arpegio,
             chord: seq.chord,
             random_chord: seq.random_chord,
             reverse_prob: seq.reverse_prob,
             shuffle_prob: seq.shuffle_prob,
+            melody_order_affinity: seq.melody_order_affinity,
         }
     }
 
     pub fn apply_to_sequence(&self, seq: &mut Sequence) {
         seq.glide = self.glide;
         seq.harmonise = self.harmonise;
+        seq.melodise = self.melodise;
         seq.tolerance = self.tolerance;
         seq.interval = self.interval.clone();
         seq.shuffle = self.shuffle;
         seq.harmoniser = self.harmoniser;
+        seq.melodiser = self.melodiser;
         seq.arpegio = self.arpegio;
         seq.chord = self.chord;
         seq.random_chord = self.random_chord;
         seq.reverse_prob = self.reverse_prob;
         seq.shuffle_prob = self.shuffle_prob;
+        seq.melody_order_affinity = self.melody_order_affinity;
     }
 }
 

@@ -1,4 +1,4 @@
-use super::super::helpers::u32_cell;
+use super::super::helpers::{i32_cell, u32_cell};
 use super::super::{apply_octave_shift, ParameterImpact};
 use crate::app::property_panel::hover_texts::{
     HARMONISE_TEXT, OCTAVE_TEXT, SHUFFLE_TEXT, TOLERENCE_TEXT, VARIATION_INTERVALS_TEXT,
@@ -99,7 +99,11 @@ pub fn show_harmony_section(
             } else {
                 ui.collapsing("Harmoniser", |ui| {
                     let mut harmoniser = seq.harmoniser;
+                    let mut melodiser = seq.melodiser;
+                    let mut melodise = seq.melodise;
+                    let mut melody_order_affinity = seq.melody_order_affinity;
                     let mut harmoniser_changed = false;
+                    let mut melodiser_changed = false;
 
                     ui.label(RichText::new("Weights per interval (0..=6)").weak());
                     ui.add_space(4.0);
@@ -133,8 +137,51 @@ pub fn show_harmony_section(
                         }
                     });
 
-                    if harmoniser_changed {
+                    ui.separator();
+
+                    if ui.checkbox(&mut melodise, "Melodise").changed() {
+                        melodiser_changed = true;
+                    }
+
+                    if melodise {
+                        ui.label(RichText::new("Melodic affinities (-32..=32)").weak());
+                        ui.add_space(4.0);
+
+                        Grid::new("melodiser_grid")
+                            .striped(true)
+                            .num_columns(3)
+                            .show(ui, |ui| {
+                                ui.label(RichText::new("Interval").weak());
+                                ui.label(RichText::new("Affinity").weak());
+                                ui.end_row();
+
+                                for i in 0..=6 {
+                                    ui.label(format!("{i}"));
+                                    let r = i32_cell(ui, &mut melodiser[i], -32..=32, 0);
+                                    if r.changed() {
+                                        melodiser_changed = true;
+                                    }
+                                    ui.end_row();
+                                }
+                            });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Keep direction affinity");
+                            if ui
+                                .add(egui::Slider::new(&mut melody_order_affinity, -32..=32))
+                                .changed()
+                            {
+                                melodiser_changed = true;
+                            }
+                        });
+                    }
+
+                    if harmoniser_changed || melodiser_changed {
                         seq.harmoniser = harmoniser;
+                        seq.melodise = melodise;
+                        seq.melodiser = melodiser;
+                        seq.melody_order_affinity = melody_order_affinity;
+                        impact.require_regeneration();
                     }
                 });
             }
