@@ -15,7 +15,7 @@ use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
 use crate::engine::score::{
     node_params::{HarmonyParams, ResolvedTrackParams, RhythmParams},
-    LowpassLfo, LowpassRelaxation, NotesGroup,
+    HarmonicsParams, LowpassLfo, LowpassRelaxation, NotesGroup,
 };
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
@@ -42,6 +42,8 @@ pub struct Sequence {
     pub wave_type: WaveType,
     #[serde(skip)]
     pub note_variant: NoteVariant,
+    #[serde(default)]
+    pub harmonics: HarmonicsParams,
     #[serde(default = "default_time_quantum")]
     pub time_quantum: TimeQuantum,
     #[serde(default = "default_harmoniser")]
@@ -94,6 +96,7 @@ impl Sequence {
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             wave_type: WaveType::Sine,
             note_variant: NoteVariant::default(),
+            harmonics: HarmonicsParams::default(),
             mute: default_mute(),
             token,
             not_generate_until: None,
@@ -229,6 +232,7 @@ impl Sequence {
                 reverse_prob: harmony.reverse_prob,
                 shuffle_prob: harmony.shuffle_prob,
                 variant: self.note_variant,
+                harmonics: params.harmonics.clone(),
             }
         });
         let mut self_ctx = vec![];
@@ -287,6 +291,7 @@ impl Sequence {
             ng.cutoff = params.lowpass.cutoff;
             ng.lowpass_enabled = params.lowpass.enabled;
             ng.lp_order = params.lowpass.order;
+            ng.harmonics = params.harmonics.clone();
         } else {
             notes_buffer.insert(
                 self.token,
@@ -296,6 +301,7 @@ impl Sequence {
                     notes: tmp,
                     wave_type: wave,
                     chorus: params.chorus.clone(),
+                    harmonics: params.harmonics.clone(),
                     attack_decay: (params.envelope.attack, params.envelope.decay),
                     lp_attack_decay: params.lowpass.envelope,
                     power: params.power.power,

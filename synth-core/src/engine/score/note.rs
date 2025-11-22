@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::Interval;
 
 use crate::{
+    engine::score::HarmonicsParams,
     engine::score::NotesGroup,
     time_freq::{Beat, Time},
     NoteId, Token,
@@ -15,8 +16,8 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NoteVariant {
     #[default]
-    PureTime,
     PhaseTracked,
+    PureTime,
 }
 
 #[derive(Deserialize, Clone)]
@@ -39,6 +40,8 @@ pub struct Note {
     pub shuffle_prob: f64,
     #[serde(default)]
     pub variant: NoteVariant,
+    #[serde(default)]
+    pub harmonics: HarmonicsParams,
 }
 impl Note {
     pub fn draw(

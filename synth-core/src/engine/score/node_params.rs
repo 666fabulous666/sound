@@ -6,7 +6,7 @@ use crate::{
         sequence::Sequence,
         time_quantum::TimeQuantum,
         track_node::{NodeKind, TrackNode},
-        ChorusParams, Interval, RdRythm, Rythm,
+        ChorusParams, HarmonicsParams, Interval, RdRythm, Rythm,
     },
     engine::time_varying::TimeVarying,
     engine::waves::WaveType,
@@ -303,6 +303,10 @@ pub struct NodeOverrides {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
+    pub harmonics: Option<HarmonicsParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub wave: Option<WaveParams>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -323,6 +327,7 @@ impl NodeOverrides {
             envelope: Some(EnvelopeParams::default()),
             lowpass: Some(LowpassParams::default()),
             power: Some(PowerParams::default()),
+            harmonics: Some(HarmonicsParams::default()),
             wave: None,
             harmony: None,
             rhythm: None,
@@ -344,6 +349,8 @@ pub struct ResolvedTrackParams {
     lowpass_depth: Option<usize>,
     pub power: PowerParams,
     power_depth: Option<usize>,
+    pub harmonics: HarmonicsParams,
+    harmonics_depth: Option<usize>,
     pub wave: WaveParams,
     wave_depth: Option<usize>,
     pub harmony: HarmonyParams,
@@ -367,6 +374,8 @@ impl Default for ResolvedTrackParams {
             lowpass_depth: None,
             power: PowerParams::default(),
             power_depth: None,
+            harmonics: HarmonicsParams::default(),
+            harmonics_depth: None,
             wave: WaveParams::default(),
             wave_depth: None,
             harmony: HarmonyParams::default(),
@@ -415,6 +424,12 @@ impl ResolvedTrackParams {
                 self.power_depth = Some(depth);
             }
         }
+        if let Some(harmonics) = &overrides.harmonics {
+            if self.harmonics_depth.is_none() {
+                self.harmonics = harmonics.clone();
+                self.harmonics_depth = Some(depth);
+            }
+        }
         if let Some(wave) = &overrides.wave {
             if self.wave_depth.is_none() {
                 self.wave = wave.clone();
@@ -438,6 +453,10 @@ impl ResolvedTrackParams {
 
     pub fn has_wave_override(&self) -> bool {
         self.wave_depth.is_some()
+    }
+
+    pub fn has_harmonics_override(&self) -> bool {
+        self.harmonics_depth.is_some()
     }
 
     pub fn has_harmony_override(&self) -> bool {
@@ -497,6 +516,10 @@ impl TrackNode {
 
     pub fn resolve_power(&self, path: &[usize]) -> ParamResolution<PowerParams> {
         resolve_param(self, path, |o| o.power.as_ref())
+    }
+
+    pub fn resolve_harmonics(&self, path: &[usize]) -> ParamResolution<HarmonicsParams> {
+        resolve_param(self, path, |o| o.harmonics.as_ref())
     }
 
     pub fn resolve_wave(&self, path: &[usize]) -> ParamResolution<WaveParams> {

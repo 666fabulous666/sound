@@ -125,6 +125,9 @@ pub fn default_lowpass_enabled() -> bool {
 pub fn default_lp_order() -> u32 {
     1
 }
+pub fn default_harmonics_attenuation() -> f64 {
+    0.5
+}
 pub fn default_tempo() -> Tempo {
     Tempo::new(60.0)
 }

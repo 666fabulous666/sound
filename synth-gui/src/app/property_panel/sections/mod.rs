@@ -2,6 +2,7 @@ pub mod accents;
 pub mod bend;
 pub mod chorus;
 pub mod envelope;
+pub mod harmonics;
 pub mod harmony;
 pub mod lowpass;
 pub mod mix;

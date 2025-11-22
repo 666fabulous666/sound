@@ -20,7 +20,7 @@ use crate::{
 struct NoteMemory {
     start_time: Time,
     lowpass_state: [f64; 5],
-    phases: Vec<f64>,
+    phase: f64,
 }
 
 pub fn stream(
@@ -74,6 +74,7 @@ pub fn stream(
                         volume,
                         lowpass_enabled,
                         lp_order,
+                        harmonics,
                         ..
                     },
                 ) in note_groups.iter()
@@ -82,7 +83,7 @@ pub fn stream(
                         let memory = lp_memories.entry(note.id).or_insert_with(|| NoteMemory {
                             start_time: note.time,
                             lowpass_state: [0.0; 5],
-                            phases: Vec::new(),
+                            phase: 0.0,
                         });
                         if note.time <= now && now <= note.time + note.duration {
                             let t = (now - note.time).rem_euclid(note.duration);
@@ -100,6 +101,7 @@ pub fn stream(
                                         *bend,
                                         *vibrato,
                                         chorus,
+                                        harmonics,
                                         power,
                                         *lowpass_enabled,
                                         *lp_order,
@@ -118,11 +120,12 @@ pub fn stream(
                                         *bend,
                                         *vibrato,
                                         chorus,
+                                        harmonics,
                                         power,
                                         *lowpass_enabled,
                                         *lp_order,
                                         &mut memory.lowpass_state,
-                                        &mut memory.phases,
+                                        &mut memory.phase,
                                         sample_rate,
                                         now,
                                         sample_step,

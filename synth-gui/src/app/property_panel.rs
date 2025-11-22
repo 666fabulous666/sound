@@ -9,8 +9,8 @@ use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, 
 use helpers::{ParameterBehavior, SliderParam};
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, harmony, lowpass, mix, power, rhythm as rhythm_section,
-    vibrato,
+    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, power,
+    rhythm as rhythm_section, vibrato,
 };
 
 use crate::{
@@ -295,6 +295,7 @@ impl GuiApp {
                         let envelope_resolution = self.score.track_root.resolve_envelope(&sel);
                         let lowpass_resolution = self.score.track_root.resolve_lowpass(&sel);
                         let power_resolution = self.score.track_root.resolve_power(&sel);
+                        let harmonics_resolution = self.score.track_root.resolve_harmonics(&sel);
                         let wave_resolution = self.score.track_root.resolve_wave(&sel);
                         let harmony_resolution = self.score.track_root.resolve_harmony(&sel);
                         let rhythm_resolution = self.score.track_root.resolve_rhythm(&sel);
@@ -478,6 +479,17 @@ impl GuiApp {
                                 overrides_dirty |= vibrato::show_vibrato_section(
                                     ui,
                                     &mut vibrato_binding,
+                                    &mut impact,
+                                );
+
+                                let mut harmonics_binding = OverrideBinding::new(
+                                    harmonics_resolution.clone(),
+                                    &mut overrides.harmonics,
+                                    depth,
+                                );
+                                overrides_dirty |= harmonics::show_harmonics_section(
+                                    ui,
+                                    &mut harmonics_binding,
                                     &mut impact,
                                 );
 
@@ -745,6 +757,24 @@ impl GuiApp {
                                     &mut impact,
                                     |ui, value, impact, editable| {
                                         power::draw_power_controls(ui, value, impact, editable)
+                                    },
+                                );
+
+                                let mut harmonics_binding = OverrideBinding::new(
+                                    harmonics_resolution.clone(),
+                                    &mut overrides.harmonics,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Harmonics",
+                                    "Add harmonics/subharmonics for children",
+                                    &mut harmonics_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        harmonics::draw_harmonics_controls(
+                                            ui, value, impact, editable,
+                                        )
                                     },
                                 );
 
@@ -1154,6 +1184,7 @@ impl GuiApp {
                     request.params.vibrato.frequency,
                 ),
                 &request.params.chorus,
+                &request.params.harmonics,
                 &request.params.power.power,
                 request.params.lowpass.enabled,
                 request.params.lowpass.order,

@@ -95,6 +95,7 @@ fn precompute_and_play(
                             ng.bend,
                             ng.vibrato,
                             &ng.chorus,
+                            &ng.harmonics,
                             &ng.power,
                             ng.lowpass_enabled,
                             ng.lp_order,

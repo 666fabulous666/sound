@@ -120,6 +120,23 @@ pub struct ChorusParams {
     pub asym: f64,
     pub time_dependency: Freq,
 }
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct HarmonicsParams {
+    pub harmonics: usize,
+    pub subharmonics: usize,
+    pub attenuation: f64,
+}
+
+impl Default for HarmonicsParams {
+    fn default() -> Self {
+        Self {
+            harmonics: 0,
+            subharmonics: 0,
+            attenuation: default_params::default_harmonics_attenuation(),
+        }
+    }
+}
 impl ChorusParams {
     pub fn new(
         number_of_heads: usize,
@@ -166,6 +183,7 @@ pub struct NotesGroup {
     pub lp_order: u32,
     pub bend: (f64, f64),
     pub chorus: ChorusParams,
+    pub harmonics: HarmonicsParams,
     pub notes: Vec<Note>,
     pub power: crate::engine::time_varying::TimeVarying,
     pub pan: f64,
@@ -759,6 +777,7 @@ fn apply_params_to_notes_group(ng: &mut NotesGroup, params: &node_params::Resolv
     ng.bend = (params.bend.magnitude, params.bend.speed);
     ng.vibrato = (params.vibrato.magnitude, params.vibrato.frequency);
     ng.chorus = params.chorus.clone();
+    ng.harmonics = params.harmonics.clone();
     ng.attack_decay = (params.envelope.attack, params.envelope.decay);
     ng.lp_attack_decay = params.lowpass.envelope;
     ng.power = params.power.power;

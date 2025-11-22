@@ -1,9 +1,9 @@
-use std::f64::consts::{PI, TAU};
+use std::f64::consts::PI;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    engine::score::ChorusParams,
+    engine::score::{ChorusParams, HarmonicsParams},
     engine::time_varying::TimeVarying,
     sign_f,
     time_freq::{Freq, Time},
@@ -80,11 +80,38 @@ fn base_wave(wave_type: &WaveType, phase: f64) -> f64 {
     }
 }
 
+fn harmonic_bundle(
+    wave_type: &WaveType,
+    base_phase: f64,
+    harmonics: &HarmonicsParams,
+    disto: impl Fn(f64) -> f64 + Copy,
+) -> (f64, f64) {
+    let mut sum = sign_f(base_wave(wave_type, base_phase), disto);
+    let mut weight_norm = 1.0;
+    let attenuation = harmonics.attenuation.max(0.0);
+
+    for i in 0..harmonics.harmonics {
+        let multiplier = (i + 2) as f64;
+        let w = attenuation.powi((i + 1) as i32);
+        sum += w * sign_f(base_wave(wave_type, base_phase * multiplier), disto);
+        weight_norm += w.abs();
+    }
+    for i in 0..harmonics.subharmonics {
+        let divisor = (i + 2) as f64;
+        let w = attenuation.powi((i + 1) as i32);
+        sum += w * sign_f(base_wave(wave_type, base_phase / divisor), disto);
+        weight_norm += w.abs();
+    }
+
+    (sum, weight_norm)
+}
+
 fn tonal_wave_sample(
     wave_type: &WaveType,
     phase: f64,
     time: Time,
     chorus: &ChorusParams,
+    harmonics: &HarmonicsParams,
     disto: impl Fn(f64) -> f64 + Copy,
     freq: Freq,
 ) -> f64 {
@@ -96,10 +123,12 @@ fn tonal_wave_sample(
         let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
         let sym_pow_k = chorus.sym.powi(k as i32);
         let asym_pow_k = chorus.asym.powi(k as i32);
-        let tmp1 = sign_f(base_wave(wave_type, phase * delta1.powi(k as i32)), disto);
-        let tmp2 = sign_f(base_wave(wave_type, phase / delta2.powi(k as i32)), disto);
+        let (tmp1, w1) =
+            harmonic_bundle(wave_type, phase * delta1.powi(k as i32), harmonics, disto);
+        let (tmp2, w2) =
+            harmonic_bundle(wave_type, phase / delta2.powi(k as i32), harmonics, disto);
         let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
-        norm += factor;
+        norm += factor * (w1 + w2);
         sum += sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
     }
 
@@ -118,6 +147,7 @@ pub fn generate_wave(
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
+    harmonics: &HarmonicsParams,
     power: &TimeVarying,
     lowpass_enabled: bool,
     lp_order: u32,
@@ -195,7 +225,15 @@ pub fn generate_wave(
         _ => {}
     }
     let phase = freq.phase(bend_vib_time);
-    let sum_of_waves = tonal_wave_sample(wave_type, phase, glided_time, chorus, disto, freq);
+    let sum_of_waves = tonal_wave_sample(
+        wave_type,
+        phase,
+        glided_time,
+        chorus,
+        harmonics,
+        disto,
+        freq,
+    );
     apply_lowpass(
         vol_envelope * sum_of_waves,
         lowpass_enabled,
@@ -217,20 +255,16 @@ pub fn generate_wave_with_phase(
     bend: (f64, f64),
     vibrato: (f64, Freq),
     chorus: &ChorusParams,
+    harmonics: &HarmonicsParams,
     power: &TimeVarying,
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
-    phases: &mut Vec<f64>,
+    phase: &mut f64,
     sample_rate: Freq,
     global_time: Time,
     sample_step: Time,
 ) -> f64 {
-    let needed_phases = chorus.voices.max(1) * 2;
-    if phases.len() != needed_phases {
-        phases.clear();
-        phases.resize(needed_phases, 0.0);
-    }
     let vol_envelope = envelope(attack_decay.0, attack_decay.1, duration)(time);
     let glided_time = if let Some(fg) = freq_glide {
         glide_mid(freq, fg, duration, time)
@@ -309,28 +343,33 @@ pub fn generate_wave_with_phase(
         _ => {}
     }
 
-    let base_phase_increment = freq.phase(next_bend_vib_time - bend_vib_time);
+    let phase_increment = freq.phase(next_bend_vib_time - bend_vib_time);
+    let current_phase = *phase;
+    *phase += phase_increment;
+
     let mut norm = 0.0;
     let mut sum = 0.0;
     for k in 0..chorus.voices {
-        let idx1 = 2 * k;
-        let idx2 = idx1 + 1;
         let d = chorus.delta * (chorus.time_dependency * glided_time).exp2();
         let delta1 = 1.0 + d * (1.0 + chorus.delta_shift);
         let delta2 = 1.0 + d * (1.0 - chorus.delta_shift);
         let sym_pow_k = chorus.sym.powi(k as i32);
         let asym_pow_k = chorus.asym.powi(k as i32);
 
-        let inc1 = base_phase_increment * delta1.powi(k as i32);
-        let inc2 = base_phase_increment / delta2.powi(k as i32);
-
-        phases[idx1] = (phases[idx1] + inc1).rem_euclid(TAU);
-        phases[idx2] = (phases[idx2] + inc2).rem_euclid(TAU);
-
-        let tmp1 = sign_f(base_wave(wave_type, phases[idx1]), disto);
-        let tmp2 = sign_f(base_wave(wave_type, phases[idx2]), disto);
+        let (tmp1, w1) = harmonic_bundle(
+            wave_type,
+            current_phase * delta1.powi(k as i32),
+            harmonics,
+            disto,
+        );
+        let (tmp2, w2) = harmonic_bundle(
+            wave_type,
+            current_phase / delta2.powi(k as i32),
+            harmonics,
+            disto,
+        );
         let factor = sym_pow_k.powi(2) + asym_pow_k.powi(2);
-        norm += factor;
+        norm += factor * (w1 + w2);
         sum += sym_pow_k * (tmp1 + tmp2) + asym_pow_k * (tmp1 - tmp2);
     }
 
