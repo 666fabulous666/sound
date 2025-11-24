@@ -1,6 +1,7 @@
 use super::super::{OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
 use crate::engine::score::{default_params::*, node_params::LowpassParams};
+use crate::engine::waves::FilterType;
 use crate::time_freq::Freq;
 use egui::Ui;
 
@@ -11,7 +12,7 @@ pub fn show_lowpass_section(
     _is_drum: bool,
 ) -> bool {
     let mut changed = false;
-    ui.collapsing("Lowpass", |ui| {
+    ui.collapsing("Filter", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
             draw_lowpass_controls(ui, &mut preview, impact, false);
@@ -31,7 +32,7 @@ pub fn draw_lowpass_controls(
     let mut changed = false;
 
     if editable {
-        let enable_resp = ui.checkbox(&mut value.enabled, "Enable lowpass");
+        let enable_resp = ui.checkbox(&mut value.enabled, "Enable filter");
         if enable_resp.changed() {
             impact.register_behavior(ParameterBehavior::AestheticImmediate);
             changed = true;
@@ -39,12 +40,37 @@ pub fn draw_lowpass_controls(
     } else {
         let mut preview_enabled = value.enabled;
         ui.add_enabled_ui(false, |ui| {
-            ui.checkbox(&mut preview_enabled, "Enable lowpass");
+            ui.checkbox(&mut preview_enabled, "Enable filter");
         });
     }
 
     ui.add_enabled_ui(value.enabled && editable, |ui| {
-        let order_param = SliderParam::new("Order", 1..=5)
+        ui.horizontal(|ui| {
+            ui.label("Type:");
+            if ui
+                .selectable_value(&mut value.filter_type, FilterType::Lowpass, "Lowpass")
+                .clicked()
+            {
+                impact.register_behavior(ParameterBehavior::AestheticImmediate);
+                changed = true;
+            }
+            if ui
+                .selectable_value(&mut value.filter_type, FilterType::Highpass, "Highpass")
+                .clicked()
+            {
+                impact.register_behavior(ParameterBehavior::AestheticImmediate);
+                changed = true;
+            }
+            if ui
+                .selectable_value(&mut value.filter_type, FilterType::Bandpass, "Bandpass")
+                .clicked()
+            {
+                impact.register_behavior(ParameterBehavior::AestheticImmediate);
+                changed = true;
+            }
+        });
+
+        let order_param = SliderParam::new("Order", 1..=10)
             .default(default_lp_order())
             .behavior(ParameterBehavior::AestheticImmediate);
         let cutoff_param = SliderParam::new("Base", 0.01..=100.0)

@@ -9,7 +9,7 @@ use crate::{
         ChorusParams, HarmonicsParams, Interval, RdRythm, Rythm,
     },
     engine::time_varying::TimeVarying,
-    engine::waves::WaveType,
+    engine::waves::{FilterType, WaveType},
     rescale_factor,
     time_freq::{Beat, Freq, Time},
     DEFAULT_LOOP_LEN,
@@ -79,6 +79,8 @@ pub struct LowpassParams {
     pub cutoff: TimeVarying,
     pub enabled: bool,
     pub order: u32,
+    #[serde(default)]
+    pub filter_type: FilterType,
 }
 
 impl Default for LowpassParams {
@@ -102,6 +104,7 @@ impl Default for LowpassParams {
             },
             enabled: default_lowpass_enabled(),
             order: default_lp_order(),
+            filter_type: FilterType::default(),
         }
     }
 }

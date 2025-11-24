@@ -10,6 +10,29 @@ use crate::{
 };
 pub mod drums;
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FilterType {
+    Lowpass,
+    Highpass,
+    Bandpass,
+}
+
+impl Default for FilterType {
+    fn default() -> Self {
+        FilterType::Lowpass
+    }
+}
+
+impl ToString for FilterType {
+    fn to_string(&self) -> String {
+        match self {
+            FilterType::Lowpass => "Lowpass".into(),
+            FilterType::Highpass => "Highpass".into(),
+            FilterType::Bandpass => "Bandpass".into(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 pub enum WaveType {
     Mute,
@@ -41,20 +64,55 @@ impl ToString for &WaveType {
     }
 }
 
-fn apply_lowpass(
+fn apply_filter(
     mut signal: f64,
-    lowpass_enabled: bool,
-    lp_order: u32,
-    memory: &mut [f64; 5],
+    filter_enabled: bool,
+    filter_type: FilterType,
+    filter_order: u32,
+    memory: &mut [f64; 10],
     cutoff_freq: Freq,
     sample_rate: Freq,
 ) -> f64 {
-    if lowpass_enabled {
-        for i in 0..lp_order.min(5) as usize {
-            signal = lowpass_step_cutoff(signal, &mut memory[i], cutoff_freq, sample_rate);
+    if !filter_enabled {
+        return signal;
+    }
+
+    let order = filter_order.min(10) as usize;
+
+    match filter_type {
+        FilterType::Lowpass => {
+            for i in 0..order {
+                signal = lowpass_step_cutoff(signal, &mut memory[i], cutoff_freq, sample_rate);
+            }
+            signal
+        }
+        FilterType::Highpass => {
+            let input = signal;
+            for i in 0..order {
+                signal = lowpass_step_cutoff(signal, &mut memory[i], cutoff_freq, sample_rate);
+            }
+            input - signal
+        }
+        FilterType::Bandpass => {
+            // Bandpass = Highpass followed by Lowpass
+            // Use first half of memories for highpass, second half for lowpass
+            let hp_order = (order + 1) / 2;
+            let lp_order = order / 2;
+
+            // Highpass stage
+            let input = signal;
+            for i in 0..hp_order {
+                signal = lowpass_step_cutoff(signal, &mut memory[i], cutoff_freq, sample_rate);
+            }
+            signal = input - signal;
+
+            // Lowpass stage
+            for i in 0..lp_order {
+                signal = lowpass_step_cutoff(signal, &mut memory[hp_order + i], cutoff_freq, sample_rate);
+            }
+            signal
         }
     }
-    signal
 }
 
 fn base_wave(wave_type: &WaveType, phase: f64) -> f64 {
@@ -150,9 +208,10 @@ pub fn generate_wave(
     harmonics: &HarmonicsParams,
     power: &TimeVarying,
     noise: &TimeVarying,
-    lowpass_enabled: bool,
-    lp_order: u32,
-    memory: &mut [f64; 5],
+    filter_enabled: bool,
+    filter_type: FilterType,
+    filter_order: u32,
+    memory: &mut [f64; 10],
     sample_rate: Freq,
     global_time: Time,
 ) -> f64 {
@@ -173,10 +232,11 @@ pub fn generate_wave(
         WaveType::HiHat => {
             let signal =
                 vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -185,10 +245,11 @@ pub fn generate_wave(
         WaveType::Kick => {
             let signal =
                 vol_envelope * sign_f(drums::kick(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -197,10 +258,11 @@ pub fn generate_wave(
         WaveType::Snare => {
             let signal =
                 vol_envelope * sign_f(drums::snare(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -209,10 +271,11 @@ pub fn generate_wave(
         WaveType::Ride => {
             let signal =
                 vol_envelope * sign_f(drums::ride(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -222,10 +285,11 @@ pub fn generate_wave(
             let signal = vol_envelope
                 * sign_f(drums::darbuka(freq, bend_vib_time), disto)
                 * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -243,10 +307,11 @@ pub fn generate_wave(
         disto,
         freq,
     );
-    apply_lowpass(
+    apply_filter(
         vol_envelope * sum_of_waves * noise_multiplier,
-        lowpass_enabled,
-        lp_order,
+        filter_enabled,
+        filter_type,
+        filter_order,
         memory,
         cutoff_freq,
         sample_rate,
@@ -267,9 +332,10 @@ pub fn generate_wave_with_phase(
     harmonics: &HarmonicsParams,
     power: &TimeVarying,
     noise: &TimeVarying,
-    lowpass_enabled: bool,
-    lp_order: u32,
-    memory: &mut [f64; 5],
+    filter_enabled: bool,
+    filter_type: FilterType,
+    filter_order: u32,
+    memory: &mut [f64; 10],
     phase: &mut f64,
     sample_rate: Freq,
     global_time: Time,
@@ -300,10 +366,11 @@ pub fn generate_wave_with_phase(
         WaveType::HiHat => {
             let signal =
                 vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -312,10 +379,11 @@ pub fn generate_wave_with_phase(
         WaveType::Kick => {
             let signal =
                 vol_envelope * sign_f(drums::kick(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -324,10 +392,11 @@ pub fn generate_wave_with_phase(
         WaveType::Snare => {
             let signal =
                 vol_envelope * sign_f(drums::snare(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -336,10 +405,11 @@ pub fn generate_wave_with_phase(
         WaveType::Ride => {
             let signal =
                 vol_envelope * sign_f(drums::ride(bend_vib_time), disto) * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -349,10 +419,11 @@ pub fn generate_wave_with_phase(
             let signal = vol_envelope
                 * sign_f(drums::darbuka(freq, bend_vib_time), disto)
                 * noise_multiplier;
-            return apply_lowpass(
+            return apply_filter(
                 signal,
-                lowpass_enabled,
-                lp_order,
+                filter_enabled,
+                filter_type,
+                filter_order,
                 memory,
                 cutoff_freq,
                 sample_rate,
@@ -397,10 +468,11 @@ pub fn generate_wave_with_phase(
 
     let signal =
         vol_envelope * (sum / norm.sqrt()) / (freq / Freq(440.0)).sqrt() * noise_multiplier;
-    apply_lowpass(
+    apply_filter(
         signal,
-        lowpass_enabled,
-        lp_order,
+        filter_enabled,
+        filter_type,
+        filter_order,
         memory,
         cutoff_freq,
         sample_rate,

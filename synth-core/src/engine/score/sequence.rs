@@ -312,6 +312,7 @@ impl Sequence {
             ng.cutoff = params.lowpass.cutoff;
             ng.lowpass_enabled = params.lowpass.enabled;
             ng.lp_order = params.lowpass.order;
+            ng.filter_type = params.lowpass.filter_type;
             ng.harmonics = params.harmonics.clone();
         } else {
             notes_buffer.insert(
@@ -333,6 +334,7 @@ impl Sequence {
                     cutoff: params.lowpass.cutoff,
                     lowpass_enabled: params.lowpass.enabled,
                     lp_order: params.lowpass.order,
+                    filter_type: params.lowpass.filter_type,
                 },
             );
         }

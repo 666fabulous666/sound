@@ -81,7 +81,7 @@ fn precompute_and_play(
                 if note.time <= now && now <= note.time + note.duration {
                     let t = (now - note.time).rem_euclid(note.duration);
                     let volume = 0.1 * ng.volume * note.volume;
-                    let mut memory = [0.0; 5];
+                    let mut memory = [0.0; 10];
 
                     let dry = volume
                         * generate_wave(
@@ -99,6 +99,7 @@ fn precompute_and_play(
                             &ng.power,
                             &ng.noise,
                             ng.lowpass_enabled,
+                            ng.filter_type,
                             ng.lp_order,
                             &mut memory,
                             synth_core::time_freq::Freq(sample_rate),

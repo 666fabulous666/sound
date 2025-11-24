@@ -19,7 +19,7 @@ use crate::{
 
 struct NoteMemory {
     start_time: Time,
-    lowpass_state: [f64; 5],
+    lowpass_state: [f64; 10],
     phase: f64,
 }
 
@@ -75,6 +75,7 @@ pub fn stream(
                         volume,
                         lowpass_enabled,
                         lp_order,
+                        filter_type,
                         harmonics,
                         ..
                     },
@@ -83,7 +84,7 @@ pub fn stream(
                     for note in notes_from_seq.iter() {
                         let memory = lp_memories.entry(note.id).or_insert_with(|| NoteMemory {
                             start_time: note.time,
-                            lowpass_state: [0.0; 5],
+                            lowpass_state: [0.0; 10],
                             phase: 0.0,
                         });
                         if note.time <= now && now <= note.time + note.duration {
@@ -106,6 +107,7 @@ pub fn stream(
                                         power,
                                         noise,
                                         *lowpass_enabled,
+                                        *filter_type,
                                         *lp_order,
                                         &mut memory.lowpass_state,
                                         sample_rate,
@@ -126,6 +128,7 @@ pub fn stream(
                                         power,
                                         noise,
                                         *lowpass_enabled,
+                                        *filter_type,
                                         *lp_order,
                                         &mut memory.lowpass_state,
                                         &mut memory.phase,

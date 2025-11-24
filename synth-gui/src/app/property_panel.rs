@@ -1200,7 +1200,7 @@ impl GuiApp {
         let note_interval = Interval::Tempered(0, octave);
         let frequency = Freq(F0.as_hz() * note_interval.compute());
         let duration = Time(1.0);
-        let mut memory = [0.0; 5];
+        let mut memory = [0.0; 10];
         let pad_samples = sample_count;
         let mut samples = Vec::with_capacity(sample_count + 2 * pad_samples + SPECTROGRAM_WINDOW);
         samples.resize(pad_samples, 0.0);
@@ -1231,6 +1231,7 @@ impl GuiApp {
                 &request.params.power.power,
                 &request.params.noise.noise,
                 request.params.lowpass.enabled,
+                request.params.lowpass.filter_type,
                 request.params.lowpass.order,
                 &mut memory,
                 sample_rate_freq,
