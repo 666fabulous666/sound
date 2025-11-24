@@ -100,6 +100,7 @@ impl GuiApp {
                             self.draw_tempo_control(ui);
                             self.draw_spectrogram_toggle(ui);
                             self.draw_zoom_controls(ui);
+                            self.draw_track_height_controls(ui);
                         }
 
                         #[cfg(not(target_arch = "wasm32"))]
@@ -252,6 +253,16 @@ impl GuiApp {
             self.adjust_timeline_zoom(1.1, 0.5, track_display_length, dummy_rect);
         }
         ui.label(format!("{:.0}%", (self.timeline_zoom * 100.0).round()));
+    }
+
+    fn draw_track_height_controls(&mut self, ui: &mut egui::Ui) {
+        let response = toolbar_icon_button(ui, "📏", "Fixed track height");
+        if response.clicked() {
+            self.fixed_track_height = !self.fixed_track_height;
+        }
+        if self.fixed_track_height {
+            ui.add(egui::Slider::new(&mut self.track_lane_height, 40.0..=240.0).text("px"));
+        }
     }
 
     fn show_confirmation_dialogs(&mut self, ctx: &egui::Context, save: &mut bool, exit: &mut bool) {

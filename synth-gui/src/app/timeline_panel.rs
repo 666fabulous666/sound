@@ -71,8 +71,9 @@ impl GuiApp {
                 let lane_h = self.track_lane_height.max(12.0);
                 let total_height = lane_h * lanes as f32;
                 egui::ScrollArea::vertical().show(ui, |ui| {
+                    let draw_height = total_height.max(ui.available_height());
                     let (rect, _resp) = ui.allocate_exact_size(
-                        egui::vec2(ui.available_width(), total_height),
+                        egui::vec2(ui.available_width(), draw_height),
                         egui::Sense::click_and_drag(),
                     );
                     self.render_timeline_contents(
@@ -128,12 +129,25 @@ impl GuiApp {
     ) {
         let painter = ui.painter_at(rect);
 
-        let scroll_delta = ui.ctx().input(|i| i.smooth_scroll_delta.y);
-        if scroll_delta.abs() > f32::EPSILON {
-            if let Some(pointer) = ui.ctx().pointer_hover_pos() {
+        let (scroll_vec, zoom_modifier) = ui.ctx().input(|i| {
+            let delta = if i.smooth_scroll_delta.length_sq() > 0.0 {
+                i.smooth_scroll_delta
+            } else {
+                i.raw_scroll_delta
+            };
+            (delta, i.modifiers.command || i.modifiers.mac_cmd)
+        });
+        let pointer_pos = ui.ctx().pointer_hover_pos();
+        let scroll_scalar = if scroll_vec.y.abs() >= scroll_vec.x.abs() {
+            scroll_vec.y
+        } else {
+            scroll_vec.x
+        };
+        if zoom_modifier && scroll_scalar.abs() > f32::EPSILON {
+            if let Some(pointer) = pointer_pos {
                 if rect.contains(pointer) {
                     let focus_ratio = ((pointer.x - rect.left()) / rect.width()).clamp(0.0, 1.0);
-                    let multiplier = (1.0 + scroll_delta * 0.08).clamp(0.5, 2.0);
+                    let multiplier = (1.0f32 + scroll_scalar * 0.08).clamp(0.5, 2.0);
                     self.adjust_timeline_zoom(multiplier, focus_ratio, track_display_length, rect);
                 }
             }
