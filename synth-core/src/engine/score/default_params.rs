@@ -74,12 +74,18 @@ pub fn default_melodise() -> bool {
     false
 }
 
-pub fn default_melodiser() -> [i32; 7] {
-    [0; 7]
-}
+pub const MAX_MELODIC_INTERVAL: usize = 24;
 
 pub fn default_melody_order_affinity() -> i32 {
     0
+}
+
+pub fn default_replicator_enabled() -> bool {
+    false
+}
+
+pub fn default_replicator_distance() -> u32 {
+    1
 }
 
 pub fn default_beat_offset() -> i32 {

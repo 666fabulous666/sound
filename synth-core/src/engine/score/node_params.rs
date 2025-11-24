@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     engine::score::{
         default_params::*,
+        sequence::{
+            default_interval_affinities, deserialize_interval_affinities, IntervalAffinity,
+            ReplicatorStep,
+        },
         sequence::Sequence,
         time_quantum::TimeQuantum,
         track_node::{NodeKind, TrackNode},
@@ -182,7 +186,23 @@ pub struct HarmonyParams {
     pub interval: Interval,
     pub shuffle: bool,
     pub harmoniser: [u32; 7],
-    pub melodiser: [i32; 7],
+    #[serde(
+        default = "default_interval_affinities",
+        deserialize_with = "deserialize_interval_affinities"
+    )]
+    pub melodiser: Vec<IntervalAffinity>,
+    pub replicator: bool,
+    #[serde(default = "crate::engine::score::sequence::default_replicator_steps")]
+    pub replicator_steps: Vec<ReplicatorStep>,
+    #[serde(
+        default = "default_interval_affinities",
+        deserialize_with = "deserialize_interval_affinities",
+        skip_serializing,
+        rename = "replicator_affinity"
+    )]
+    pub replicator_affinity_legacy: Vec<IntervalAffinity>,
+    #[serde(default, skip_serializing, rename = "replicator_distance")]
+    pub replicator_distance_legacy: Option<u32>,
     pub arpegio: f64,
     pub chord: usize,
     pub random_chord: bool,
@@ -201,7 +221,11 @@ impl Default for HarmonyParams {
             interval: Interval::RDTempered(2, vec![-7, 0, 7], 0),
             shuffle: default_shuffle(),
             harmoniser: default_harmoniser(),
-            melodiser: default_melodiser(),
+            melodiser: default_interval_affinities(),
+            replicator_steps: crate::engine::score::sequence::default_replicator_steps(),
+            replicator: default_replicator_enabled(),
+            replicator_affinity_legacy: default_interval_affinities(),
+            replicator_distance_legacy: None,
             arpegio: default_arpegio(),
             chord: default_tension(),
             random_chord: default_random_chord(),
@@ -259,7 +283,11 @@ impl HarmonyParams {
             interval: seq.interval.clone(),
             shuffle: seq.shuffle,
             harmoniser: seq.harmoniser,
-            melodiser: seq.melodiser,
+            melodiser: seq.melodiser.clone(),
+            replicator_steps: seq.replicator_steps.clone(),
+            replicator: seq.replicator,
+            replicator_affinity_legacy: seq.replicator_affinity_legacy.clone(),
+            replicator_distance_legacy: seq.replicator_distance_legacy,
             arpegio: seq.arpegio,
             chord: seq.chord,
             random_chord: seq.random_chord,
@@ -277,7 +305,11 @@ impl HarmonyParams {
         seq.interval = self.interval.clone();
         seq.shuffle = self.shuffle;
         seq.harmoniser = self.harmoniser;
-        seq.melodiser = self.melodiser;
+        seq.melodiser = self.melodiser.clone();
+        seq.replicator_steps = self.replicator_steps.clone();
+        seq.replicator = self.replicator;
+        seq.replicator_affinity_legacy = self.replicator_affinity_legacy.clone();
+        seq.replicator_distance_legacy = self.replicator_distance_legacy;
         seq.arpegio = self.arpegio;
         seq.chord = self.chord;
         seq.random_chord = self.random_chord;

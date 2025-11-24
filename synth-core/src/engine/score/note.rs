@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use super::Interval;
 
 use crate::{
-    engine::score::HarmonicsParams,
+    engine::score::{
+        default_params::MAX_MELODIC_INTERVAL, sequence::IntervalAffinity, sequence::ReplicatorStep,
+        HarmonicsParams,
+    },
     engine::score::NotesGroup,
     time_freq::{Beat, Time},
     NoteId, NoteIdGen, Token,
@@ -55,7 +58,9 @@ impl Note {
         harmoniser: [u32; 7],
         skip_harmonised: usize,
         melodise: bool,
-        melodiser: [i32; 7],
+        melodiser: &[IntervalAffinity],
+        replicator: bool,
+        replicator_steps: &[ReplicatorStep],
         melody_order_affinity: i32,
         tolerance: (Time, Time),
         step_as_time: Time,
@@ -136,7 +141,7 @@ impl Note {
                                 d.iter().cloned(),
                                 harmoniser,
                             );
-                            let affinity = if melodise {
+                            let affinity_melodic = if melodise {
                                 melodic_affinity(
                                     d.iter().copied(),
                                     prev_note,
@@ -147,7 +152,19 @@ impl Note {
                             } else {
                                 0.0
                             };
+                            let affinity_replicate = if replicator {
+                                replicator_affinity_score(
+                                    d.iter().copied(),
+                                    self_ctx,
+                                    self.beat_time,
+                                    step_in_beats,
+                                    replicator_steps,
+                                )
+                            } else {
+                                0.0
+                            };
                             // Score favors low tension and good melodic continuity.
+                            let affinity = affinity_melodic + affinity_replicate;
                             let score = ((tension - affinity) * 1024.0) as i64;
                             let tension_score = (tension * 1024.0) as i64;
                             (score, tension_score, d)
@@ -248,6 +265,25 @@ fn dist12(n1: i32, n2: i32) -> i32 {
     d.min(12 - d)
 }
 
+fn interval_idx_clamped(n1: i32, n2: i32) -> usize {
+    (n1 - n2)
+        .abs()
+        .min((MAX_MELODIC_INTERVAL - 1) as i32) as usize
+}
+
+fn affinity_for_interval(interval: usize, affinities: &[IntervalAffinity]) -> i32 {
+    affinities
+        .iter()
+        .find_map(|a| {
+            if a.interval as usize == interval {
+                Some(a.affinity)
+            } else {
+                None
+            }
+        })
+        .unwrap_or(0)
+}
+
 fn melodic_previous_notes(
     self_ctx: &[Note],
     current_time: Time,
@@ -277,7 +313,7 @@ fn melodic_affinity(
     combo: impl IntoIterator<Item = i32>,
     prev_note: Option<i32>,
     prev_prev_note: Option<i32>,
-    melodiser: [i32; 7],
+    melodiser: &[IntervalAffinity],
     order_affinity: i32,
 ) -> i32 {
     let Some(prev) = prev_note else {
@@ -290,8 +326,8 @@ fn melodic_affinity(
 
     let mut total = 0;
     for n in combo {
-        let d = dist12(prev, n) as usize;
-        total += melodiser[d];
+        let d = interval_idx_clamped(prev, n);
+        total += affinity_for_interval(d, melodiser);
 
         if let Some(direction) = previous_direction {
             let keeps_direction = match direction {
@@ -302,6 +338,65 @@ fn melodic_affinity(
             if keeps_direction {
                 total += order_affinity;
             }
+        }
+    }
+
+    total
+}
+
+fn replicator_note(
+    self_ctx: &[Note],
+    current_beat: Beat,
+    step_in_beats: Beat,
+    distance: u32,
+) -> Option<i32> {
+    let target = current_beat - step_in_beats * distance as f64;
+    let beat_window = step_in_beats.as_beats().abs() * 0.5;
+
+    self_ctx
+        .iter()
+        .filter(|n| n.beat_time <= current_beat)
+        .filter_map(|n| {
+            if let Interval::Tempered(d, _) = n.interval {
+                Some((n.beat_time, d))
+            } else {
+                None
+            }
+        })
+        .filter(|(bt, _)| (bt.as_beats() - target.as_beats()).abs() <= beat_window)
+        .min_by(|(bt1, _), (bt2, _)| {
+            let d1 = (bt1.as_beats() - target.as_beats()).abs();
+            let d2 = (bt2.as_beats() - target.as_beats()).abs();
+            d1.partial_cmp(&d2).unwrap_or(Ordering::Equal)
+        })
+        .map(|(_, d)| d)
+}
+
+fn replicator_affinity_score(
+    combo: impl IntoIterator<Item = i32> + Clone,
+    self_ctx: &[Note],
+    current_beat: Beat,
+    step_in_beats: Beat,
+    steps: &[ReplicatorStep],
+) -> f64 {
+    let mut total = 0.0;
+
+    for step in steps.iter() {
+        if step.distance == 0 {
+            continue;
+        }
+        if let Some(reference) =
+            replicator_note(self_ctx, current_beat, step_in_beats, step.distance)
+        {
+            let base: i32 = combo
+                .clone()
+                .into_iter()
+                .map(|n| {
+                    let idx = interval_idx_clamped(reference, n);
+                    affinity_for_interval(idx, &step.affinities)
+                })
+                .sum();
+            total += base as f64;
         }
     }
 

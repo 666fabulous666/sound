@@ -4,8 +4,9 @@ use crate::app::property_panel::hover_texts::{
     HARMONISE_TEXT, OCTAVE_TEXT, SHUFFLE_TEXT, TOLERENCE_TEXT, VARIATION_INTERVALS_TEXT,
     VARIATION_STEPS_TEXT,
 };
-use crate::engine::score::default_params::default_harmoniser;
-use crate::engine::score::{sequence::Sequence, Interval, NotesGroup};
+use crate::engine::score::default_params::{default_harmoniser, default_replicator_distance};
+use crate::engine::score::sequence::{IntervalAffinity, ReplicatorStep, Sequence};
+use crate::engine::score::{Interval, NotesGroup};
 use crate::Token;
 use egui::{Grid, RichText, Ui};
 use std::collections::BTreeMap;
@@ -99,88 +100,204 @@ pub fn show_harmony_section(
             } else {
                 ui.collapsing("Harmoniser", |ui| {
                     let mut harmoniser = seq.harmoniser;
-                    let mut melodiser = seq.melodiser;
+                    let mut melodiser = seq.melodiser.clone();
                     let mut melodise = seq.melodise;
                     let mut melody_order_affinity = seq.melody_order_affinity;
+                    let mut replicator = seq.replicator;
+                    let mut replicator_steps = seq.replicator_steps.clone();
                     let mut harmoniser_changed = false;
                     let mut melodiser_changed = false;
+                    let mut replicator_changed = false;
 
-                    ui.label(RichText::new("Weights per interval (0..=6)").weak());
-                    ui.add_space(4.0);
-
-                    Grid::new("harmoniser_grid_inverted")
-                        .striped(true)
-                        .num_columns(3)
-                        .show(ui, |ui| {
-                            ui.label(RichText::new("Interval").weak());
-                            ui.label(RichText::new("Tension").weak());
-                            ui.end_row();
-
-                            for i in 0..=6 {
-                                ui.label(format!("{i}"));
-                                let r = u32_cell(ui, &mut harmoniser[i], 0..=32, 0);
-                                if r.changed() {
-                                    harmoniser_changed = true;
-                                }
-                                ui.end_row();
-                            }
-                        });
-
-                    ui.horizontal_wrapped(|ui| {
-                        if ui.button("Reset all to 16").clicked() {
-                            harmoniser = [16; 7];
-                            harmoniser_changed = true;
-                        }
-                        if ui.button("Reset defaults").clicked() {
-                            harmoniser = default_harmoniser();
-                            harmoniser_changed = true;
-                        }
-                    });
-
-                    ui.separator();
-
-                    if ui.checkbox(&mut melodise, "Melodise").changed() {
-                        melodiser_changed = true;
-                    }
-
-                    if melodise {
-                        ui.label(RichText::new("Melodic affinities (-32..=32)").weak());
+                    ui.collapsing("Harmony settings", |ui| {
+                        ui.label(RichText::new("Weights per interval (0..=6)").weak());
                         ui.add_space(4.0);
 
-                        Grid::new("melodiser_grid")
+                        Grid::new("harmoniser_grid_inverted")
                             .striped(true)
                             .num_columns(3)
                             .show(ui, |ui| {
                                 ui.label(RichText::new("Interval").weak());
-                                ui.label(RichText::new("Affinity").weak());
+                                ui.label(RichText::new("Tension").weak());
                                 ui.end_row();
 
                                 for i in 0..=6 {
                                     ui.label(format!("{i}"));
-                                    let r = i32_cell(ui, &mut melodiser[i], -32..=32, 0);
+                                    let r = u32_cell(ui, &mut harmoniser[i], 0..=32, 0);
                                     if r.changed() {
-                                        melodiser_changed = true;
+                                        harmoniser_changed = true;
                                     }
                                     ui.end_row();
                                 }
                             });
 
-                        ui.horizontal(|ui| {
-                            ui.label("Keep direction affinity");
-                            if ui
-                                .add(egui::Slider::new(&mut melody_order_affinity, -32..=32))
-                                .changed()
-                            {
-                                melodiser_changed = true;
+                        ui.horizontal_wrapped(|ui| {
+                            if ui.button("Reset all to 16").clicked() {
+                                harmoniser = [16; 7];
+                                harmoniser_changed = true;
+                            }
+                            if ui.button("Reset defaults").clicked() {
+                                harmoniser = default_harmoniser();
+                                harmoniser_changed = true;
                             }
                         });
-                    }
+                    });
 
-                    if harmoniser_changed || melodiser_changed {
+                    ui.collapsing("Melody settings", |ui| {
+                        if ui.checkbox(&mut melodise, "Melodise").changed() {
+                            melodiser_changed = true;
+                        }
+
+                        if melodise {
+                            ui.label(RichText::new("Melodic affinities (-32..=32)").weak());
+                            ui.add_space(4.0);
+
+                            if ui.button("Add interval").clicked() {
+                                melodiser.push(IntervalAffinity::default());
+                                melodiser_changed = true;
+                            }
+
+                            let mut removal: Option<usize> = None;
+                            for (idx, entry) in melodiser.iter_mut().enumerate() {
+                                ui.horizontal(|ui| {
+                                    ui.label(format!("Interval {}", idx + 1));
+                                    let mut interval_val = entry.interval as i32;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut interval_val, 0..=23)
+                                                .text("Interval"),
+                                        )
+                                        .changed()
+                                    {
+                                        entry.interval = interval_val.clamp(0, 23) as u8;
+                                        melodiser_changed = true;
+                                    }
+                                    ui.label("Affinity");
+                                    let r = i32_cell(ui, &mut entry.affinity, -32..=32, 0);
+                                    if r.changed() {
+                                        melodiser_changed = true;
+                                    }
+                                    if ui.button("Remove").clicked() {
+                                        removal = Some(idx);
+                                    }
+                                });
+                            }
+                            if let Some(idx) = removal {
+                                if idx < melodiser.len() {
+                                    melodiser.remove(idx);
+                                    melodiser_changed = true;
+                                }
+                            }
+
+                            ui.horizontal(|ui| {
+                                ui.label("Keep direction affinity");
+                                if ui
+                                    .add(egui::Slider::new(&mut melody_order_affinity, -32..=32))
+                                    .changed()
+                                {
+                                    melodiser_changed = true;
+                                }
+                            });
+                        }
+                    });
+
+                    ui.collapsing("Replicator settings", |ui| {
+                        if ui
+                            .checkbox(&mut replicator, "Replicator")
+                            .on_hover_text(
+                                "Add interval affinity against the note N time quanta earlier.",
+                            )
+                            .changed()
+                        {
+                            replicator_changed = true;
+                        }
+                        if replicator {
+                            ui.horizontal(|ui| {
+                                ui.label("Steps back");
+                                if ui
+                                    .small_button("Add")
+                                    .on_hover_text("Add another time-quantum offset")
+                                    .clicked()
+                                {
+                                    replicator_steps.push(ReplicatorStep::default());
+                                    replicator_changed = true;
+                                }
+                            });
+
+                            let mut removal: Option<usize> = None;
+                            for (idx, step) in replicator_steps.iter_mut().enumerate() {
+                                ui.separator();
+                                ui.horizontal(|ui| {
+                                    ui.label(format!("Step {}", idx + 1));
+                                    let dist_resp = u32_cell(
+                                        ui,
+                                        &mut step.distance,
+                                        1..=64,
+                                        default_replicator_distance(),
+                                    );
+                                    if dist_resp.changed() {
+                                        replicator_changed = true;
+                                    }
+                                    if ui.button("Remove").clicked() {
+                                        removal = Some(idx);
+                                    }
+                                });
+
+                                ui.label(RichText::new("Replication affinities (-32..=32)").weak());
+                                if ui.button("Add interval").clicked() {
+                                    step.affinities.push(IntervalAffinity::default());
+                                    replicator_changed = true;
+                                }
+
+                                let mut remove_aff: Option<usize> = None;
+                                for (a_idx, affinity) in step.affinities.iter_mut().enumerate() {
+                                    ui.horizontal(|ui| {
+                                        ui.label(format!("Interval {}", a_idx + 1));
+                                        let mut interval_val = affinity.interval as i32;
+                                        if ui
+                                            .add(
+                                                egui::Slider::new(&mut interval_val, 0..=23)
+                                                    .text("Interval"),
+                                            )
+                                            .changed()
+                                        {
+                                            affinity.interval = interval_val.clamp(0, 23) as u8;
+                                            replicator_changed = true;
+                                        }
+                                        ui.label("Affinity");
+                                        let r =
+                                            i32_cell(ui, &mut affinity.affinity, -32..=32, 0);
+                                        if r.changed() {
+                                            replicator_changed = true;
+                                        }
+                                        if ui.button("Remove").clicked() {
+                                            remove_aff = Some(a_idx);
+                                        }
+                                    });
+                                }
+                                if let Some(idx) = remove_aff {
+                                    if idx < step.affinities.len() {
+                                        step.affinities.remove(idx);
+                                        replicator_changed = true;
+                                    }
+                                }
+                            }
+                            if let Some(idx) = removal {
+                                if idx < replicator_steps.len() {
+                                    replicator_steps.remove(idx);
+                                    replicator_changed = true;
+                                }
+                            }
+                        }
+                    });
+
+                    if harmoniser_changed || melodiser_changed || replicator_changed {
                         seq.harmoniser = harmoniser;
                         seq.melodise = melodise;
                         seq.melodiser = melodiser;
                         seq.melody_order_affinity = melody_order_affinity;
+                        seq.replicator = replicator;
+                        seq.replicator_steps = replicator_steps;
                         impact.require_regeneration();
                     }
                 });

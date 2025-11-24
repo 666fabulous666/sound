@@ -32,6 +32,81 @@ use super::ChorusParams;
 
 use default_params::*;
 
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct IntervalAffinity {
+    pub interval: u8,
+    pub affinity: i32,
+}
+
+impl Default for IntervalAffinity {
+    fn default() -> Self {
+        Self {
+            interval: 0,
+            affinity: 0,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct ReplicatorStep {
+    pub distance: u32,
+    #[serde(
+        default = "default_interval_affinities",
+        deserialize_with = "deserialize_interval_affinities"
+    )]
+    pub affinities: Vec<IntervalAffinity>,
+}
+
+impl Default for ReplicatorStep {
+    fn default() -> Self {
+        Self {
+            distance: default_replicator_distance(),
+            affinities: default_interval_affinities(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum AffinityInput {
+    Pairs(Vec<IntervalAffinity>),
+    Fixed([i32; MAX_MELODIC_INTERVAL]),
+    Flexible(Vec<i32>),
+}
+
+pub(crate) fn deserialize_interval_affinities<'de, D>(
+    deserializer: D,
+) -> Result<Vec<IntervalAffinity>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input = AffinityInput::deserialize(deserializer)?;
+    let from_array = |vals: Vec<i32>| {
+        vals.into_iter()
+            .enumerate()
+            .filter(|(_, v)| *v != 0)
+            .map(|(i, v)| IntervalAffinity {
+                interval: i as u8,
+                affinity: v,
+            })
+            .collect()
+    };
+    let res = match input {
+        AffinityInput::Pairs(p) => p,
+        AffinityInput::Fixed(a) => from_array(a.to_vec()),
+        AffinityInput::Flexible(v) => from_array(v),
+    };
+    Ok(res)
+}
+
+pub(crate) fn default_interval_affinities() -> Vec<IntervalAffinity> {
+    Vec::new()
+}
+
+pub(crate) fn default_replicator_steps() -> Vec<ReplicatorStep> {
+    vec![ReplicatorStep::default()]
+}
+
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Sequence {
     pub t_min: Beat,
@@ -50,8 +125,24 @@ pub struct Sequence {
     pub harmoniser: [u32; 7],
     #[serde(default = "default_skip_harmonised")]
     pub skip_harmonised: usize,
-    #[serde(default = "default_melodiser")]
-    pub melodiser: [i32; 7],
+    #[serde(
+        default = "default_interval_affinities",
+        deserialize_with = "deserialize_interval_affinities"
+    )]
+    pub melodiser: Vec<IntervalAffinity>,
+    #[serde(default = "default_replicator_enabled")]
+    pub replicator: bool,
+    #[serde(default = "default_replicator_steps")]
+    pub replicator_steps: Vec<ReplicatorStep>,
+    #[serde(
+        default = "default_interval_affinities",
+        deserialize_with = "deserialize_interval_affinities",
+        skip_serializing,
+        rename = "replicator_affinity"
+    )]
+    pub replicator_affinity_legacy: Vec<IntervalAffinity>,
+    #[serde(default, skip_serializing, rename = "replicator_distance")]
+    pub replicator_distance_legacy: Option<u32>,
     #[serde(default = "default_beat_offset")]
     pub beat_offset: i32,
     #[serde(default = "default_glide")]
@@ -117,7 +208,11 @@ impl Sequence {
             harmonise: default_harmonise(),
             harmoniser: default_harmoniser(),
             skip_harmonised: default_skip_harmonised(),
-            melodiser: default_melodiser(),
+            melodiser: default_interval_affinities(),
+            replicator: default_replicator_enabled(),
+            replicator_steps: default_replicator_steps(),
+            replicator_affinity_legacy: default_interval_affinities(),
+            replicator_distance_legacy: None,
             glide: default_glide(),
             melodise: default_melodise(),
             melody_order_affinity: default_melody_order_affinity(),
@@ -251,6 +346,20 @@ impl Sequence {
             })
             .collect();
         let mut self_ctx = vec![];
+        let mut legacy_steps = Vec::new();
+        if self.replicator_steps.is_empty() && !self.replicator_affinity_legacy.is_empty() {
+            legacy_steps.push(ReplicatorStep {
+                distance: self
+                    .replicator_distance_legacy
+                    .unwrap_or_else(default_replicator_distance),
+                affinities: self.replicator_affinity_legacy.clone(),
+            });
+        }
+        let replicator_steps = if !legacy_steps.is_empty() {
+            &legacy_steps
+        } else {
+            &self.replicator_steps
+        };
         let base_notes: Vec<Note> = base_triggers
             .into_iter()
             .flat_map(|n| {
@@ -263,7 +372,9 @@ impl Sequence {
                     self.harmoniser,
                     self.skip_harmonised,
                     self.melodise,
-                    self.melodiser,
+                    &self.melodiser,
+                    self.replicator,
+                    replicator_steps,
                     self.melody_order_affinity,
                     self.tolerance,
                     step_as_time,
