@@ -16,6 +16,7 @@ pub fn show_rhythm_section(
     seq: &mut Sequence,
     impact: &mut ParameterImpact,
     edit_vec_fn: &dyn Fn(&mut Ui, &mut Vec<usize>, usize),
+    promote: Option<&mut dyn FnMut()>,
 ) {
     ui.collapsing("Rythm", |ui| {
         ui.horizontal(|ui| {
@@ -119,5 +120,17 @@ pub fn show_rhythm_section(
             .behavior(ParameterBehavior::StructuralImmediate)
             .tooltip("Extends the final note duration for each window");
         tail_param.draw(ui, &mut seq.tail_multiplier, impact);
+
+        if let Some(promote) = promote {
+            if ui
+                .small_button("Promote rhythm to parent override")
+                .on_hover_text(
+                    "Copy this rhythm to the parent override and clear it here",
+                )
+                .clicked()
+            {
+                promote();
+            }
+        }
     });
 }

@@ -16,6 +16,7 @@ pub fn show_harmony_section(
     seq: &mut Sequence,
     notes: &mut BTreeMap<Token, NotesGroup>,
     impact: &mut ParameterImpact,
+    promote: Option<&mut dyn FnMut()>,
 ) {
     ui.collapsing("Harmony", |ui| {
         ui.checkbox(&mut seq.glide, "Glide");
@@ -355,6 +356,17 @@ pub fn show_harmony_section(
                 .changed()
             {
                 impact.require_regeneration();
+            }
+        }
+        if let Some(promote) = promote {
+            if ui
+                .small_button("Promote harmony to parent override")
+                .on_hover_text(
+                    "Copy these harmony settings to the parent override and clear them here",
+                )
+                .clicked()
+            {
+                promote();
             }
         }
     });

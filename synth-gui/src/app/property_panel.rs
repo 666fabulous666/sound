@@ -192,7 +192,7 @@ fn draw_rhythm_override_controls(
     params.apply_to_sequence(&mut temp_seq);
     let before = params.clone();
     ui.add_enabled_ui(editable, |ui| {
-        rhythm_section::show_rhythm_section(ui, &mut temp_seq, impact, edit_vec_fn);
+        rhythm_section::show_rhythm_section(ui, &mut temp_seq, impact, edit_vec_fn, None);
     });
     let after = RhythmParams::from_sequence(&temp_seq);
     if editable && after != before {
@@ -214,7 +214,7 @@ fn draw_harmony_override_controls(
     let before = params.clone();
     let mut dummy_notes: BTreeMap<Token, NotesGroup> = BTreeMap::new();
     ui.add_enabled_ui(editable, |ui| {
-        harmony::show_harmony_section(ui, &mut temp_seq, &mut dummy_notes, impact);
+        harmony::show_harmony_section(ui, &mut temp_seq, &mut dummy_notes, impact, None);
     });
     let after = HarmonyParams::from_sequence(&temp_seq);
     if editable && after != before {
@@ -675,25 +675,24 @@ impl GuiApp {
                                             &mut preview,
                                             &mut impact,
                                             &edit_vec_generators,
+                                            None,
                                         );
                                     });
                                 } else {
+                                    let mut promote_clicked = false;
                                     rhythm_section::show_rhythm_section(
                                         ui,
                                         seq_mut,
                                         &mut impact,
                                         &edit_vec_generators,
+                                        Some(&mut || {
+                                            promote_clicked = true;
+                                        }),
                                     );
-                                    if depth > 0 {
-                                        if ui
-                                            .small_button("Promote rhythm to parent override")
-                                            .on_hover_text("Copy this rhythm to the parent override and clear it here")
-                                            .clicked()
-                                        {
-                                            promotion_request = Some(PromotionKind::Rhythm(
-                                                RhythmParams::from_sequence(seq_mut),
-                                            ));
-                                        }
+                                    if promote_clicked && depth > 0 {
+                                        promotion_request = Some(PromotionKind::Rhythm(
+                                            RhythmParams::from_sequence(seq_mut),
+                                        ));
                                     }
                                 }
 
@@ -710,25 +709,24 @@ impl GuiApp {
                                             &mut preview,
                                             &mut self.score.notes,
                                             &mut impact,
+                                            None,
                                         );
                                     });
                                 } else {
+                                    let mut promote_clicked = false;
                                     harmony::show_harmony_section(
                                         ui,
                                         seq_mut,
                                         &mut self.score.notes,
                                         &mut impact,
+                                        Some(&mut || {
+                                            promote_clicked = true;
+                                        }),
                                     );
-                                    if depth > 0 {
-                                        if ui
-                                            .small_button("Promote harmony to parent override")
-                                            .on_hover_text("Copy these harmony settings to the parent override and clear them here")
-                                            .clicked()
-                                        {
-                                            promotion_request = Some(PromotionKind::Harmony(
-                                                HarmonyParams::from_sequence(seq_mut),
-                                            ));
-                                        }
+                                    if promote_clicked && depth > 0 {
+                                        promotion_request = Some(PromotionKind::Harmony(
+                                            HarmonyParams::from_sequence(seq_mut),
+                                        ));
                                     }
                                 }
                                 accents::show_accents_section(
