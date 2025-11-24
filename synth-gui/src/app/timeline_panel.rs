@@ -15,7 +15,7 @@ use crate::{
         waves::envelope,
     },
     time_freq::{Beat, Tempo, Time},
-    NOTE_LINGER_TIME, TREE_DEPTH_WIDTH,
+    TREE_DEPTH_WIDTH,
 };
 
 const LASER_STRIP_RATIOS: [f32; 7] = [0.0, 0.12, 0.3, 0.5, 0.7, 0.88, 1.0];
@@ -52,16 +52,7 @@ impl GuiApp {
         let tempo = self.score.tempo();
         let current_time = self.now();
 
-        // Grid params based on sequences only:
-        let max_loop_len = self
-            .score
-            .track_root
-            .sequences()
-            .fold(Time(0.0), |acc, seq| {
-                acc.max(tempo.beats_to_time(seq.loop_len))
-            });
-        let playhead = NOTE_LINGER_TIME.min(max_loop_len);
-        let track_display_length = max_loop_len + playhead;
+        let (max_loop_len, _padding, track_display_length) = self.timeline_lengths(tempo);
 
         // Precompute sub-grids so we don't borrow during the closure:
         let sub_grids: Vec<isize> = self
@@ -74,168 +65,241 @@ impl GuiApp {
         // ----- UI -----
         egui::CentralPanel::default().show(ctx, |ui| {
             let text_color = ui.visuals().text_color();
-            let (rect, _resp) = ui.allocate_exact_size(
-                egui::vec2(ui.available_width(), ui.available_height()),
-                egui::Sense::click_and_drag(),
-            );
-            let painter = ui.painter_at(rect);
-
             let lanes = visible_paths.len().max(1);
-            let lane_h = rect.height() / lanes as f32;
-            let block_h = lane_h * 0.6;
-            let lane_gap = (lane_h - block_h) * 0.5;
 
-            paint_grid(
-                current_time,
-                max_loop_len,
-                playhead,
-                track_display_length,
-                sub_grids,
-                text_color,
-                rect,
-                &painter,
-                tempo,
+            if self.fixed_track_height {
+                let lane_h = self.track_lane_height.max(12.0);
+                let total_height = lane_h * lanes as f32;
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    let (rect, _resp) = ui.allocate_exact_size(
+                        egui::vec2(ui.available_width(), total_height),
+                        egui::Sense::click_and_drag(),
+                    );
+                    self.render_timeline_contents(
+                        ui,
+                        ctx,
+                        rect,
+                        lane_h,
+                        &visible_paths,
+                        current_time,
+                        max_loop_len,
+                        track_display_length,
+                        &sub_grids,
+                        text_color,
+                        tempo,
+                    );
+                });
+            } else {
+                let (rect, _resp) = ui.allocate_exact_size(
+                    egui::vec2(ui.available_width(), ui.available_height()),
+                    egui::Sense::click_and_drag(),
+                );
+                let lane_h = rect.height() / lanes as f32;
+                self.render_timeline_contents(
+                    ui,
+                    ctx,
+                    rect,
+                    lane_h,
+                    &visible_paths,
+                    current_time,
+                    max_loop_len,
+                    track_display_length,
+                    &sub_grids,
+                    text_color,
+                    tempo,
+                );
+            }
+        });
+    }
+
+    fn render_timeline_contents(
+        &mut self,
+        ui: &mut egui::Ui,
+        ctx: &egui::Context,
+        rect: egui::Rect,
+        lane_h: f32,
+        visible_paths: &[Vec<usize>],
+        current_time: Time,
+        max_loop_len: Time,
+        track_display_length: Time,
+        sub_grids: &[isize],
+        text_color: Color32,
+        tempo: Tempo,
+    ) {
+        let painter = ui.painter_at(rect);
+
+        let scroll_delta = ui.ctx().input(|i| i.smooth_scroll_delta.y);
+        if scroll_delta.abs() > f32::EPSILON {
+            if let Some(pointer) = ui.ctx().pointer_hover_pos() {
+                if rect.contains(pointer) {
+                    let focus_ratio = ((pointer.x - rect.left()) / rect.width()).clamp(0.0, 1.0);
+                    let multiplier = (1.0 + scroll_delta * 0.08).clamp(0.5, 2.0);
+                    self.adjust_timeline_zoom(multiplier, focus_ratio, track_display_length, rect);
+                }
+            }
+        }
+
+        let view_span = self.timeline_view_span(track_display_length);
+        self.clamp_timeline_view(track_display_length, view_span);
+        let view_start = self.timeline_view_start;
+        let view_end = view_start + view_span;
+        let playhead = view_start + Time::new(view_span.as_secs() * 0.5);
+
+        let block_h = lane_h * 0.6;
+        let lane_gap = (lane_h - block_h) * 0.5;
+
+        paint_grid(
+            current_time,
+            max_loop_len,
+            playhead,
+            view_start,
+            view_span,
+            sub_grids,
+            text_color,
+            rect,
+            &painter,
+            tempo,
+        );
+
+        let tree_band_rect = rect.with_max_x(rect.left() + rect.width() * 0.25);
+
+        let mut lane_infos = Vec::new();
+        for (i, path) in visible_paths.iter().enumerate() {
+            let top = rect.top() + i as f32 * lane_h + lane_gap;
+            let y0 = top;
+            let y1 = top + block_h;
+            let lane_rect =
+                egui::Rect::from_min_max(egui::pos2(rect.left(), y0), egui::pos2(rect.right(), y1));
+            let track_rect = egui::Rect::from_min_max(
+                egui::pos2(Self::t_to_x(rect, view_start, view_start, view_span), y0),
+                egui::pos2(Self::t_to_x(rect, view_end, view_start, view_span), y1),
+            );
+            let tree_rect = egui::Rect::from_min_max(
+                egui::pos2(tree_band_rect.left(), y0),
+                egui::pos2(tree_band_rect.right(), y1),
             );
 
-            let tree_band_rect = rect.with_max_x(rect.left() + rect.width() * 0.25);
+            let node = match self.score.track_root.get(path) {
+                Some(n) => n,
+                None => continue,
+            };
 
-            let mut lane_infos = Vec::new();
-            for (i, path) in visible_paths.iter().enumerate() {
-                let top = rect.top() + i as f32 * lane_h + lane_gap;
-                let y0 = top;
-                let y1 = top + block_h;
-                let lane_rect = egui::Rect::from_min_max(
-                    egui::pos2(rect.left(), y0),
-                    egui::pos2(rect.right(), y1),
-                );
-                let track_rect = egui::Rect::from_min_max(
-                    egui::pos2(Self::t_to_x(rect, Time::new(0.0), track_display_length), y0),
-                    egui::pos2(
-                        Self::t_to_x(rect, track_display_length, track_display_length),
-                        y1,
-                    ),
-                );
-                let tree_rect = egui::Rect::from_min_max(
-                    egui::pos2(tree_band_rect.left(), y0),
-                    egui::pos2(tree_band_rect.right(), y1),
-                );
+            lane_infos.push(LaneGeometry {
+                path: path.clone(),
+                lane_rect,
+                track_rect,
+                tree_rect,
+                depth: path.len(),
+                is_group: matches!(node.kind, NodeKind::Group { .. }),
+                child_count: node.child_count(),
+            });
+        }
 
-                let node = match self.score.track_root.get(path) {
-                    Some(n) => n,
-                    None => continue,
-                };
+        for lane in &lane_infos {
+            let Some(node) = self.score.track_root.get(&lane.path).cloned() else {
+                continue;
+            };
 
-                lane_infos.push(LaneGeometry {
-                    path: path.clone(),
-                    lane_rect,
-                    track_rect,
-                    tree_rect,
-                    depth: path.len(),
-                    is_group: matches!(node.kind, NodeKind::Group { .. }),
-                    child_count: node.child_count(),
-                });
-            }
+            let node_hue = node.hue;
+            let track_rect = lane.track_rect;
+            let y0 = track_rect.top();
+            let y1 = track_rect.bottom();
 
-            for lane in &lane_infos {
-                let Some(node) = self.score.track_root.get(&lane.path).cloned() else {
-                    continue;
-                };
+            let drag_resp = ui
+                .interact(
+                    lane.track_rect,
+                    egui::Id::new(("lane_drag", &lane.path)),
+                    egui::Sense::click_and_drag(),
+                )
+                .on_hover_cursor(egui::CursorIcon::Grab);
 
-                let node_hue = node.hue;
-                let track_rect = lane.track_rect;
-                let y0 = track_rect.top();
-                let y1 = track_rect.bottom();
+            let is_selected = self
+                .selected
+                .as_ref()
+                .map(|p| p.as_slice() == lane.path.as_slice())
+                .unwrap_or(false);
 
-                let drag_resp = ui
-                    .interact(
-                        lane.track_rect,
-                        egui::Id::new(("lane_drag", &lane.path)),
-                        egui::Sense::click_and_drag(),
-                    )
-                    .on_hover_cursor(egui::CursorIcon::Grab);
-
-                let is_selected = self
-                    .selected
-                    .as_ref()
-                    .map(|p| p.as_slice() == lane.path.as_slice())
-                    .unwrap_or(false);
-
-                match node.kind {
-                    NodeKind::Group {
-                        collapsed, muted, ..
-                    } => {
-                        let col = highlight_if_selected(
-                            &painter,
-                            lane_gap,
-                            track_rect,
-                            is_selected,
-                            GuiApp::group_color(node_hue),
-                            ui.visuals().panel_fill,
+            match node.kind {
+                NodeKind::Group {
+                    collapsed, muted, ..
+                } => {
+                    let col = highlight_if_selected(
+                        &painter,
+                        lane_gap,
+                        track_rect,
+                        is_selected,
+                        GuiApp::group_color(node_hue),
+                        ui.visuals().panel_fill,
+                    );
+                    if let Some((first_y, last_y)) = group_y_span(&lane_infos, lane.path.as_slice())
+                    {
+                        let subbox_offset = TREE_DEPTH_WIDTH * lane.depth as f32;
+                        let left = rect.left() + subbox_offset;
+                        let right = rect.right();
+                        let encompass_rect = egui::Rect::from_min_max(
+                            egui::pos2(left, first_y - lane_gap),
+                            egui::pos2(right, last_y + lane_gap),
                         );
-                        if let Some((first_y, last_y)) =
-                            group_y_span(&lane_infos, lane.path.as_slice())
-                        {
-                            let subbox_offset = TREE_DEPTH_WIDTH * lane.depth as f32;
-                            let left = rect.left() + subbox_offset;
-                            let right = rect.right();
-                            let encompass_rect = egui::Rect::from_min_max(
-                                egui::pos2(left, first_y - lane_gap),
-                                egui::pos2(right, last_y + lane_gap),
-                            );
 
-                            if is_selected && !collapsed {
-                                highlight_group(text_color, &painter, encompass_rect, muted);
-                            }
-
-                            painter.rect_filled(
-                                track_rect,
-                                6.0,
-                                if is_selected {
-                                    col
-                                } else {
-                                    col.gamma_multiply(0.35)
-                                },
-                            );
-                            painter.rect_stroke(
-                                track_rect,
-                                6.0,
-                                egui::Stroke::new(1.0, text_color.gamma_multiply(0.5)),
-                                egui::StrokeKind::Middle,
-                            );
+                        if is_selected && !collapsed {
+                            highlight_group(text_color, &painter, encompass_rect, muted);
                         }
-                    }
 
-                    NodeKind::Seq(seq) => {
-                        let col = highlight_if_selected(
-                            &painter,
-                            lane_gap,
+                        painter.rect_filled(
                             track_rect,
-                            is_selected,
-                            GuiApp::seq_color(&seq.wave_type, node_hue),
-                            ui.visuals().panel_fill,
+                            6.0,
+                            if is_selected {
+                                col
+                            } else {
+                                col.gamma_multiply(0.35)
+                            },
                         );
-                        let loop_len = tempo.beats_to_time(seq.loop_len);
-                        let t_min_time = tempo.beats_to_time(seq.t_min);
-                        let t_max_time = tempo.beats_to_time(seq.t_max);
-                        let win_len = t_max_time - t_min_time;
-                        let start0 = (t_min_time - current_time).rem_euclid(loop_len) + playhead;
-                        let repeats =
-                            (track_display_length.as_secs() / loop_len.as_secs()).ceil() as i32 + 2;
+                        painter.rect_stroke(
+                            track_rect,
+                            6.0,
+                            egui::Stroke::new(1.0, text_color.gamma_multiply(0.5)),
+                            egui::StrokeKind::Middle,
+                        );
+                    }
+                }
 
-                        for n in -repeats..repeats {
+                NodeKind::Seq(seq) => {
+                    let col = highlight_if_selected(
+                        &painter,
+                        lane_gap,
+                        track_rect,
+                        is_selected,
+                        GuiApp::seq_color(&seq.wave_type, node_hue),
+                        ui.visuals().panel_fill,
+                    );
+                    let loop_len = tempo.beats_to_time(seq.loop_len);
+                    let t_min_time = tempo.beats_to_time(seq.t_min);
+                    let t_max_time = tempo.beats_to_time(seq.t_max);
+                    let win_len = t_max_time - t_min_time;
+                    let start0 = (t_min_time - current_time).rem_euclid(loop_len) + playhead;
+                    let visible_end = view_end + win_len;
+
+                    if loop_len.as_secs() > f64::EPSILON {
+                        let start_n = ((view_start.as_secs() - start0.as_secs())
+                            / loop_len.as_secs())
+                        .floor() as i32
+                            - 2;
+                        let end_n = ((visible_end.as_secs() - start0.as_secs())
+                            / loop_len.as_secs())
+                        .ceil() as i32
+                            + 2;
+
+                        for n in start_n..=end_n {
                             let shift = loop_len * (n as f64);
                             let s = start0 + shift;
                             let e = s + win_len;
 
-                            if e <= Time(0.0) || s >= track_display_length {
+                            if e <= view_start || s >= view_end {
                                 continue;
                             }
 
-                            let s_clamped = s.max(Time(0.0));
-                            let e_clamped = e.min(track_display_length);
-
-                            let x_s = Self::t_to_x(track_rect, s_clamped, track_display_length);
-                            let x_e = Self::t_to_x(track_rect, e_clamped, track_display_length);
+                            let x_s = Self::t_to_x(track_rect, s, view_start, view_span);
+                            let x_e = Self::t_to_x(track_rect, e, view_start, view_span);
 
                             if x_e > x_s {
                                 let block_rect = egui::Rect::from_min_max(
@@ -254,213 +318,205 @@ impl GuiApp {
                                 );
                             }
                         }
+                    }
 
-                        let envelope_params =
-                            self.score.track_root.resolve_envelope(&lane.path).value;
+                    let envelope_params = self.score.track_root.resolve_envelope(&lane.path).value;
 
-                        if let Some(group) = self.score.notes.get(&seq.token) {
-                            group.notes.iter().for_each(|n| {
-                                if let Interval::Tempered(degree, _) = n.interval {
-                                    let dy = track_rect.top() - track_rect.bottom();
-                                    let note_rect = egui::Rect::from_min_max(
-                                        egui::pos2(
-                                            Self::t_to_x(
-                                                track_rect,
-                                                n.time - current_time + playhead,
-                                                track_display_length,
-                                            ),
-                                            0.5 * (track_rect.bottom() + track_rect.top())
-                                                + dy * (degree as f32 + 0.5) / 24.0,
+                    if let Some(group) = self.score.notes.get(&seq.token) {
+                        group.notes.iter().for_each(|n| {
+                            if let Interval::Tempered(degree, _) = n.interval {
+                                let dy = track_rect.top() - track_rect.bottom();
+                                let note_rect = egui::Rect::from_min_max(
+                                    egui::pos2(
+                                        Self::t_to_x(
+                                            track_rect,
+                                            n.time - current_time + playhead,
+                                            view_start,
+                                            view_span,
                                         ),
-                                        egui::pos2(
-                                            Self::t_to_x(
-                                                track_rect,
-                                                (n.time + n.duration - current_time) + playhead,
-                                                track_display_length,
-                                            ),
-                                            0.5 * (track_rect.bottom() + track_rect.top())
-                                                + dy * (degree as f32 - 0.5) / 24.0,
+                                        0.5 * (track_rect.bottom() + track_rect.top())
+                                            + dy * (degree as f32 + 0.5) / 24.0,
+                                    ),
+                                    egui::pos2(
+                                        Self::t_to_x(
+                                            track_rect,
+                                            (n.time + n.duration - current_time) + playhead,
+                                            view_start,
+                                            view_span,
                                         ),
-                                    );
+                                        0.5 * (track_rect.bottom() + track_rect.top())
+                                            + dy * (degree as f32 - 0.5) / 24.0,
+                                    ),
+                                );
 
-                                    let note_width = note_rect.width();
-                                    let note_height = note_rect.height();
-                                    if note_width <= f32::EPSILON || note_height <= f32::EPSILON {
-                                        return;
+                                let note_width = note_rect.width();
+                                let note_height = note_rect.height();
+                                if note_width <= f32::EPSILON || note_height <= f32::EPSILON {
+                                    return;
+                                }
+                                let subdivisions = note_width.min(100.0).floor() as usize;
+                                if subdivisions == 0 {
+                                    return;
+                                }
+                                let inv = 1.0 / subdivisions as f32;
+                                let time_step = inv as f64;
+                                let env_curve = envelope(
+                                    envelope_params.attack,
+                                    envelope_params.decay,
+                                    n.duration,
+                                );
+                                let envelope_values: Vec<f32> = (0..subdivisions)
+                                    .map(|i| (env_curve(n.duration * i as f64 * time_step)) as f32)
+                                    .collect();
+                                let normalization = {
+                                    let value = envelope_params.normalization as f32;
+                                    if !value.is_finite() || value.abs() <= f32::EPSILON {
+                                        1.0
+                                    } else {
+                                        value
                                     }
-                                    let subdivisions = note_width.min(100.0).floor() as usize;
-                                    if subdivisions == 0 {
-                                        return;
+                                };
+                                let note_left = note_rect.left();
+                                let note_top = note_rect.top();
+                                let mut mesh = Mesh::default();
+                                let rows = LASER_STRIP_RATIOS.len();
+                                for (i, e) in envelope_values.iter().enumerate() {
+                                    let base_value = (e / normalization).clamp(0.0, 1.0);
+                                    let left = note_left + note_width * (i as f32 * inv);
+                                    let right = note_left + note_width * ((i + 1) as f32 * inv);
+                                    let vertex_base = mesh.vertices.len() as u32;
+                                    for &ratio in LASER_STRIP_RATIOS.iter() {
+                                        let y = note_top + ratio * note_height;
+                                        let color = laser_color(
+                                            laser_value_at_ratio(base_value, ratio),
+                                            ratio,
+                                        );
+                                        mesh.vertices.push(Vertex {
+                                            pos: egui::pos2(left, y),
+                                            uv: egui::Pos2::ZERO,
+                                            color,
+                                        });
+                                        mesh.vertices.push(Vertex {
+                                            pos: egui::pos2(right, y),
+                                            uv: egui::Pos2::ZERO,
+                                            color,
+                                        });
                                     }
-                                    let inv = 1.0 / subdivisions as f32;
-                                    let time_step = inv as f64;
-                                    let env_curve = envelope(
-                                        envelope_params.attack,
-                                        envelope_params.decay,
-                                        n.duration,
-                                    );
-                                    let envelope_values: Vec<f32> = (0..subdivisions)
-                                        .map(|i| {
-                                            (env_curve(n.duration * i as f64 * time_step)) as f32
-                                        })
-                                        .collect();
-                                    let normalization = {
-                                        let value = envelope_params.normalization as f32;
-                                        if !value.is_finite() || value.abs() <= f32::EPSILON {
-                                            1.0
-                                        } else {
-                                            value
-                                        }
-                                    };
-                                    let note_left = note_rect.left();
-                                    let note_top = note_rect.top();
-                                    let mut mesh = Mesh::default();
-                                    let rows = LASER_STRIP_RATIOS.len();
-                                    for (i, e) in envelope_values.iter().enumerate() {
-                                        let base_value = (e / normalization).clamp(0.0, 1.0);
-                                        let left = note_left + note_width * (i as f32 * inv);
-                                        let right = note_left + note_width * ((i + 1) as f32 * inv);
-                                        let vertex_base = mesh.vertices.len() as u32;
-                                        for &ratio in LASER_STRIP_RATIOS.iter() {
-                                            let y = note_top + ratio * note_height;
-                                            let color = laser_color(
-                                                laser_value_at_ratio(base_value, ratio),
-                                                ratio,
-                                            );
-                                            mesh.vertices.push(Vertex {
-                                                pos: egui::pos2(left, y),
-                                                uv: egui::Pos2::ZERO,
-                                                color,
-                                            });
-                                            mesh.vertices.push(Vertex {
-                                                pos: egui::pos2(right, y),
-                                                uv: egui::Pos2::ZERO,
-                                                color,
-                                            });
-                                        }
-                                        for row in 0..rows - 1 {
-                                            let idx = vertex_base + (row as u32) * 2;
-                                            mesh.indices.extend_from_slice(&[
-                                                idx,
-                                                idx + 2,
-                                                idx + 1,
-                                                idx + 1,
-                                                idx + 2,
-                                                idx + 3,
-                                            ]);
-                                        }
-                                    }
-                                    if !mesh.indices.is_empty() {
-                                        painter.add(egui::Shape::mesh(mesh));
+                                    for row in 0..rows - 1 {
+                                        let idx = vertex_base + (row as u32) * 2;
+                                        mesh.indices.extend_from_slice(&[
+                                            idx,
+                                            idx + 2,
+                                            idx + 1,
+                                            idx + 1,
+                                            idx + 2,
+                                            idx + 3,
+                                        ]);
                                     }
                                 }
-                            });
-                        }
+                                if !mesh.indices.is_empty() {
+                                    painter.add(egui::Shape::mesh(mesh));
+                                }
+                            }
+                        });
+                    }
 
-                        let bar_color = col.lerp_to_gamma(text_color, 0.5);
-                        let rep_loop_len = tempo.beats_to_time(seq.loop_len * seq.repeat as f64);
-                        let current = self.now();
-                        if rep_loop_len.as_secs() > 0.0 {
-                            let bar_pos =
-                                rep_loop_len + playhead - current.rem_euclid(rep_loop_len);
-                            (0..seq.repeat).for_each(|j| {
-                                let pos = tempo.beats_to_time(seq.loop_len * j as f64) + playhead
-                                    - current.rem_euclid(rep_loop_len);
-                                painter.text(
-                                    egui::pos2(
-                                        Self::t_to_x(rect, pos, track_display_length),
-                                        y0 - 0.333 * lane_gap,
-                                    ),
-                                    Align2::CENTER_BOTTOM,
-                                    format!("{}/{}", j + 1, seq.repeat),
-                                    egui::TextStyle::Body.resolve(ui.style()),
-                                    bar_color,
-                                );
-                            });
+                    let bar_color = col.lerp_to_gamma(text_color, 0.5);
+                    let rep_loop_len = tempo.beats_to_time(seq.loop_len * seq.repeat as f64);
+                    let current = self.now();
+                    if rep_loop_len.as_secs() > 0.0 {
+                        let bar_pos = rep_loop_len + playhead - current.rem_euclid(rep_loop_len);
+                        (0..seq.repeat).for_each(|j| {
+                            let pos = tempo.beats_to_time(seq.loop_len * j as f64) + playhead
+                                - current.rem_euclid(rep_loop_len);
                             painter.text(
                                 egui::pos2(
-                                    Self::t_to_x(rect, bar_pos, track_display_length),
+                                    Self::t_to_x(rect, pos, view_start, view_span),
                                     y0 - 0.333 * lane_gap,
                                 ),
                                 Align2::CENTER_BOTTOM,
-                                format!("x{}", seq.repeat),
+                                format!("{}/{}", j + 1, seq.repeat),
                                 egui::TextStyle::Body.resolve(ui.style()),
                                 bar_color,
                             );
-                            painter.line_segment(
-                                [
-                                    egui::pos2(
-                                        Self::t_to_x(rect, bar_pos, track_display_length),
-                                        y0,
-                                    ),
-                                    egui::pos2(
-                                        Self::t_to_x(rect, bar_pos, track_display_length),
-                                        y1,
-                                    ),
-                                ],
-                                egui::Stroke::new(2.0, bar_color),
-                            );
-                            painter.line_segment(
-                                [
-                                    egui::pos2(
-                                        Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-                                        y0,
-                                    ),
-                                    egui::pos2(
-                                        Self::t_to_x(rect, bar_pos, track_display_length) + 4.0,
-                                        y1,
-                                    ),
-                                ],
-                                egui::Stroke::new(2.0, bar_color),
-                            );
-                            painter.circle_filled(
+                        });
+                        painter.text(
+                            egui::pos2(
+                                Self::t_to_x(rect, bar_pos, view_start, view_span),
+                                y0 - 0.333 * lane_gap,
+                            ),
+                            Align2::CENTER_BOTTOM,
+                            format!("x{}", seq.repeat),
+                            egui::TextStyle::Body.resolve(ui.style()),
+                            bar_color,
+                        );
+                        painter.line_segment(
+                            [
+                                egui::pos2(Self::t_to_x(rect, bar_pos, view_start, view_span), y0),
+                                egui::pos2(Self::t_to_x(rect, bar_pos, view_start, view_span), y1),
+                            ],
+                            egui::Stroke::new(2.0, bar_color),
+                        );
+                        painter.line_segment(
+                            [
                                 egui::pos2(
-                                    Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-                                    0.75 * y0 + 0.25 * y1,
+                                    Self::t_to_x(rect, bar_pos, view_start, view_span) + 4.0,
+                                    y0,
                                 ),
-                                2.0,
-                                bar_color,
-                            );
-                            painter.circle_filled(
                                 egui::pos2(
-                                    Self::t_to_x(rect, bar_pos, track_display_length) - 4.0,
-                                    0.25 * y0 + 0.75 * y1,
+                                    Self::t_to_x(rect, bar_pos, view_start, view_span) + 4.0,
+                                    y1,
                                 ),
-                                2.0,
-                                bar_color,
-                            );
-                        }
+                            ],
+                            egui::Stroke::new(2.0, bar_color),
+                        );
+                        painter.circle_filled(
+                            egui::pos2(
+                                Self::t_to_x(rect, bar_pos, view_start, view_span) - 4.0,
+                                0.75 * y0 + 0.25 * y1,
+                            ),
+                            2.0,
+                            bar_color,
+                        );
+                        painter.circle_filled(
+                            egui::pos2(
+                                Self::t_to_x(rect, bar_pos, view_start, view_span) - 4.0,
+                                0.25 * y0 + 0.75 * y1,
+                            ),
+                            2.0,
+                            bar_color,
+                        );
                     }
                 }
-
-                self.handle_lane_widget_interaction(ctx, &lane.path, &drag_resp);
-                if drag_resp.clicked() {
-                    self.selected = Some(lane.path.clone());
-                }
             }
 
-            self.update_sequence_drag_runtime(ctx, &lane_infos, tempo, track_display_length);
-
-            self.paint_tree_band(ui, &painter, tree_band_rect, rect, &lane_infos);
-
-            if let Some(preview) = self.update_tree_drag_preview(ctx, &lane_infos, rect) {
-                paint_drop_preview(&painter, &preview);
+            self.handle_lane_widget_interaction(ctx, &lane.path, &drag_resp);
+            if drag_resp.clicked() {
+                self.selected = Some(lane.path.clone());
             }
-            if let Some(drag_state) = self.tree_drag.as_ref() {
-                self.paint_tree_drag_ghost(ui, &painter, rect, &lane_infos, drag_state);
-            }
+        }
 
-            if self.tree_drag.is_some() {
-                ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
-            }
+        self.update_sequence_drag_runtime(ctx, &lane_infos, tempo, view_span);
 
-            // playhead
-            let x = Self::t_to_x(rect, playhead, track_display_length);
-            painter.line_segment(
-                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                egui::Stroke::new(1.0, ui.visuals().strong_text_color()),
-            );
-        });
+        self.paint_tree_band(ui, &painter, tree_band_rect, rect, &lane_infos);
+
+        if let Some(preview) = self.update_tree_drag_preview(ctx, &lane_infos, rect) {
+            paint_drop_preview(&painter, &preview);
+        }
+        if let Some(drag_state) = self.tree_drag.as_ref() {
+            self.paint_tree_drag_ghost(ui, &painter, rect, &lane_infos, drag_state);
+        }
+
+        if self.tree_drag.is_some() {
+            ctx.set_cursor_icon(egui::CursorIcon::Grabbing);
+        }
+
+        // playhead
+        let x = Self::t_to_x(rect, playhead, view_start, view_span);
+        painter.line_segment(
+            [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+            egui::Stroke::new(1.0, ui.visuals().strong_text_color()),
+        );
     }
 
     fn handle_lane_widget_interaction(
@@ -725,7 +781,7 @@ impl GuiApp {
         ctx: &egui::Context,
         lanes: &[LaneGeometry],
         tempo: Tempo,
-        track_display_length: Time,
+        visible_span: Time,
     ) {
         let Some(state) = self.sequence_drag.as_ref() else {
             return;
@@ -738,7 +794,7 @@ impl GuiApp {
         };
 
         let delta_ratio = (pointer.x - state.pointer_start.x) / lane.track_rect.width().max(1.0);
-        let delta_secs = track_display_length.as_secs() * delta_ratio as f64;
+        let delta_secs = visible_span.as_secs() * delta_ratio as f64;
         let delta_beats = tempo.time_to_beats(Time(delta_secs)).as_beats();
 
         if let Some(node) = self.score.track_root.get_mut(&state.path) {
@@ -952,18 +1008,16 @@ fn paint_grid(
     current_time: Time,
     max_loop_len: Time,
     playhead: Time,
-    track_display_length: Time,
-    sub_grids: Vec<isize>,
+    view_start: Time,
+    view_span: Time,
+    sub_grids: &[isize],
     text_color: Color32,
     rect: Rect,
     painter: &Painter,
     tempo: Tempo,
 ) {
-    let track_beats = tempo
-        .time_to_beats(track_display_length)
-        .as_beats()
-        .max(0.0);
-    for sub_grid in &sub_grids {
+    let track_beats = tempo.time_to_beats(view_span).as_beats().max(0.0);
+    for sub_grid in sub_grids {
         if *sub_grid <= 0 {
             continue;
         }
@@ -973,7 +1027,7 @@ fn paint_grid(
             let beat = Beat(s as f64 / *sub_grid as f64);
             let line_time =
                 tempo.beats_to_time(beat) - current_time.rem_euclid(max_loop_len) + playhead;
-            let x = GuiApp::t_to_x(rect, line_time, track_display_length);
+            let x = GuiApp::t_to_x(rect, line_time, view_start, view_span);
             let base_col = text_color;
             let thickness = 1.0;
             let half = *sub_grid / 2;

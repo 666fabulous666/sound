@@ -12,7 +12,7 @@ use crate::{
     layout_left, F0, TOOLBAR_ICON_SIZE,
 };
 use cpal::traits::DeviceTrait;
-use egui::{Align2, Area, Frame, Id, Layout, Order, RichText, Vec2};
+use egui::{Align2, Area, Frame, Id, Layout, Order, Pos2, Rect, RichText, Vec2};
 #[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
 use synth_core::stream::stream;
@@ -99,6 +99,7 @@ impl GuiApp {
                         if !self.show_start {
                             self.draw_tempo_control(ui);
                             self.draw_spectrogram_toggle(ui);
+                            self.draw_zoom_controls(ui);
                         }
 
                         #[cfg(not(target_arch = "wasm32"))]
@@ -239,6 +240,18 @@ impl GuiApp {
         if let Some(err) = &self.record_error {
             ui.colored_label(egui::Color32::LIGHT_RED, err);
         }
+    }
+
+    fn draw_zoom_controls(&mut self, ui: &mut egui::Ui) {
+        let (_, _, track_display_length) = self.timeline_lengths(self.score.tempo());
+        let dummy_rect = Rect::from_min_size(Pos2::ZERO, Vec2::splat(1.0));
+        if toolbar_icon_button(ui, "🔎➖", "Zoom out timeline").clicked() {
+            self.adjust_timeline_zoom(0.9, 0.5, track_display_length, dummy_rect);
+        }
+        if toolbar_icon_button(ui, "🔎➕", "Zoom in timeline").clicked() {
+            self.adjust_timeline_zoom(1.1, 0.5, track_display_length, dummy_rect);
+        }
+        ui.label(format!("{:.0}%", (self.timeline_zoom * 100.0).round()));
     }
 
     fn show_confirmation_dialogs(&mut self, ctx: &egui::Context, save: &mut bool, exit: &mut bool) {

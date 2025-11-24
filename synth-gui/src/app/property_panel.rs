@@ -8,12 +8,12 @@ mod sections;
 use super::colormap::color_from_value;
 use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
 use helpers::{ParameterBehavior, SliderParam};
+use preset_section::preset_section;
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
     accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, power,
     rhythm as rhythm_section, vibrato,
 };
-use preset_section::preset_section;
 
 use crate::{
     app::{
@@ -21,8 +21,8 @@ use crate::{
     },
     engine::score::{
         node_params::{
-            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, ParamResolution,
-            PowerParams, ResolvedTrackParams, RhythmParams, VibratoParams, WaveParams,
+            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, ParamResolution, PowerParams,
+            ResolvedTrackParams, RhythmParams, VibratoParams, WaveParams,
         },
         note::NoteVariant,
         sequence::Sequence,
@@ -124,11 +124,9 @@ fn promote_button<T: Clone>(
     if depth == 0 || binding.is_locked() || !binding.is_active_here() {
         return None;
     }
-    let response = ui
-        .small_button("Promote to parent override")
-        .on_hover_text(
-            "Copy this value to the parent override, clear it locally, and apply it to siblings.",
-        );
+    let response = ui.small_button("Promote to parent override").on_hover_text(
+        "Copy this value to the parent override, clear it locally, and apply it to siblings.",
+    );
     if response.clicked() {
         Some(binding.resolved().clone())
     } else {
@@ -335,6 +333,17 @@ impl GuiApp {
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut self.fixed_track_height, "Fixed track height");
+                        if self.fixed_track_height {
+                            ui.add(
+                                egui::Slider::new(&mut self.track_lane_height, 40.0..=240.0)
+                                    .text("Track px"),
+                            );
+                        }
+                    });
+                    ui.separator();
+
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
                     let mut promotion_request: Option<PromotionKind> = None;

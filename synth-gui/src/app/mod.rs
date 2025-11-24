@@ -23,7 +23,7 @@ use crate::{
     shortcuts::*,
     texts::README_MD,
     time_freq::{Tempo, Time},
-    Token, GROOVE_DEFAULTS,
+    Token, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
 };
 use arc_swap::ArcSwap;
 use cpal::Stream;
@@ -99,6 +99,10 @@ pub struct GuiApp {
     show_exit_confirm: bool,
     tempo_popup_open: bool,
     tempo_popup_pos: Option<egui::Pos2>,
+    timeline_zoom: f32,
+    timeline_view_start: Time,
+    fixed_track_height: bool,
+    track_lane_height: f32,
     #[cfg(not(target_arch = "wasm32"))]
     recorder: Arc<Recorder>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -226,6 +230,10 @@ impl GuiApp {
             show_exit_confirm: false,
             tempo_popup_open: false,
             tempo_popup_pos: None,
+            timeline_zoom: 1.0,
+            timeline_view_start: Time::new(0.0),
+            fixed_track_height: false,
+            track_lane_height: 120.0,
             score: Score::new(),
             #[cfg(not(target_arch = "wasm32"))]
             recorder: Arc::new(Recorder::new()),
@@ -285,8 +293,73 @@ impl GuiApp {
             });
         });
     }
-    fn t_to_x(rect: egui::Rect, t: Time, loop_len: Time) -> f32 {
-        rect.left() + t.as_secs() as f32 / loop_len.as_secs() as f32 * rect.width()
+    fn t_to_x(rect: egui::Rect, t: Time, view_start: Time, view_span: Time) -> f32 {
+        if view_span.as_secs() <= f64::EPSILON {
+            return rect.left();
+        }
+        let normalized =
+            ((t.as_secs() - view_start.as_secs()) / view_span.as_secs()).clamp(-10.0, 10.0);
+        rect.left() + normalized as f32 * rect.width()
+    }
+
+    fn timeline_lengths(&self, tempo: Tempo) -> (Time, Time, Time) {
+        let max_loop_len = self
+            .score
+            .track_root
+            .sequences()
+            .fold(Time(0.0), |acc, seq| {
+                acc.max(tempo.beats_to_time(seq.loop_len))
+            });
+        let padding = NOTE_LINGER_TIME.max(Time::new(1.0));
+        let track_display_length =
+            Time::new((max_loop_len.as_secs() + padding.as_secs() * 8.0).max(padding.as_secs()));
+        (max_loop_len, padding, track_display_length)
+    }
+
+    fn timeline_view_span(&self, total: Time) -> Time {
+        let zoom = self.timeline_zoom.max(0.01);
+        let span = total.as_secs() / zoom as f64;
+        Time::new(span.max(f64::MIN_POSITIVE))
+    }
+
+    fn clamp_timeline_view(&mut self, total: Time, span: Time) {
+        let max_start = (total.as_secs() - span.as_secs()).max(0.0);
+        self.timeline_view_start.0 = self.timeline_view_start.as_secs().clamp(0.0, max_start);
+    }
+
+    fn adjust_timeline_zoom(
+        &mut self,
+        multiplier: f32,
+        focus_ratio: f32,
+        total: Time,
+        rect: egui::Rect,
+    ) {
+        if !multiplier.is_finite() || multiplier <= 0.0 {
+            return;
+        }
+        let old_zoom = self.timeline_zoom;
+        let new_zoom = (old_zoom * multiplier).clamp(0.1, 16.0);
+        if (new_zoom - old_zoom).abs() <= f32::EPSILON {
+            return;
+        }
+
+        let old_span = self.timeline_view_span(total);
+        self.timeline_zoom = new_zoom;
+        let new_span = self.timeline_view_span(total);
+
+        let focus_ratio = focus_ratio.clamp(0.0, 1.0) as f64;
+        let focus_time =
+            Time::new(self.timeline_view_start.as_secs() + old_span.as_secs() * focus_ratio);
+        let desired_start =
+            focus_time.as_secs() - new_span.as_secs() * focus_ratio.clamp(0.0, 1.0) as f64;
+        self.timeline_view_start = Time::new(desired_start);
+        self.clamp_timeline_view(total, new_span);
+
+        // Prevent invisible zoom when rect is tiny
+        if rect.width() <= f32::EPSILON {
+            self.timeline_zoom = old_zoom;
+            self.timeline_view_start = Time::new(0.0);
+        }
     }
 
     /// Get color for a sequence, combining wave type and custom hue
@@ -400,6 +473,8 @@ impl GuiApp {
         self.score.notes.clear();
         self.clock.store(0, std::sync::atomic::Ordering::Relaxed);
         self.spectrogram_previews.clear();
+        self.timeline_zoom = 1.0;
+        self.timeline_view_start = Time::new(0.0);
     }
 
     fn visit_sequences<F>(node: &TrackNode, f: &mut F)
