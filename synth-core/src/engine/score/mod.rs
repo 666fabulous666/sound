@@ -246,6 +246,7 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
+            track_node::MixContext::default(),
             node_params::ResolvedTrackParams::default(),
             0,
         );
@@ -264,6 +265,12 @@ impl Score {
             self.track_root
                 .resolved_params_for_path(&path[..path.len() - 1])
         };
+        let mix = if path.is_empty() {
+            track_node::MixContext::default()
+        } else {
+            self.track_root
+                .mix_context_for_path(&path[..path.len() - 1])
+        };
         if let Some(node) = self.track_root.get_mut(path) {
             node.draw_node(
                 &mut self.notes,
@@ -272,6 +279,7 @@ impl Score {
                 now,
                 self.tempo,
                 &mut self.note_id_gen,
+                mix,
                 inherited,
                 path.len(),
             );
@@ -754,6 +762,7 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
+            track_node::MixContext::default(),
             node_params::ResolvedTrackParams::default(),
             0,
         );

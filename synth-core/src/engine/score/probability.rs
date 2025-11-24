@@ -24,6 +24,10 @@ impl Probability {
     pub fn set(&mut self, value: f64) {
         self.0 = value.clamp(0.0, 1.0);
     }
+
+    pub fn mul(self, other: Probability) -> Probability {
+        Probability::new(self.0 * other.0)
+    }
 }
 
 impl Default for Probability {

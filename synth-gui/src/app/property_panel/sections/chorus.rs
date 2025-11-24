@@ -18,7 +18,9 @@ pub fn show_chorus_section(
     let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            draw_chorus_controls(ui, &mut preview, impact, &defaults, false);
+            ui.add_enabled_ui(false, |ui| {
+                draw_chorus_controls(ui, &mut preview, impact, &defaults, false);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_chorus_controls(ui, value, impact, &defaults, true);
         }

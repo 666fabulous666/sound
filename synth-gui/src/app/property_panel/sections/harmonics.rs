@@ -18,7 +18,9 @@ pub fn show_harmonics_section(
     ui.collapsing("Harmonics", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            draw_harmonics_controls(ui, &mut preview, impact, false);
+            ui.add_enabled_ui(false, |ui| {
+                draw_harmonics_controls(ui, &mut preview, impact, false);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_harmonics_controls(ui, value, impact, true);
         }

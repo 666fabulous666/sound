@@ -54,6 +54,56 @@ pub struct AestheticLocks {
     pub lock_hue: bool,
 }
 
+#[derive(Clone, Copy)]
+pub struct MixContext {
+    pub volume: f64,
+    pub pan: Option<f64>,
+    pub proba: Probability,
+}
+
+impl Default for MixContext {
+    fn default() -> Self {
+        Self {
+            volume: 1.0,
+            pan: None,
+            proba: Probability::certainty(),
+        }
+    }
+}
+
+impl MixContext {
+    pub fn propagate(&self, node: &TrackNode) -> (MixContext, f64) {
+        let volume = sanitize_volume(self.volume * node.volume());
+        let proba = self.proba.mul(node.proba);
+        let pan_lock_here = matches!(node.kind, NodeKind::Group { ref aesthetic, .. } if aesthetic.lock_pan);
+        let effective_pan = self.pan.unwrap_or(node.pan);
+        let next_pan = if let Some(pan) = self.pan {
+            Some(pan)
+        } else if pan_lock_here {
+            Some(node.pan)
+        } else {
+            None
+        };
+
+        (
+            MixContext {
+                volume,
+                pan: next_pan,
+                proba,
+            },
+            effective_pan,
+        )
+    }
+}
+
+fn sanitize_volume(value: f64) -> f64 {
+    if value.is_finite() && value >= 0.0 {
+        value
+    } else {
+        0.0
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum NodeKind {
     Group {
@@ -306,6 +356,28 @@ impl TrackNode {
         *pan = pan.clamp(0.0, 1.0);
     }
 
+    /// Compute the mix context contributed by all ancestors of `path`.
+    /// The node at `path` itself is not applied; the returned context should be
+    /// passed when drawing that node so it can apply its own mix.
+    pub fn mix_context_for_path(&self, path: &[usize]) -> MixContext {
+        let mut mix = MixContext::default();
+        let mut node = self;
+        for &idx in path {
+            let (next_mix, _) = mix.propagate(node);
+            match &node.kind {
+                NodeKind::Group { children, .. } => {
+                    node = match children.get(idx) {
+                        Some(ch) => ch,
+                        None => break,
+                    };
+                    mix = next_mix;
+                }
+                NodeKind::Seq(_) => break,
+            }
+        }
+        mix
+    }
+
     // ---------- Path-based navigation & edits ----------
     pub fn get<'a>(&'a self, path: &[usize]) -> Option<&'a TrackNode> {
         let mut cur = self;
@@ -392,9 +464,11 @@ impl TrackNode {
         now: Time,
         tempo: Tempo,
         note_id_gen: &mut NoteIdGen,
+        mix: MixContext,
         inherited_params: ResolvedTrackParams,
         depth: usize,
     ) {
+        let (current_mix, effective_pan) = mix.propagate(self);
         let current_params = inherited_params.with_overrides(&self.overrides, depth);
         match &mut self.kind {
             NodeKind::Seq(seq) => {
@@ -420,8 +494,8 @@ impl TrackNode {
                     notes,
                     rng,
                     now,
-                    self.pan,
-                    self.proba,
+                    effective_pan,
+                    current_mix.proba,
                     tempo,
                     note_id_gen,
                     &current_params,
@@ -435,18 +509,18 @@ impl TrackNode {
                     scheduler.sequence_state_mut(seq.token).busy_until = release;
                 }
             }
-            NodeKind::Group {
-                children,
-                muted,
-                not_generate_until,
-                mode,
-                ..
-            } => {
+                NodeKind::Group {
+                    children,
+                    muted,
+                    not_generate_until,
+                    mode,
+                    ..
+                } => {
                 if *muted {
                     return; // Don't generate anything if muted
                 }
                 if not_generate_until.map_or(true, |until| now >= until) {
-                    if rng.gen_bool(self.proba.as_f64()) {
+                    if rng.gen_bool(current_mix.proba.as_f64()) {
                         match mode {
                             GroupMode::And => {
                                 for ch in children {
@@ -457,6 +531,7 @@ impl TrackNode {
                                         now,
                                         tempo,
                                         note_id_gen,
+                                        current_mix,
                                         current_params.clone(),
                                         depth + 1,
                                     );
@@ -482,13 +557,14 @@ impl TrackNode {
                                         child.draw_node(
                                             notes,
                                             scheduler,
-                                            rng,
-                                            now,
-                                            tempo,
-                                            note_id_gen,
-                                            current_params.clone(),
-                                            depth + 1,
-                                        );
+                                        rng,
+                                        now,
+                                        tempo,
+                                        note_id_gen,
+                                        current_mix,
+                                        current_params.clone(),
+                                        depth + 1,
+                                    );
                                         let busy_until = child_busy_until(child, scheduler);
                                         for (child_idx, sibling) in children.iter_mut().enumerate()
                                         {

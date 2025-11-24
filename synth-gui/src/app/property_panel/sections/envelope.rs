@@ -13,7 +13,9 @@ pub fn show_envelope_section(
     ui.collapsing("Envelope", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            draw_envelope_controls(ui, &mut preview, impact, is_drum, false);
+            ui.add_enabled_ui(false, |ui| {
+                draw_envelope_controls(ui, &mut preview, impact, is_drum, false);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_envelope_controls(ui, value, impact, is_drum, true);
         }

@@ -12,7 +12,9 @@ pub fn show_bend_section(
     ui.collapsing("Bend", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            draw_bend_controls(ui, &mut preview, impact);
+            ui.add_enabled_ui(false, |ui| {
+                draw_bend_controls(ui, &mut preview, impact);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_bend_controls(ui, value, impact);
         }

@@ -13,7 +13,9 @@ pub fn show_vibrato_section(
     ui.collapsing("Vibrato", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            changed |= draw_vibrato_controls(ui, &mut preview, impact, false);
+            ui.add_enabled_ui(false, |ui| {
+                draw_vibrato_controls(ui, &mut preview, impact, false);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_vibrato_controls(ui, value, impact, true);
         }

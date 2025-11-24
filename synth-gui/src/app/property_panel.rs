@@ -107,19 +107,31 @@ fn group_override_section<T: Clone>(
     binding: &mut OverrideBinding<T>,
     impact: &mut ParameterImpact,
     render_controls: impl Fn(&mut egui::Ui, &mut T, &mut ParameterImpact, bool) -> bool,
-) -> bool {
+) -> (bool, Option<T>) {
     let mut changed = false;
+    let mut distribute_value = None;
     ui.collapsing(title, |ui| {
         let mut active = binding.is_active_here();
-        let response = ui
-            .add_enabled_ui(!binding.is_locked(), |ui| {
-                ui.checkbox(&mut active, "Override for children")
-            })
-            .inner;
-        let response = response.on_hover_text(tooltip);
-        if response.changed() {
-            changed |= binding.set_override(active);
-        }
+        ui.vertical(|ui| {
+            let response = ui
+                .add_enabled_ui(!binding.is_locked(), |ui| {
+                    ui.checkbox(&mut active, "Override for children")
+                })
+                .inner;
+            let response = response.on_hover_text(tooltip);
+            if response.changed() {
+                changed |= binding.set_override(active);
+            }
+            if binding.is_active_here() && !binding.is_locked() {
+                if ui
+                    .small_button("Distribute to children")
+                    .on_hover_text("Copy this override value into every child, enable the override on those children, and remove it here.")
+                    .clicked()
+                {
+                    distribute_value = Some(binding.resolved().clone());
+                }
+            }
+        });
 
         if binding.is_locked() || !binding.is_active_here() {
             let mut preview = binding.resolved().clone();
@@ -130,7 +142,7 @@ fn group_override_section<T: Clone>(
             changed |= render_controls(ui, value, impact, true);
         }
     });
-    changed
+    (changed, distribute_value)
 }
 
 fn draw_rhythm_override_controls(
@@ -306,6 +318,7 @@ impl GuiApp {
                         let wave_resolution = self.score.track_root.resolve_wave(&sel);
                         let harmony_resolution = self.score.track_root.resolve_harmony(&sel);
                         let rhythm_resolution = self.score.track_root.resolve_rhythm(&sel);
+                        let pan_resolution = self.score.track_root.resolve_pan(&sel);
                         let mut needs_override_refresh = false;
 
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
@@ -367,7 +380,15 @@ impl GuiApp {
                                     },
                                 );
                             });
-                            mix::show_mix_section(ui, track_node_mut, &mut impact);
+                            let pan_locked_by_parent = pan_resolution.locked_for_depth(depth);
+                            let resolved_pan = pan_resolution.value;
+                            mix::show_mix_section(
+                                ui,
+                                track_node_mut,
+                                &mut impact,
+                                pan_locked_by_parent,
+                                resolved_pan,
+                            );
                             let weight_param = SliderParam::new("Selection weight", 0.0..=32.0)
                                 .default(1.0)
                                 .behavior(ParameterBehavior::StructuralImmediate)
@@ -671,161 +692,257 @@ impl GuiApp {
                                 ui.heading("Child overrides");
                                 let mut group_overrides_dirty = false;
 
-                                let mut envelope_binding = OverrideBinding::new(
-                                    envelope_resolution.clone(),
-                                    &mut overrides.envelope,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Envelope",
-                                    "Force envelope parameters on descendants",
-                                    &mut envelope_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        envelope::draw_envelope_controls(
-                                            ui, value, impact, false, editable,
-                                        )
-                                    },
-                                );
+                                let (envelope_dirty, distribute_envelope) = {
+                                    let mut envelope_binding = OverrideBinding::new(
+                                        envelope_resolution.clone(),
+                                        &mut overrides.envelope,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Envelope",
+                                        "Force envelope parameters on descendants",
+                                        &mut envelope_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            envelope::draw_envelope_controls(
+                                                ui, value, impact, false, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let envelope_distributed = distribute_envelope.is_some();
+                                if let Some(value) = distribute_envelope {
+                                    for child in children.iter_mut() {
+                                        child.overrides.envelope = Some(value.clone());
+                                    }
+                                    overrides.envelope = None;
+                                }
+                                group_overrides_dirty |= envelope_dirty || envelope_distributed;
 
-                                let mut lowpass_binding = OverrideBinding::new(
-                                    lowpass_resolution.clone(),
-                                    &mut overrides.lowpass,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Lowpass",
-                                    "Apply lowpass filter settings to all children",
-                                    &mut lowpass_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        lowpass::draw_lowpass_controls(ui, value, impact, editable)
-                                    },
-                                );
+                                let (lowpass_dirty, distribute_lowpass) = {
+                                    let mut lowpass_binding = OverrideBinding::new(
+                                        lowpass_resolution.clone(),
+                                        &mut overrides.lowpass,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Lowpass",
+                                        "Apply lowpass filter settings to all children",
+                                        &mut lowpass_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            lowpass::draw_lowpass_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let lowpass_distributed = distribute_lowpass.is_some();
+                                if let Some(value) = distribute_lowpass {
+                                    for child in children.iter_mut() {
+                                        child.overrides.lowpass = Some(value.clone());
+                                    }
+                                    overrides.lowpass = None;
+                                }
+                                group_overrides_dirty |=
+                                    lowpass_dirty || lowpass_distributed;
 
-                                let mut bend_binding = OverrideBinding::new(
-                                    bend_resolution.clone(),
-                                    &mut overrides.bend,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Bend",
-                                    "Override pitch bend for descendants",
-                                    &mut bend_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        let changed = bend::draw_bend_controls(ui, value, impact);
-                                        editable && changed
-                                    },
-                                );
+                                let (bend_dirty, distribute_bend) = {
+                                    let mut bend_binding = OverrideBinding::new(
+                                        bend_resolution.clone(),
+                                        &mut overrides.bend,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Bend",
+                                        "Override pitch bend for descendants",
+                                        &mut bend_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            let changed =
+                                                bend::draw_bend_controls(ui, value, impact);
+                                            editable && changed
+                                        },
+                                    )
+                                };
+                                let bend_distributed = distribute_bend.is_some();
+                                if let Some(value) = distribute_bend {
+                                    for child in children.iter_mut() {
+                                        child.overrides.bend = Some(value.clone());
+                                    }
+                                    overrides.bend = None;
+                                }
+                                group_overrides_dirty |= bend_dirty || bend_distributed;
 
-                                let mut vibrato_binding = OverrideBinding::new(
-                                    vibrato_resolution.clone(),
-                                    &mut overrides.vibrato,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Vibrato",
-                                    "Share vibrato settings with children",
-                                    &mut vibrato_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        vibrato::draw_vibrato_controls(ui, value, impact, editable)
-                                    },
-                                );
+                                let (vibrato_dirty, distribute_vibrato) = {
+                                    let mut vibrato_binding = OverrideBinding::new(
+                                        vibrato_resolution.clone(),
+                                        &mut overrides.vibrato,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Vibrato",
+                                        "Share vibrato settings with children",
+                                        &mut vibrato_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            vibrato::draw_vibrato_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let vibrato_distributed = distribute_vibrato.is_some();
+                                if let Some(value) = distribute_vibrato {
+                                    for child in children.iter_mut() {
+                                        child.overrides.vibrato = Some(value.clone());
+                                    }
+                                    overrides.vibrato = None;
+                                }
+                                group_overrides_dirty |=
+                                    vibrato_dirty || vibrato_distributed;
 
-                                let mut chorus_binding = OverrideBinding::new(
-                                    chorus_resolution.clone(),
-                                    &mut overrides.chorus,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Chorus",
-                                    "Override chorus detune for children",
-                                    &mut chorus_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        chorus::draw_chorus_controls(
-                                            ui,
-                                            value,
-                                            impact,
-                                            &ChorusParams::default(),
-                                            editable,
-                                        )
-                                    },
-                                );
+                                let (chorus_dirty, distribute_chorus) = {
+                                    let mut chorus_binding = OverrideBinding::new(
+                                        chorus_resolution.clone(),
+                                        &mut overrides.chorus,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Chorus",
+                                        "Override chorus detune for children",
+                                        &mut chorus_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            chorus::draw_chorus_controls(
+                                                ui,
+                                                value,
+                                                impact,
+                                                &ChorusParams::default(),
+                                                editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let chorus_distributed = distribute_chorus.is_some();
+                                if let Some(value) = distribute_chorus {
+                                    for child in children.iter_mut() {
+                                        child.overrides.chorus = Some(value.clone());
+                                    }
+                                    overrides.chorus = None;
+                                }
+                                group_overrides_dirty |=
+                                    chorus_dirty || chorus_distributed;
 
-                                let mut power_binding = OverrideBinding::new(
-                                    power_resolution.clone(),
-                                    &mut overrides.power,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Power factor",
-                                    "Drive power-factor distortion for child sequences",
-                                    &mut power_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        power::draw_power_controls(ui, value, impact, editable)
-                                    },
-                                );
+                                let (power_dirty, distribute_power) = {
+                                    let mut power_binding = OverrideBinding::new(
+                                        power_resolution.clone(),
+                                        &mut overrides.power,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Power factor",
+                                        "Drive power-factor distortion for child sequences",
+                                        &mut power_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            power::draw_power_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let power_distributed = distribute_power.is_some();
+                                if let Some(value) = distribute_power {
+                                    for child in children.iter_mut() {
+                                        child.overrides.power = Some(value.clone());
+                                    }
+                                    overrides.power = None;
+                                }
+                                group_overrides_dirty |= power_dirty || power_distributed;
 
-                                let mut noise_binding = OverrideBinding::new(
-                                    noise_resolution.clone(),
-                                    &mut overrides.noise,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Noise",
-                                    "Apply noise (random signal attenuation) to child sequences",
-                                    &mut noise_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        noise::draw_noise_controls(ui, value, impact, editable)
-                                    },
-                                );
+                                let (noise_dirty, distribute_noise) = {
+                                    let mut noise_binding = OverrideBinding::new(
+                                        noise_resolution.clone(),
+                                        &mut overrides.noise,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Noise",
+                                        "Apply noise (random signal attenuation) to child sequences",
+                                        &mut noise_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            noise::draw_noise_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let noise_distributed = distribute_noise.is_some();
+                                if let Some(value) = distribute_noise {
+                                    for child in children.iter_mut() {
+                                        child.overrides.noise = Some(value.clone());
+                                    }
+                                    overrides.noise = None;
+                                }
+                                group_overrides_dirty |= noise_dirty || noise_distributed;
 
-                                let mut harmonics_binding = OverrideBinding::new(
-                                    harmonics_resolution.clone(),
-                                    &mut overrides.harmonics,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Harmonics",
-                                    "Add harmonics/subharmonics for children",
-                                    &mut harmonics_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        harmonics::draw_harmonics_controls(
-                                            ui, value, impact, editable,
-                                        )
-                                    },
-                                );
+                                let (harmonics_dirty, distribute_harmonics) = {
+                                    let mut harmonics_binding = OverrideBinding::new(
+                                        harmonics_resolution.clone(),
+                                        &mut overrides.harmonics,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Harmonics",
+                                        "Add harmonics/subharmonics for children",
+                                        &mut harmonics_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            harmonics::draw_harmonics_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let harmonics_distributed = distribute_harmonics.is_some();
+                                if let Some(value) = distribute_harmonics {
+                                    for child in children.iter_mut() {
+                                        child.overrides.harmonics = Some(value.clone());
+                                    }
+                                    overrides.harmonics = None;
+                                }
+                                group_overrides_dirty |=
+                                    harmonics_dirty || harmonics_distributed;
 
-                                let mut wave_binding = OverrideBinding::new(
-                                    wave_resolution.clone(),
-                                    &mut overrides.wave,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Wave type",
-                                    "Force all descendants to use this oscillator",
-                                    &mut wave_binding,
-                                    &mut impact,
-                                    |ui, value, _impact, editable| {
-                                        let mut changed = false;
-                                        ui.add_enabled_ui(editable, |ui| {
-                                            let mut choice = value.wave;
-                                            egui::ComboBox::from_id_salt("group_wave_type_combo")
+                                let (wave_dirty, distribute_wave) = {
+                                    let mut wave_binding = OverrideBinding::new(
+                                        wave_resolution.clone(),
+                                        &mut overrides.wave,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Wave type",
+                                        "Force all descendants to use this oscillator",
+                                        &mut wave_binding,
+                                        &mut impact,
+                                        |ui, value, _impact, editable| {
+                                            let mut changed = false;
+                                            ui.add_enabled_ui(editable, |ui| {
+                                                let mut choice = value.wave;
+                                                egui::ComboBox::from_id_salt(
+                                                    "group_wave_type_combo",
+                                                )
                                                 .selected_text((&choice).to_string())
                                                 .show_ui(ui, |ui| {
                                                     for var in ALL_WAVES.iter() {
@@ -836,57 +953,97 @@ impl GuiApp {
                                                         );
                                                     }
                                                 });
-                                            if choice != value.wave {
-                                                value.wave = choice;
-                                                changed = true;
+                                                if choice != value.wave {
+                                                    value.wave = choice;
+                                                    changed = true;
+                                                }
+                                            });
+                                            changed
+                                        },
+                                    )
+                                };
+                                let wave_distributed = distribute_wave.is_some();
+                                if let Some(value) = distribute_wave {
+                                    for child in children.iter_mut() {
+                                        match &mut child.kind {
+                                            NodeKind::Seq(seq) => {
+                                                seq.wave_type = value.wave;
                                             }
-                                        });
-                                        changed
-                                    },
-                                );
+                                            NodeKind::Group { .. } => {
+                                                child.overrides.wave = Some(value.clone());
+                                            }
+                                        }
+                                    }
+                                    overrides.wave = None;
+                                }
+                                group_overrides_dirty |= wave_dirty || wave_distributed;
 
                                 let edit_vec_generators =
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
                                         GuiApp::edit_vec(ui, gens, default_val, layout_left());
                                     };
 
-                                let mut rhythm_binding = OverrideBinding::new(
-                                    rhythm_resolution.clone(),
-                                    &mut overrides.rhythm,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Rhythm",
-                                    "Override timing (windows, repeats, offsets) for descendants",
-                                    &mut rhythm_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        draw_rhythm_override_controls(
-                                            ui,
-                                            value,
-                                            impact,
-                                            editable,
-                                            &edit_vec_generators,
-                                        )
-                                    },
-                                );
+                                let (rhythm_dirty, distribute_rhythm) = {
+                                    let mut rhythm_binding = OverrideBinding::new(
+                                        rhythm_resolution.clone(),
+                                        &mut overrides.rhythm,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Rhythm",
+                                        "Override timing (windows, repeats, offsets) for descendants",
+                                        &mut rhythm_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            draw_rhythm_override_controls(
+                                                ui,
+                                                value,
+                                                impact,
+                                                editable,
+                                                &edit_vec_generators,
+                                            )
+                                        },
+                                    )
+                                };
+                                let rhythm_distributed = distribute_rhythm.is_some();
+                                if let Some(value) = distribute_rhythm {
+                                    for child in children.iter_mut() {
+                                        child.overrides.rhythm = Some(value.clone());
+                                    }
+                                    overrides.rhythm = None;
+                                }
+                                group_overrides_dirty |=
+                                    rhythm_dirty || rhythm_distributed;
 
-                                let mut harmony_binding = OverrideBinding::new(
-                                    harmony_resolution.clone(),
-                                    &mut overrides.harmony,
-                                    depth,
-                                );
-                                group_overrides_dirty |= group_override_section(
-                                    ui,
-                                    "Harmony",
-                                    "Share harmony/shuffle settings with children",
-                                    &mut harmony_binding,
-                                    &mut impact,
-                                    |ui, value, impact, editable| {
-                                        draw_harmony_override_controls(ui, value, impact, editable)
-                                    },
-                                );
+                                let (harmony_dirty, distribute_harmony) = {
+                                    let mut harmony_binding = OverrideBinding::new(
+                                        harmony_resolution.clone(),
+                                        &mut overrides.harmony,
+                                        depth,
+                                    );
+                                    group_override_section(
+                                        ui,
+                                        "Harmony",
+                                        "Share harmony/shuffle settings with children",
+                                        &mut harmony_binding,
+                                        &mut impact,
+                                        |ui, value, impact, editable| {
+                                            draw_harmony_override_controls(
+                                                ui, value, impact, editable,
+                                            )
+                                        },
+                                    )
+                                };
+                                let harmony_distributed = distribute_harmony.is_some();
+                                if let Some(value) = distribute_harmony {
+                                    for child in children.iter_mut() {
+                                        child.overrides.harmony = Some(value.clone());
+                                    }
+                                    overrides.harmony = None;
+                                }
+                                group_overrides_dirty |=
+                                    harmony_dirty || harmony_distributed;
 
                                 if group_overrides_dirty {
                                     needs_override_refresh = true;
@@ -1029,9 +1186,9 @@ impl GuiApp {
                         }
                     }
                     // Apply deferred volume change (after mutable borrow is dropped)
-                    // This updates NotesGroup volumes for ALL sequences using chain products from root
+                    // This updates NotesGroup mix for ALL sequences using chain products from root
                     if impact.needs_mix_update() {
-                        self.update_all_volumes_from_tree();
+                        self.update_all_mix_from_tree();
                     }
 
                     if impact.needs_regeneration() {

@@ -15,7 +15,7 @@ use crate::{
             node_params::{self, ResolvedTrackParams},
             probability::Probability,
             sequence::Sequence,
-            track_node::{AestheticLocks, GroupMode, NodeKind, TrackNode},
+            track_node::{AestheticLocks, GroupMode, MixContext, NodeKind, TrackNode},
             NotesGroup, Score,
         },
         waves::WaveType,
@@ -609,41 +609,36 @@ impl GuiApp {
         self.score.notes.remove(&tk);
     }
 
-    /// Update volumes for ALL NotesGroup entries based on the tree structure.
-    /// This is the ONLY way volumes are set in NotesGroup - always as the product of all ancestors.
-    /// Called after any volume change and after note generation.
-    fn update_all_volumes_from_tree(&mut self) {
-        fn sanitize(volume: f64) -> f64 {
-            if volume.is_finite() && volume >= 0.0 {
-                volume
-            } else {
-                0.0
-            }
-        }
-
+    /// Update mix information (volume and pan) for all `NotesGroup` entries based on the tree.
+    /// Volume remains multiplicative down the tree; pan follows the first ancestor that overrides.
+    fn update_all_mix_from_tree(&mut self) {
         fn dfs(
             node: &TrackNode,
             notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
-            parent_volume: f64,
+            mix: MixContext,
         ) {
-            let node_volume = sanitize(node.volume());
-            let cumulative = sanitize(parent_volume * node_volume);
+            let (next_mix, effective_pan) = mix.propagate(node);
 
             match &node.kind {
                 NodeKind::Seq(seq) => {
                     if let Some(ng) = notes.get_mut(&seq.token) {
-                        ng.volume = cumulative;
+                        ng.volume = next_mix.volume;
+                        ng.pan = effective_pan;
                     }
                 }
                 NodeKind::Group { children, .. } => {
                     for child in children {
-                        dfs(child, notes, cumulative);
+                        dfs(child, notes, next_mix);
                     }
                 }
             }
         }
 
-        dfs(&self.score.track_root, &mut self.score.notes, 1.0);
+        dfs(
+            &self.score.track_root,
+            &mut self.score.notes,
+            MixContext::default(),
+        );
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -746,7 +741,7 @@ impl App for GuiApp {
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.score.generate_notes(self.now(), &mut self.rng);
-        self.update_all_volumes_from_tree(); // Apply volumes based on tree structure
+        self.update_all_mix_from_tree(); // Apply mix based on tree structure
         self.score.retain_notes(self.now());
         self.score
             .shared_notes

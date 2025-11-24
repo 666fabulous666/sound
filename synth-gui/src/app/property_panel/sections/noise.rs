@@ -13,7 +13,9 @@ pub fn show_noise_section(
     let header = ui.collapsing("Noise", |ui| {
         if binding.is_locked() {
             let mut preview = binding.resolved().clone();
-            draw_noise_controls(ui, &mut preview, impact, false);
+            ui.add_enabled_ui(false, |ui| {
+                draw_noise_controls(ui, &mut preview, impact, false);
+            });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_noise_controls(ui, value, impact, true);
         }

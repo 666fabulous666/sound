@@ -625,6 +625,46 @@ impl TrackNode {
         resolve_param(self, path, |o| o.rhythm.as_ref())
     }
 
+    pub fn resolve_pan(&self, path: &[usize]) -> ParamResolution<f64> {
+        let mut node = self;
+        let mut depth = 0usize;
+        let mut locked_source = None;
+        let mut value = node.pan;
+
+        if let NodeKind::Group { aesthetic, .. } = &node.kind {
+            if aesthetic.lock_pan {
+                locked_source = Some(depth);
+            }
+        }
+
+        for &idx in path {
+            match &node.kind {
+                NodeKind::Group { children, .. } => {
+                    if let Some(child) = children.get(idx) {
+                        depth += 1;
+                        if locked_source.is_none() {
+                            value = child.pan;
+                            if let NodeKind::Group { aesthetic, .. } = &child.kind {
+                                if aesthetic.lock_pan {
+                                    locked_source = Some(depth);
+                                }
+                            }
+                        }
+                        node = child;
+                    } else {
+                        break;
+                    }
+                }
+                NodeKind::Seq(_) => break,
+            }
+        }
+
+        ParamResolution {
+            value,
+            source_depth: locked_source,
+        }
+    }
+
     pub fn resolved_params_for_path(&self, path: &[usize]) -> ResolvedTrackParams {
         let mut params = ResolvedTrackParams::default().with_overrides(&self.overrides, 0);
         let mut node = self;

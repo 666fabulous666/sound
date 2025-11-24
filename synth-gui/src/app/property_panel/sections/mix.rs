@@ -1,9 +1,17 @@
 use super::super::ParameterImpact;
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam, ValueTransform};
-use crate::engine::score::{default_params::*, probability::Probability, track_node::TrackNode};
+use crate::engine::score::{
+    default_params::*, probability::Probability, track_node::{NodeKind, TrackNode},
+};
 use egui::{Key, Ui};
 
-pub fn show_mix_section(ui: &mut Ui, track_node: &mut TrackNode, impact: &mut ParameterImpact) {
+pub fn show_mix_section(
+    ui: &mut Ui,
+    track_node: &mut TrackNode,
+    impact: &mut ParameterImpact,
+    pan_locked_by_parent: bool,
+    resolved_pan: f64,
+) {
     ui.collapsing("Mix", |ui| {
         let kb_changed = ui.ctx().input(|i| {
             let step = if i.modifiers.shift { 0.5 } else { 0.05 };
@@ -35,7 +43,29 @@ pub fn show_mix_section(ui: &mut Ui, track_node: &mut TrackNode, impact: &mut Pa
             .default(default_pan())
             .behavior(ParameterBehavior::Mix)
             .tooltip("0.5 is centered, 0.0 is left, 1.0 is right");
-        pan_param.draw(ui, track_node.pan_mut(), impact);
+        if pan_locked_by_parent {
+            let mut preview = resolved_pan;
+            ui.add_enabled_ui(false, |ui| {
+                pan_param.draw(ui, &mut preview, impact);
+            });
+            ui.label("Pan locked by ancestor override");
+        } else {
+            pan_param.draw(ui, track_node.pan_mut(), impact);
+        }
+
+        if let NodeKind::Group { aesthetic, .. } = &mut track_node.kind {
+            let mut lock_pan = aesthetic.lock_pan;
+            let response = ui
+                .add_enabled_ui(!pan_locked_by_parent, |ui| {
+                    ui.checkbox(&mut lock_pan, "Override pan for children")
+                })
+                .inner
+                .on_hover_text("Use this pan for all descendants unless another ancestor overrides it");
+            if response.changed() {
+                aesthetic.lock_pan = lock_pan;
+                impact.register_behavior(ParameterBehavior::Mix);
+            }
+        }
 
         let proba_transform = ValueTransform {
             to_exposed: |p: &Probability| p.as_f64(),
