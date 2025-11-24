@@ -1,4 +1,5 @@
 use crate::app::GuiApp;
+use std::sync::Arc;
 use synth_core::engine::score::preset::InstrumentPreset;
 
 impl GuiApp {
@@ -171,5 +172,8 @@ impl GuiApp {
 
         // Regenerate notes for the affected node and following sequences
         self.score.refresh_notes_for_path(path);
+        self.score
+            .shared_notes
+            .store(Arc::new(self.score.notes.clone()));
     }
 }

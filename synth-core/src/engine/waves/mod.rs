@@ -149,6 +149,7 @@ pub fn generate_wave(
     chorus: &ChorusParams,
     harmonics: &HarmonicsParams,
     power: &TimeVarying,
+    noise: &TimeVarying,
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
@@ -164,11 +165,14 @@ pub fn generate_wave(
     let bend_vib_time = time_bend_vibrato(glided_time, bend.0, bend.1, vibrato.0, vibrato.1);
     let p = power.evaluate(glided_time, global_time, duration);
     let disto = |x: f64| x.powf(p);
+    let noise_alpha = noise.evaluate(glided_time, global_time, duration);
+    let noise_multiplier = 1.0 - noise_alpha * rand::random::<f64>();
     let dynamic_multiplier = cutoff.evaluate(glided_time, global_time, duration);
     let cutoff_freq = freq * dynamic_multiplier;
     match wave_type {
         WaveType::HiHat => {
-            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -179,7 +183,8 @@ pub fn generate_wave(
             );
         }
         WaveType::Kick => {
-            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::kick(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -190,7 +195,8 @@ pub fn generate_wave(
             );
         }
         WaveType::Snare => {
-            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::snare(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -201,7 +207,8 @@ pub fn generate_wave(
             );
         }
         WaveType::Ride => {
-            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::ride(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -212,7 +219,9 @@ pub fn generate_wave(
             );
         }
         WaveType::Darbuka => {
-            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            let signal = vol_envelope
+                * sign_f(drums::darbuka(freq, bend_vib_time), disto)
+                * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -235,7 +244,7 @@ pub fn generate_wave(
         freq,
     );
     apply_lowpass(
-        vol_envelope * sum_of_waves,
+        vol_envelope * sum_of_waves * noise_multiplier,
         lowpass_enabled,
         lp_order,
         memory,
@@ -257,6 +266,7 @@ pub fn generate_wave_with_phase(
     chorus: &ChorusParams,
     harmonics: &HarmonicsParams,
     power: &TimeVarying,
+    noise: &TimeVarying,
     lowpass_enabled: bool,
     lp_order: u32,
     memory: &mut [f64; 5],
@@ -281,12 +291,15 @@ pub fn generate_wave_with_phase(
         time_bend_vibrato(next_glided_time, bend.0, bend.1, vibrato.0, vibrato.1);
     let p = power.evaluate(glided_time, global_time, duration);
     let disto = |x: f64| x.powf(p);
+    let noise_alpha = noise.evaluate(glided_time, global_time, duration);
+    let noise_multiplier = 1.0 - noise_alpha * rand::random::<f64>();
     let dynamic_multiplier = cutoff.evaluate(glided_time, global_time, duration);
     let cutoff_freq = freq * dynamic_multiplier;
 
     match wave_type {
         WaveType::HiHat => {
-            let signal = vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::hi_hat(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -297,7 +310,8 @@ pub fn generate_wave_with_phase(
             );
         }
         WaveType::Kick => {
-            let signal = vol_envelope * sign_f(drums::kick(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::kick(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -308,7 +322,8 @@ pub fn generate_wave_with_phase(
             );
         }
         WaveType::Snare => {
-            let signal = vol_envelope * sign_f(drums::snare(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::snare(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -319,7 +334,8 @@ pub fn generate_wave_with_phase(
             );
         }
         WaveType::Ride => {
-            let signal = vol_envelope * sign_f(drums::ride(bend_vib_time), disto);
+            let signal =
+                vol_envelope * sign_f(drums::ride(bend_vib_time), disto) * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -330,7 +346,9 @@ pub fn generate_wave_with_phase(
             );
         }
         WaveType::Darbuka => {
-            let signal = vol_envelope * sign_f(drums::darbuka(freq, bend_vib_time), disto);
+            let signal = vol_envelope
+                * sign_f(drums::darbuka(freq, bend_vib_time), disto)
+                * noise_multiplier;
             return apply_lowpass(
                 signal,
                 lowpass_enabled,
@@ -377,7 +395,8 @@ pub fn generate_wave_with_phase(
         norm = 1.0;
     }
 
-    let signal = vol_envelope * (sum / norm.sqrt()) / (freq / Freq(440.0)).sqrt();
+    let signal =
+        vol_envelope * (sum / norm.sqrt()) / (freq / Freq(440.0)).sqrt() * noise_multiplier;
     apply_lowpass(
         signal,
         lowpass_enabled,

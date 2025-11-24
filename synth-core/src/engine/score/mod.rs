@@ -187,6 +187,7 @@ pub struct NotesGroup {
     pub harmonics: HarmonicsParams,
     pub notes: Vec<Note>,
     pub power: crate::engine::time_varying::TimeVarying,
+    pub noise: crate::engine::time_varying::TimeVarying,
     pub pan: f64,
     pub tolerance: (Time, Time),
     pub vibrato: (f64, Freq),
@@ -782,6 +783,7 @@ fn apply_params_to_notes_group(ng: &mut NotesGroup, params: &node_params::Resolv
     ng.attack_decay = (params.envelope.attack, params.envelope.decay);
     ng.lp_attack_decay = params.lowpass.envelope;
     ng.power = params.power.power;
+    ng.noise = params.noise.noise;
     ng.wave_type = params.wave.wave;
     ng.cutoff = params.lowpass.cutoff;
     ng.lowpass_enabled = params.lowpass.enabled;

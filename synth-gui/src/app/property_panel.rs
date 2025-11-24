@@ -10,7 +10,7 @@ use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, 
 use helpers::{ParameterBehavior, SliderParam};
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, power,
+    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, power,
     rhythm as rhythm_section, vibrato,
 };
 use preset_section::preset_section;
@@ -34,7 +34,7 @@ use crate::{
     time_freq::{Freq, Time},
     Token, F0,
 };
-use std::{collections::BTreeMap, f32::consts::TAU};
+use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
 
 #[derive(Clone)]
 pub enum Action {
@@ -301,6 +301,7 @@ impl GuiApp {
                         let envelope_resolution = self.score.track_root.resolve_envelope(&sel);
                         let lowpass_resolution = self.score.track_root.resolve_lowpass(&sel);
                         let power_resolution = self.score.track_root.resolve_power(&sel);
+                        let noise_resolution = self.score.track_root.resolve_noise(&sel);
                         let harmonics_resolution = self.score.track_root.resolve_harmonics(&sel);
                         let wave_resolution = self.score.track_root.resolve_wave(&sel);
                         let harmony_resolution = self.score.track_root.resolve_harmony(&sel);
@@ -520,6 +521,14 @@ impl GuiApp {
                                 );
                                 overrides_dirty |=
                                     power::show_power_section(ui, &mut power_binding, &mut impact);
+
+                                let mut noise_binding = OverrideBinding::new(
+                                    noise_resolution.clone(),
+                                    &mut overrides.noise,
+                                    depth,
+                                );
+                                overrides_dirty |=
+                                    noise::show_noise_section(ui, &mut noise_binding, &mut impact);
 
                                 let edit_vec_generators =
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
@@ -767,6 +776,22 @@ impl GuiApp {
                                     },
                                 );
 
+                                let mut noise_binding = OverrideBinding::new(
+                                    noise_resolution.clone(),
+                                    &mut overrides.noise,
+                                    depth,
+                                );
+                                group_overrides_dirty |= group_override_section(
+                                    ui,
+                                    "Noise",
+                                    "Apply noise (random signal attenuation) to child sequences",
+                                    &mut noise_binding,
+                                    &mut impact,
+                                    |ui, value, impact, editable| {
+                                        noise::draw_noise_controls(ui, value, impact, editable)
+                                    },
+                                );
+
                                 let mut harmonics_binding = OverrideBinding::new(
                                     harmonics_resolution.clone(),
                                     &mut overrides.harmonics,
@@ -871,6 +896,9 @@ impl GuiApp {
 
                         if needs_override_refresh {
                             self.score.refresh_notes_for_path(&sel);
+                            self.score
+                                .shared_notes
+                                .store(Arc::new(self.score.notes.clone()));
                         }
                     } else {
                         ui.label("Click a block to edit");
@@ -1201,6 +1229,7 @@ impl GuiApp {
                 &request.params.chorus,
                 &request.params.harmonics,
                 &request.params.power.power,
+                &request.params.noise.noise,
                 request.params.lowpass.enabled,
                 request.params.lowpass.order,
                 &mut memory,

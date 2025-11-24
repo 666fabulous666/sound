@@ -326,6 +326,7 @@ impl Sequence {
                     attack_decay: (params.envelope.attack, params.envelope.decay),
                     lp_attack_decay: params.lowpass.envelope,
                     power: params.power.power,
+                    noise: params.noise.noise,
                     pan,
                     volume: 1.0, // Initial volume - will be updated by volume application mechanism
                     tolerance: harmony.tolerance,

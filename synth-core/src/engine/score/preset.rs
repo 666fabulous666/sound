@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node_params::{
-        BendParams, EnvelopeParams, LowpassParams, NodeOverrides,
+        BendParams, EnvelopeParams, LowpassParams, NoiseParams, NodeOverrides,
         PowerParams, VibratoParams, WaveParams,
     },
     ChorusParams, HarmonicsParams,
@@ -97,6 +97,11 @@ pub struct InstrumentPreset {
     #[serde(default)]
     pub power: Option<PowerParams>,
 
+    /// Noise (signal attenuation with randomness)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub noise: Option<NoiseParams>,
+
     /// Harmonics and subharmonics
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
@@ -122,6 +127,7 @@ impl InstrumentPreset {
             envelope: None,
             lowpass: None,
             power: None,
+            noise: None,
             harmonics: None,
             wave: None,
         }
@@ -143,6 +149,7 @@ impl InstrumentPreset {
             envelope: overrides.envelope.clone(),
             lowpass: overrides.lowpass.clone(),
             power: overrides.power.clone(),
+            noise: overrides.noise.clone(),
             harmonics: overrides.harmonics.clone(),
             wave: overrides.wave.clone(),
         }
@@ -171,6 +178,9 @@ impl InstrumentPreset {
         }
         if let Some(ref power) = self.power {
             overrides.power = Some(power.clone());
+        }
+        if let Some(ref noise) = self.noise {
+            overrides.noise = Some(noise.clone());
         }
         if let Some(ref harmonics) = self.harmonics {
             overrides.harmonics = Some(harmonics.clone());

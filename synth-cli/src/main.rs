@@ -97,6 +97,7 @@ fn precompute_and_play(
                             &ng.chorus,
                             &ng.harmonics,
                             &ng.power,
+                            &ng.noise,
                             ng.lowpass_enabled,
                             ng.lp_order,
                             &mut memory,

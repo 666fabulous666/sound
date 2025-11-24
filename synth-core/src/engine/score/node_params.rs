@@ -133,6 +133,31 @@ impl Default for PowerParams {
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct NoiseParams {
+    pub noise: TimeVarying,
+}
+
+impl Default for NoiseParams {
+    fn default() -> Self {
+        Self {
+            noise: TimeVarying {
+                base: 0.0,  // No noise by default
+                relaxation: crate::engine::time_varying::Relaxation {
+                    start: 1.0,
+                    end: 1.0,
+                    rate: 0.0,
+                },
+                lfo: crate::engine::time_varying::Lfo {
+                    magnitude: 0.0,
+                    frequency: Freq(0.5),
+                    sync_with_clock: false,
+                },
+            },
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct WaveParams {
     pub wave: WaveType,
 }
@@ -315,6 +340,10 @@ pub struct NodeOverrides {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
+    pub noise: Option<NoiseParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub harmonics: Option<HarmonicsParams>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -339,6 +368,7 @@ impl NodeOverrides {
             envelope: Some(EnvelopeParams::default()),
             lowpass: Some(LowpassParams::default()),
             power: Some(PowerParams::default()),
+            noise: Some(NoiseParams::default()),
             harmonics: Some(HarmonicsParams::default()),
             wave: None,
             harmony: None,
@@ -361,6 +391,8 @@ pub struct ResolvedTrackParams {
     lowpass_depth: Option<usize>,
     pub power: PowerParams,
     power_depth: Option<usize>,
+    pub noise: NoiseParams,
+    noise_depth: Option<usize>,
     pub harmonics: HarmonicsParams,
     harmonics_depth: Option<usize>,
     pub wave: WaveParams,
@@ -386,6 +418,8 @@ impl Default for ResolvedTrackParams {
             lowpass_depth: None,
             power: PowerParams::default(),
             power_depth: None,
+            noise: NoiseParams::default(),
+            noise_depth: None,
             harmonics: HarmonicsParams::default(),
             harmonics_depth: None,
             wave: WaveParams::default(),
@@ -434,6 +468,12 @@ impl ResolvedTrackParams {
             if self.power_depth.is_none() {
                 self.power = power.clone();
                 self.power_depth = Some(depth);
+            }
+        }
+        if let Some(noise) = &overrides.noise {
+            if self.noise_depth.is_none() {
+                self.noise = noise.clone();
+                self.noise_depth = Some(depth);
             }
         }
         if let Some(harmonics) = &overrides.harmonics {
@@ -528,6 +568,10 @@ impl TrackNode {
 
     pub fn resolve_power(&self, path: &[usize]) -> ParamResolution<PowerParams> {
         resolve_param(self, path, |o| o.power.as_ref())
+    }
+
+    pub fn resolve_noise(&self, path: &[usize]) -> ParamResolution<NoiseParams> {
+        resolve_param(self, path, |o| o.noise.as_ref())
     }
 
     pub fn resolve_harmonics(&self, path: &[usize]) -> ParamResolution<HarmonicsParams> {

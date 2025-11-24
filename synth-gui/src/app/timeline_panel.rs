@@ -1,5 +1,6 @@
 use egui::epaint::{Mesh, Vertex};
 use egui::{Color32, Painter, Rect};
+use std::sync::Arc;
 
 use egui::Align2;
 
@@ -776,6 +777,9 @@ impl GuiApp {
     fn finish_sequence_drag(&mut self) {
         if let Some(state) = self.sequence_drag.take() {
             self.score.refresh_notes_for_path(&state.path);
+            self.score
+                .shared_notes
+                .store(Arc::new(self.score.notes.clone()));
         }
     }
     fn paint_tree_band(
