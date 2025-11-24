@@ -1,5 +1,6 @@
 pub(crate) mod colormap;
 mod load;
+mod preset_io;
 mod property_panel;
 mod save;
 mod start_page;
@@ -78,6 +79,8 @@ pub struct GuiApp {
     #[cfg(target_arch = "wasm32")]
     pub(crate) pending_loaded_bytes: std::rc::Rc<std::cell::RefCell<Option<Vec<u8>>>>,
     #[cfg(target_arch = "wasm32")]
+    pending_preset_bytes: std::rc::Rc<std::cell::RefCell<Option<(Vec<u8>, Vec<usize>)>>>,
+    #[cfg(target_arch = "wasm32")]
     instant: Instant,
     #[cfg(target_arch = "wasm32")]
     fps: f64,
@@ -101,6 +104,7 @@ pub struct GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
     record_error: Option<String>,
     spectrogram_previews: HashMap<Token, SpectrogramPreview>,
+    preset_name_input: String,
 }
 
 #[derive(Clone)]
@@ -202,6 +206,8 @@ impl GuiApp {
             #[cfg(target_arch = "wasm32")]
             pending_loaded_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
             #[cfg(target_arch = "wasm32")]
+            pending_preset_bytes: std::rc::Rc::new(std::cell::RefCell::new(None)),
+            #[cfg(target_arch = "wasm32")]
             instant: Instant::now(),
             #[cfg(target_arch = "wasm32")]
             fps: 60.0,
@@ -226,6 +232,7 @@ impl GuiApp {
             #[cfg(not(target_arch = "wasm32"))]
             record_error: None,
             spectrogram_previews: HashMap::new(),
+            preset_name_input: String::new(),
         };
         app
     }
@@ -668,6 +675,8 @@ impl App for GuiApp {
         let mut exit = false;
         #[cfg(target_arch = "wasm32")]
         self.poll_loaded_state();
+        #[cfg(target_arch = "wasm32")]
+        self.poll_loaded_preset();
         if self.score.track_root.child_count() != 0 {
             // if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, SELECT_UP)) {
             //     if let Some(ref path) = self.selected {

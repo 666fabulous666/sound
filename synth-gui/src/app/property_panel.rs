@@ -1,6 +1,7 @@
 pub mod helpers;
 pub mod hover_texts;
 mod navigation;
+mod preset_section;
 mod rhythm;
 mod sections;
 
@@ -12,6 +13,7 @@ use sections::{
     accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, power,
     rhythm as rhythm_section, vibrato,
 };
+use preset_section::preset_section;
 
 use crate::{
     app::{
@@ -287,6 +289,10 @@ impl GuiApp {
                 ScrollArea::vertical().show(ui, |ui| {
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
+
+                    // Show preset section early and store the action
+                    let preset_action = preset_section(ui, &mut self.preset_name_input);
+
                     if let Some(sel) = self.selected.clone() {
                         let depth = sel.len();
                         let bend_resolution = self.score.track_root.resolve_bend(&sel);
@@ -300,6 +306,7 @@ impl GuiApp {
                         let harmony_resolution = self.score.track_root.resolve_harmony(&sel);
                         let rhythm_resolution = self.score.track_root.resolve_rhythm(&sel);
                         let mut needs_override_refresh = false;
+
                         if let Some(track_node_mut) = self.score.track_root.get_mut(&sel) {
                             navigation(ui, &mut action, track_node_mut);
 
@@ -867,6 +874,14 @@ impl GuiApp {
                         }
                     } else {
                         ui.label("Click a block to edit");
+                    }
+
+                    // Handle preset actions
+                    if preset_action.save && !preset_action.preset_name.is_empty() {
+                        self.save_preset(preset_action.preset_name.clone());
+                    }
+                    if preset_action.load {
+                        self.load_preset(ctx);
                     }
 
                     if let Some(mut sel) = self.selected.clone() {

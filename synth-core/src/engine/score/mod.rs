@@ -16,6 +16,7 @@
 pub mod default_params;
 pub mod node_params;
 pub mod note;
+pub mod preset;
 pub mod probability;
 pub mod scheduler;
 pub mod sequence;
