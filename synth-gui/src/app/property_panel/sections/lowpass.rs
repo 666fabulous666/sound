@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
 use crate::engine::score::{default_params::*, node_params::LowpassParams};
 use crate::engine::waves::FilterType;
@@ -10,6 +10,8 @@ pub fn show_lowpass_section(
     binding: &mut OverrideBinding<LowpassParams>,
     impact: &mut ParameterImpact,
     _is_drum: bool,
+    depth: usize,
+    promote: &mut Option<LowpassParams>,
 ) -> bool {
     let mut changed = false;
     ui.collapsing("Filter", |ui| {
@@ -20,6 +22,9 @@ pub fn show_lowpass_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_lowpass_controls(ui, value, impact, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     changed

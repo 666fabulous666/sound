@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam, ValueTransform};
 use crate::engine::score::{default_params::*, node_params::VibratoParams};
 use crate::time_freq::Freq;
@@ -8,6 +8,8 @@ pub fn show_vibrato_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<VibratoParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<VibratoParams>,
 ) -> bool {
     let mut changed = false;
     ui.collapsing("Vibrato", |ui| {
@@ -18,6 +20,9 @@ pub fn show_vibrato_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_vibrato_controls(ui, value, impact, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     changed

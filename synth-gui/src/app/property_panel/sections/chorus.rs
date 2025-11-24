@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
 use crate::app::property_panel::hover_texts::{
     ASYM_DETUNE_TEXT, DETUNE_SHIFT_TEXT, DETUNE_TEXT, DETUNE_TIME_DEP_TEXT, DETUNE_WEIGHTING_TEXT,
@@ -12,6 +12,8 @@ pub fn show_chorus_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<ChorusParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<ChorusParams>,
 ) -> bool {
     let mut changed = false;
     let defaults = ChorusParams::default();
@@ -23,6 +25,9 @@ pub fn show_chorus_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_chorus_controls(ui, value, impact, &defaults, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);

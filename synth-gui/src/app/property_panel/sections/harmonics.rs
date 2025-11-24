@@ -3,7 +3,7 @@ use egui::Ui;
 use crate::{
     app::property_panel::{
         helpers::{ParameterBehavior, SliderParam, ValueTransform},
-        OverrideBinding, ParameterImpact,
+        promote_button, OverrideBinding, ParameterImpact,
     },
     engine::score::{default_params::default_harmonics_attenuation, HarmonicsParams},
 };
@@ -12,6 +12,8 @@ pub fn show_harmonics_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<HarmonicsParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<HarmonicsParams>,
 ) -> bool {
     let mut changed = false;
 
@@ -23,6 +25,9 @@ pub fn show_harmonics_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_harmonics_controls(ui, value, impact, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
 

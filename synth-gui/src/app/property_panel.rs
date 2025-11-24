@@ -21,7 +21,8 @@ use crate::{
     },
     engine::score::{
         node_params::{
-            EnvelopeParams, HarmonyParams, ParamResolution, ResolvedTrackParams, RhythmParams,
+            BendParams, EnvelopeParams, HarmonyParams, LowpassParams, ParamResolution,
+            PowerParams, ResolvedTrackParams, RhythmParams, VibratoParams, WaveParams,
         },
         note::NoteVariant,
         sequence::Sequence,
@@ -98,6 +99,41 @@ pub struct OverrideBinding<'a, T: Clone> {
     slot: &'a mut Option<T>,
     locked_by_parent: bool,
     active_here: bool,
+}
+
+#[derive(Clone)]
+enum PromotionKind {
+    Envelope(EnvelopeParams),
+    Lowpass(LowpassParams),
+    Bend(BendParams),
+    Vibrato(VibratoParams),
+    Chorus(ChorusParams),
+    Power(PowerParams),
+    Noise(crate::engine::score::node_params::NoiseParams),
+    Harmonics(crate::engine::score::HarmonicsParams),
+    Wave(WaveParams),
+    Rhythm(RhythmParams),
+    Harmony(HarmonyParams),
+}
+
+fn promote_button<T: Clone>(
+    ui: &mut egui::Ui,
+    binding: &OverrideBinding<T>,
+    depth: usize,
+) -> Option<T> {
+    if depth == 0 || binding.is_locked() || !binding.is_active_here() {
+        return None;
+    }
+    let response = ui
+        .small_button("Promote to parent override")
+        .on_hover_text(
+            "Copy this value to the parent override, clear it locally, and apply it to siblings.",
+        );
+    if response.clicked() {
+        Some(binding.resolved().clone())
+    } else {
+        None
+    }
 }
 
 fn group_override_section<T: Clone>(
@@ -301,6 +337,7 @@ impl GuiApp {
                 ScrollArea::vertical().show(ui, |ui| {
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
+                    let mut promotion_request: Option<PromotionKind> = None;
 
                     // Show preset section early and store the action
                     let preset_action = preset_section(ui, &mut self.preset_name_input);
@@ -421,8 +458,8 @@ impl GuiApp {
                                                         *var,
                                                         (&var).to_string(),
                                                     );
-                                                }
-                                            });
+                                            }
+                                        });
                                         if w_choice != effective_wave {
                                             effective_wave = w_choice;
                                         }
@@ -432,6 +469,19 @@ impl GuiApp {
                                     seq_mut.wave_type = effective_wave;
                                     if let Some(ng) = self.score.notes.get_mut(&seq_mut.token) {
                                         ng.wave_type = seq_mut.wave_type;
+                                    }
+                                }
+                                if !wave_locked && depth > 0 {
+                                    if ui
+                                        .small_button("Promote wave to parent override")
+                                        .on_hover_text(
+                                            "Copy this wave to the parent override and clear it here",
+                                        )
+                                        .clicked()
+                                    {
+                                        promotion_request = Some(PromotionKind::Wave(WaveParams {
+                                            wave: effective_wave,
+                                        }));
                                     }
                                 }
 
@@ -473,54 +523,87 @@ impl GuiApp {
                                     &mut overrides.envelope,
                                     depth,
                                 );
+                                let mut env_promote = None;
                                 overrides_dirty |= envelope::show_envelope_section(
                                     ui,
                                     &mut envelope_binding,
                                     &mut impact,
                                     is_drum,
+                                    depth,
+                                    &mut env_promote,
                                 );
+                                if let Some(value) = env_promote {
+                                    promotion_request = Some(PromotionKind::Envelope(value));
+                                }
 
                                 let mut lowpass_binding = OverrideBinding::new(
                                     lowpass_resolution.clone(),
                                     &mut overrides.lowpass,
                                     depth,
                                 );
+                                let mut lp_promote = None;
                                 overrides_dirty |= lowpass::show_lowpass_section(
                                     ui,
                                     &mut lowpass_binding,
                                     &mut impact,
                                     is_drum,
+                                    depth,
+                                    &mut lp_promote,
                                 );
+                                if let Some(value) = lp_promote {
+                                    promotion_request = Some(PromotionKind::Lowpass(value));
+                                }
 
                                 let mut bend_binding = OverrideBinding::new(
                                     bend_resolution.clone(),
                                     &mut overrides.bend,
                                     depth,
                                 );
-                                overrides_dirty |=
-                                    bend::show_bend_section(ui, &mut bend_binding, &mut impact);
+                                let mut bend_promote = None;
+                                overrides_dirty |= bend::show_bend_section(
+                                    ui,
+                                    &mut bend_binding,
+                                    &mut impact,
+                                    depth,
+                                    &mut bend_promote,
+                                );
+                                if let Some(value) = bend_promote {
+                                    promotion_request = Some(PromotionKind::Bend(value));
+                                }
 
                                 let mut vibrato_binding = OverrideBinding::new(
                                     vibrato_resolution.clone(),
                                     &mut overrides.vibrato,
                                     depth,
                                 );
+                                let mut vibrato_promote = None;
                                 overrides_dirty |= vibrato::show_vibrato_section(
                                     ui,
                                     &mut vibrato_binding,
                                     &mut impact,
+                                    depth,
+                                    &mut vibrato_promote,
                                 );
+                                if let Some(value) = vibrato_promote {
+                                    promotion_request = Some(PromotionKind::Vibrato(value));
+                                }
 
                                 let mut harmonics_binding = OverrideBinding::new(
                                     harmonics_resolution.clone(),
                                     &mut overrides.harmonics,
                                     depth,
                                 );
+                                let mut harmonics_promote = None;
                                 overrides_dirty |= harmonics::show_harmonics_section(
                                     ui,
                                     &mut harmonics_binding,
                                     &mut impact,
+                                    depth,
+                                    &mut harmonics_promote,
                                 );
+                                if let Some(value) = harmonics_promote {
+                                    promotion_request = Some(PromotionKind::Harmonics(value));
+                                }
 
                                 if !DRUM_WAVES.contains(&effective_wave) {
                                     let mut chorus_binding = OverrideBinding::new(
@@ -528,11 +611,17 @@ impl GuiApp {
                                         &mut overrides.chorus,
                                         depth,
                                     );
+                                    let mut chorus_promote = None;
                                     overrides_dirty |= chorus::show_chorus_section(
                                         ui,
                                         &mut chorus_binding,
                                         &mut impact,
+                                        depth,
+                                        &mut chorus_promote,
                                     );
+                                    if let Some(value) = chorus_promote {
+                                        promotion_request = Some(PromotionKind::Chorus(value));
+                                    }
                                 }
 
                                 let mut power_binding = OverrideBinding::new(
@@ -540,16 +629,34 @@ impl GuiApp {
                                     &mut overrides.power,
                                     depth,
                                 );
-                                overrides_dirty |=
-                                    power::show_power_section(ui, &mut power_binding, &mut impact);
+                                let mut power_promote = None;
+                                overrides_dirty |= power::show_power_section(
+                                    ui,
+                                    &mut power_binding,
+                                    &mut impact,
+                                    depth,
+                                    &mut power_promote,
+                                );
+                                if let Some(value) = power_promote {
+                                    promotion_request = Some(PromotionKind::Power(value));
+                                }
 
                                 let mut noise_binding = OverrideBinding::new(
                                     noise_resolution.clone(),
                                     &mut overrides.noise,
                                     depth,
                                 );
-                                overrides_dirty |=
-                                    noise::show_noise_section(ui, &mut noise_binding, &mut impact);
+                                let mut noise_promote = None;
+                                overrides_dirty |= noise::show_noise_section(
+                                    ui,
+                                    &mut noise_binding,
+                                    &mut impact,
+                                    depth,
+                                    &mut noise_promote,
+                                );
+                                if let Some(value) = noise_promote {
+                                    promotion_request = Some(PromotionKind::Noise(value));
+                                }
 
                                 let edit_vec_generators =
                                     |ui: &mut egui::Ui, gens: &mut Vec<usize>, default_val| {
@@ -577,6 +684,17 @@ impl GuiApp {
                                         &mut impact,
                                         &edit_vec_generators,
                                     );
+                                    if depth > 0 {
+                                        if ui
+                                            .small_button("Promote rhythm to parent override")
+                                            .on_hover_text("Copy this rhythm to the parent override and clear it here")
+                                            .clicked()
+                                        {
+                                            promotion_request = Some(PromotionKind::Rhythm(
+                                                RhythmParams::from_sequence(seq_mut),
+                                            ));
+                                        }
+                                    }
                                 }
 
                                 let harmony_locked = harmony_resolution.locked_for_depth(depth);
@@ -601,6 +719,17 @@ impl GuiApp {
                                         &mut self.score.notes,
                                         &mut impact,
                                     );
+                                    if depth > 0 {
+                                        if ui
+                                            .small_button("Promote harmony to parent override")
+                                            .on_hover_text("Copy these harmony settings to the parent override and clear them here")
+                                            .clicked()
+                                        {
+                                            promotion_request = Some(PromotionKind::Harmony(
+                                                HarmonyParams::from_sequence(seq_mut),
+                                            ));
+                                        }
+                                    }
                                 }
                                 accents::show_accents_section(
                                     ui,
@@ -1045,11 +1174,11 @@ impl GuiApp {
                                 group_overrides_dirty |=
                                     harmony_dirty || harmony_distributed;
 
-                                if group_overrides_dirty {
-                                    needs_override_refresh = true;
-                                }
+                            if group_overrides_dirty {
+                                needs_override_refresh = true;
                             }
                         }
+                    }
 
                         if needs_override_refresh {
                             self.score.refresh_notes_for_path(&sel);
@@ -1182,6 +1311,134 @@ impl GuiApp {
                                         track_node.toggle_mute();
                                         impact.require_regeneration();
                                     });
+                            }
+                        }
+                    }
+                    if let Some(promotion) = promotion_request.clone() {
+                        if let Some(sel) = self.selected.clone() {
+                            if !sel.is_empty() {
+                                let parent_path = &sel[..sel.len() - 1];
+                                match promotion.clone() {
+                                    PromotionKind::Envelope(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.envelope = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.envelope = None;
+                                        }
+                                    }
+                                    PromotionKind::Lowpass(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.lowpass = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.lowpass = None;
+                                        }
+                                    }
+                                    PromotionKind::Bend(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.bend = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.bend = None;
+                                        }
+                                    }
+                                    PromotionKind::Vibrato(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.vibrato = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.vibrato = None;
+                                        }
+                                    }
+                                    PromotionKind::Chorus(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.chorus = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.chorus = None;
+                                        }
+                                    }
+                                    PromotionKind::Power(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.power = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.power = None;
+                                        }
+                                    }
+                                    PromotionKind::Noise(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.noise = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.noise = None;
+                                        }
+                                    }
+                                    PromotionKind::Harmonics(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.harmonics = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.harmonics = None;
+                                        }
+                                    }
+                                    PromotionKind::Wave(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.wave = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.wave = None;
+                                            if let NodeKind::Seq(seq) = &mut child.kind {
+                                                seq.wave_type = v.wave;
+                                            }
+                                        }
+                                    }
+                                    PromotionKind::Rhythm(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.rhythm = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.rhythm = None;
+                                        }
+                                    }
+                                    PromotionKind::Harmony(v) => {
+                                        if let Some(parent) =
+                                            self.score.track_root.get_mut(parent_path)
+                                        {
+                                            parent.overrides.harmony = Some(v.clone());
+                                        }
+                                        if let Some(child) = self.score.track_root.get_mut(&sel) {
+                                            child.overrides.harmony = None;
+                                        }
+                                    }
+                                }
+                                self.score.refresh_notes_for_path(parent_path);
+                                self.score
+                                    .shared_notes
+                                    .store(Arc::new(self.score.notes.clone()));
+                                self.spectrogram_render_requested = true;
+                                self.update_all_mix_from_tree();
                             }
                         }
                     }

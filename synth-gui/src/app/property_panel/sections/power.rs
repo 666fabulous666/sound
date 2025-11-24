@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
 use crate::app::property_panel::hover_texts::POW_FACT_TEXT;
 use crate::engine::score::{default_params::*, node_params::PowerParams};
@@ -9,6 +9,8 @@ pub fn show_power_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<PowerParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<PowerParams>,
 ) -> bool {
     let mut changed = false;
     let header = ui.collapsing("Power factor", |ui| {
@@ -19,6 +21,9 @@ pub fn show_power_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_power_controls(ui, value, impact, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     header.header_response.on_hover_text(POW_FACT_TEXT);

@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam};
 use crate::engine::score::node_params::NoiseParams;
 use crate::time_freq::Freq;
@@ -8,6 +8,8 @@ pub fn show_noise_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<NoiseParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<NoiseParams>,
 ) -> bool {
     let mut changed = false;
     let header = ui.collapsing("Noise", |ui| {
@@ -18,6 +20,9 @@ pub fn show_noise_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_noise_controls(ui, value, impact, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     header.header_response.on_hover_text(

@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{rescale_envelope, ParameterBehavior, SliderParam};
 use crate::engine::score::{default_params::*, node_params::EnvelopeParams};
 use egui::Ui;
@@ -8,6 +8,8 @@ pub fn show_envelope_section(
     binding: &mut OverrideBinding<EnvelopeParams>,
     impact: &mut ParameterImpact,
     is_drum: bool,
+    depth: usize,
+    promote: &mut Option<EnvelopeParams>,
 ) -> bool {
     let mut changed = false;
     ui.collapsing("Envelope", |ui| {
@@ -18,6 +20,9 @@ pub fn show_envelope_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_envelope_controls(ui, value, impact, is_drum, true);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     changed

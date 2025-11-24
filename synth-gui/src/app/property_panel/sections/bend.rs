@@ -1,4 +1,4 @@
-use super::super::{OverrideBinding, ParameterImpact};
+use super::super::{promote_button, OverrideBinding, ParameterImpact};
 use crate::app::property_panel::helpers::{ParameterBehavior, SliderParam, ValueTransform};
 use crate::engine::score::{default_params::*, node_params::BendParams};
 use egui::Ui;
@@ -7,6 +7,8 @@ pub fn show_bend_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<BendParams>,
     impact: &mut ParameterImpact,
+    depth: usize,
+    promote: &mut Option<BendParams>,
 ) -> bool {
     let mut changed = false;
     ui.collapsing("Bend", |ui| {
@@ -17,6 +19,9 @@ pub fn show_bend_section(
             });
         } else if let Some(value) = binding.value_mut() {
             changed |= draw_bend_controls(ui, value, impact);
+        }
+        if let Some(value) = promote_button(ui, binding, depth) {
+            *promote = Some(value);
         }
     });
     changed
