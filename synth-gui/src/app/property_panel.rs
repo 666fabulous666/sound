@@ -333,17 +333,6 @@ impl GuiApp {
             .min_width(self.property_panel_width.max(240.0))
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.checkbox(&mut self.fixed_track_height, "Fixed track height");
-                        if self.fixed_track_height {
-                            ui.add(
-                                egui::Slider::new(&mut self.track_lane_height, 40.0..=240.0)
-                                    .text("Track px"),
-                            );
-                        }
-                    });
-                    ui.separator();
-
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
                     let mut promotion_request: Option<PromotionKind> = None;
