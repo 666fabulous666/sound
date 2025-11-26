@@ -124,9 +124,7 @@ pub fn show_rhythm_section(
         if let Some(promote) = promote {
             if ui
                 .small_button("Promote rhythm to parent override")
-                .on_hover_text(
-                    "Copy this rhythm to the parent override and clear it here",
-                )
+                .on_hover_text("Copy this rhythm to the parent override and clear it here")
                 .clicked()
             {
                 promote();

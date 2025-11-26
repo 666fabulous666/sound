@@ -1,4 +1,6 @@
-use crate::engine::score::{default_proba, probability::Probability, scheduler::PlaybackScheduler};
+use crate::engine::score::{
+    default_proba, probability::Probability, scheduler::PlaybackScheduler, TrackDelays,
+};
 use core::marker::PhantomData;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -75,7 +77,8 @@ impl MixContext {
     pub fn propagate(&self, node: &TrackNode) -> (MixContext, f64) {
         let volume = sanitize_volume(self.volume * node.volume());
         let proba = self.proba.mul(node.proba);
-        let pan_lock_here = matches!(node.kind, NodeKind::Group { ref aesthetic, .. } if aesthetic.lock_pan);
+        let pan_lock_here =
+            matches!(node.kind, NodeKind::Group { ref aesthetic, .. } if aesthetic.lock_pan);
         let effective_pan = self.pan.unwrap_or(node.pan);
         let next_pan = if let Some(pan) = self.pan {
             Some(pan)
@@ -135,6 +138,8 @@ pub struct TrackNode {
     pub or_weight: f64,
     #[serde(default)]
     pub overrides: NodeOverrides,
+    #[serde(default, skip_serializing_if = "TrackDelays::is_empty")]
+    pub delays: TrackDelays,
     #[serde(flatten)]
     pub kind: NodeKind,
 }
@@ -171,6 +176,7 @@ impl TrackNode {
             hue: 0.0,
             or_weight: 1.0,
             overrides: NodeOverrides::default(),
+            delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: gen.next(),
                 muted: false,
@@ -193,6 +199,7 @@ impl TrackNode {
             hue: 0.0,
             or_weight: 1.0,
             overrides: NodeOverrides::sequence_defaults(),
+            delays: TrackDelays::default(),
             kind: NodeKind::Seq(seq),
         }
     }
@@ -467,9 +474,11 @@ impl TrackNode {
         mix: MixContext,
         inherited_params: ResolvedTrackParams,
         depth: usize,
+        inherited_delays: TrackDelays,
     ) {
         let (current_mix, effective_pan) = mix.propagate(self);
         let current_params = inherited_params.with_overrides(&self.overrides, depth);
+        let merged_delays = self.delays.merge_with_parent(&inherited_delays);
         match &mut self.kind {
             NodeKind::Seq(seq) => {
                 if !scheduler.sequence_state_mut(seq.token).is_idle(now) {
@@ -490,6 +499,7 @@ impl TrackNode {
                 } else {
                     seq.wave_type
                 };
+                let delays_seconds = merged_delays.to_seconds(tempo, 0.5, 0.5);
                 if let Some(release) = seq.draw_sequence_core(
                     notes,
                     rng,
@@ -502,6 +512,7 @@ impl TrackNode {
                     &rhythm_context,
                     &harmony_context,
                     wave_context,
+                    &delays_seconds,
                 ) {
                     if let Some(ng) = notes.get(&seq.token) {
                         scheduler.register_sequence_snapshot(seq, ng, rhythm_context.loop_len);
@@ -509,13 +520,13 @@ impl TrackNode {
                     scheduler.sequence_state_mut(seq.token).busy_until = release;
                 }
             }
-                NodeKind::Group {
-                    children,
-                    muted,
-                    not_generate_until,
-                    mode,
-                    ..
-                } => {
+            NodeKind::Group {
+                children,
+                muted,
+                not_generate_until,
+                mode,
+                ..
+            } => {
                 if *muted {
                     return; // Don't generate anything if muted
                 }
@@ -534,6 +545,7 @@ impl TrackNode {
                                         current_mix,
                                         current_params.clone(),
                                         depth + 1,
+                                        merged_delays.clone(),
                                     );
                                 }
                             }
@@ -557,14 +569,15 @@ impl TrackNode {
                                         child.draw_node(
                                             notes,
                                             scheduler,
-                                        rng,
-                                        now,
-                                        tempo,
-                                        note_id_gen,
-                                        current_mix,
-                                        current_params.clone(),
-                                        depth + 1,
-                                    );
+                                            rng,
+                                            now,
+                                            tempo,
+                                            note_id_gen,
+                                            current_mix,
+                                            current_params.clone(),
+                                            depth + 1,
+                                            merged_delays.clone(),
+                                        );
                                         let busy_until = child_busy_until(child, scheduler);
                                         for (child_idx, sibling) in children.iter_mut().enumerate()
                                         {

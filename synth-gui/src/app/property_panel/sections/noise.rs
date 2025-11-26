@@ -27,7 +27,7 @@ pub fn show_noise_section(
     });
     header.header_response.on_hover_text(
         "Multiplies signal by (1.0 - alpha * random) where random ∈ [0, 1]. \
-         Alpha is time-varying with relaxation and LFO modulation."
+         Alpha is time-varying with relaxation and LFO modulation.",
     );
     changed
 }

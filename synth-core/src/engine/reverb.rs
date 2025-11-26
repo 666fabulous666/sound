@@ -1,3 +1,5 @@
+use crate::engine::score::DelayTapSeconds;
+
 struct RingBuff<const N: usize> {
     data: Vec<f64>,
     head: usize,
@@ -14,7 +16,11 @@ impl<const N: usize> Default for RingBuff<N> {
 
 impl<const N: usize> RingBuff<N> {
     fn backward(&self, n: usize) -> f64 {
-        self.data[(self.head + (N - n)) % N]
+        if N == 0 {
+            return 0.0;
+        }
+        let step = n.min(N.saturating_sub(1));
+        self.data[(self.head + (N - step)) % N]
     }
     fn push(&mut self, value: f64) {
         self.head = (self.head + 1) % N;
@@ -40,14 +46,26 @@ impl<const B: usize> Reverb<B> {
         }
     }
 
-    pub fn process(&mut self, dry: f64, delays: &[f64]) -> f64 {
-        let mut output = self.dry_factor * dry;
+    pub fn process(&mut self, dry: f64, delays_seconds: &[DelayTapSeconds]) -> f64 {
+        if delays_seconds.is_empty() {
+            self.buffer.push(dry);
+            return dry;
+        }
 
-        let a = self.wet_factor / delays.len() as f64;
-        for d in delays.iter() {
-            output += a * self
-                .buffer
-                .backward((*d / 1000.0 * self.sample_rate) as usize);
+        let wet_gain: Vec<(usize, f64)> = delays_seconds
+            .iter()
+            .map(|tap| {
+                let wet = (tap.weight * self.wet_factor).clamp(0.0, 1.0);
+                (tap.steps(self.sample_rate), wet)
+            })
+            .collect();
+
+        let total_wet: f64 = wet_gain.iter().map(|(_, w)| *w).sum::<f64>().min(1.0);
+        let dry_gain = (1.0 - total_wet) * self.dry_factor.clamp(0.0, 1.0);
+        let mut output = dry_gain * dry;
+
+        for (steps, wet) in wet_gain {
+            output += wet * self.buffer.backward(steps);
         }
 
         self.buffer.push(output);

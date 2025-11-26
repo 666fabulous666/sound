@@ -9,7 +9,7 @@ pub mod time_freq;
 use std::ops::Deref;
 
 pub const DEFAULT_LOOP_LEN: Time = Time(4.0);
-pub const NOTE_LINGER_TIME: Time = Time(12.0);
+pub const NOTE_LINGER_TIME: Time = Time(32.0);
 pub const F0: Freq = Freq(440.0);
 // pub const REVERB_BUFFER_LEN: usize = 65535;
 pub const REVERB_BUFFER_LEN: usize = 44100;

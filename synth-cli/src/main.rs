@@ -10,7 +10,7 @@ use synth_core::{
         reverb::Reverb,
         score::{
             track_node::{NodeKind, TrackNode},
-            Score,
+            Score, TrackDelays,
         },
     },
     recorder::Recorder,
@@ -42,8 +42,11 @@ struct Args {
 #[derive(serde::Deserialize)]
 struct ScoreState {
     seqs: TrackNode,
-    #[serde(default)]
-    delays: (Vec<f64>, Vec<f64>),
+    #[serde(
+        default = "synth_core::engine::score::default_params::default_delays",
+        rename = "delays_beats"
+    )]
+    delays: TrackDelays,
 }
 
 /// Precompute audio and play from buffer
@@ -189,19 +192,22 @@ fn update_volumes_from_tree(score: &mut Score) {
     };
 
     // Compute volume for each token as the product from root
-    let volume_updates: Vec<(Token, f64)> = seq_paths
+    let tempo = score.tempo();
+    let volume_updates: Vec<(Token, f64, TrackDelays)> = seq_paths
         .iter()
         .filter_map(|(token, path)| {
-            score
-                .volume_chain_product(path)
-                .map(|volume| (*token, volume))
+            score.volume_chain_product(path).map(|volume| {
+                let delays = score.delays_for_path(path);
+                (*token, volume, delays)
+            })
         })
         .collect();
 
     // Apply volumes to NotesGroup entries
     for (token, ng) in score.notes.iter_mut() {
-        if let Some((_, volume)) = volume_updates.iter().find(|(tk, _)| *tk == *token) {
+        if let Some((_, volume, delays)) = volume_updates.iter().find(|(tk, _, _)| *tk == *token) {
             ng.volume = *volume;
+            ng.delays = delays.to_seconds(tempo, 0.5, 0.5);
         }
     }
 }
@@ -231,7 +237,8 @@ fn main() -> Result<()> {
     // Create score
     let mut score = Score::new();
     score.track_root = state.seqs;
-    score.delays = state.delays;
+    score.delays = state.delays.clone();
+    score.track_root.delays = state.delays;
 
     // Initialize token generator based on existing tokens
     score.last_token = TokenGen(
@@ -267,7 +274,9 @@ fn main() -> Result<()> {
     let clock = Arc::new(AtomicU64::new(0));
 
     // Use Score's built-in shared_notes and create shared_delays (like GUI)
-    let shared_delays = Arc::new(arc_swap::ArcSwap::from_pointee(score.delays.clone()));
+    let shared_delays = Arc::new(arc_swap::ArcSwap::from_pointee(
+        score.track_root.delays.to_seconds(score.tempo(), 0.0, 0.0),
+    ));
 
     let recorder = if let Some(path) = &args.record {
         let recorder = Arc::new(Recorder::new());
@@ -285,8 +294,8 @@ fn main() -> Result<()> {
         clock.clone(),
         score.shared_notes.clone(), // Use Score's shared_notes
         (
-            Reverb::<REVERB_BUFFER_LEN>::new(0.5, 0.5, sample_rate),
-            Reverb::<REVERB_BUFFER_LEN>::new(0.5, 0.5, sample_rate),
+            Reverb::<REVERB_BUFFER_LEN>::new(1.0, 1.0, sample_rate),
+            Reverb::<REVERB_BUFFER_LEN>::new(1.0, 1.0, sample_rate),
         ),
         shared_delays.clone(),
         recorder.clone(),
@@ -331,7 +340,11 @@ fn main() -> Result<()> {
 
             // Update shared reference atomically
             score.shared_notes.store(Arc::new(score.notes.clone()));
-            shared_delays.store(Arc::new(score.delays.clone()));
+            shared_delays.store(Arc::new(score.track_root.delays.to_seconds(
+                score.tempo(),
+                0.0,
+                0.0,
+            )));
 
             last_gen_time = now;
         }
