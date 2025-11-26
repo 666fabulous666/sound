@@ -1507,7 +1507,14 @@ impl GuiApp {
         request: SpectrogramRequest,
         background: Color32,
     ) {
-        if let Some(image) = self.build_spectrogram_image(&request, background) {
+        let harmony_params = if request.params.has_harmony_override() {
+            request.params.harmony.clone()
+        } else {
+            HarmonyParams::from_sequence(&request.sequence)
+        };
+        let fundamental_freq = interval_frequency(&harmony_params.interval);
+
+        if let Some(image) = self.build_spectrogram_image(&request, background, fundamental_freq) {
             if let Some(existing) = self.spectrogram_previews.get_mut(&request.token) {
                 existing.texture.set(image.clone(), TextureOptions::LINEAR);
                 existing.size = image.size;
@@ -1515,6 +1522,7 @@ impl GuiApp {
                 existing.params = request.params.clone();
                 existing.background = background;
                 existing.log_freq = self.spectrogram_log_freq;
+                existing.fundamental_freq = fundamental_freq;
             } else {
                 let size = image.size;
                 let texture = ctx.load_texture(
@@ -1531,6 +1539,7 @@ impl GuiApp {
                         params: request.params.clone(),
                         background,
                         log_freq: self.spectrogram_log_freq,
+                        fundamental_freq,
                     },
                 );
             }
@@ -1555,6 +1564,17 @@ impl GuiApp {
                     {
                         self.spectrogram_render_requested = true;
                     }
+                    ui.add_space(8.0);
+                    ui.label("Harmonics:");
+                    if ui
+                        .add(egui::DragValue::new(&mut self.spectrogram_freq_multiplier)
+                            .range(2.0..=64.0)
+                            .speed(0.5))
+                        .on_hover_text("Number of harmonics to display")
+                        .changed()
+                    {
+                        self.spectrogram_render_requested = true;
+                    }
                 });
                 ui.separator();
                 let preview = self
@@ -1564,9 +1584,118 @@ impl GuiApp {
                     .and_then(|node| node.as_seq().map(|seq| seq.token))
                     .and_then(|token| self.spectrogram_previews.get(&token));
                 if let Some(preview) = preview {
-                    let width = ui.available_width().max(64.0);
+                    let total_width = ui.available_width().max(64.0);
                     let height = ui.available_height().max(120.0);
-                    ui.image((preview.texture.id(), Vec2::new(width, height)));
+                    let label_width = 50.0;
+                    let spectrogram_width = (total_width - 2.0 * label_width).max(64.0);
+                    let n = self.spectrogram_freq_multiplier.round() as i32;
+                    let fundamental = preview.fundamental_freq;
+                    let log_scale = self.spectrogram_log_freq;
+
+                    // Allocate space for the whole row
+                    let (response, painter) = ui.allocate_painter(
+                        Vec2::new(total_width, height),
+                        egui::Sense::hover(),
+                    );
+                    let rect = response.rect;
+
+                    // Define regions
+                    let left_label_rect = egui::Rect::from_min_size(
+                        rect.min,
+                        Vec2::new(label_width, height),
+                    );
+                    let spectrogram_rect = egui::Rect::from_min_size(
+                        rect.min + Vec2::new(label_width, 0.0),
+                        Vec2::new(spectrogram_width, height),
+                    );
+                    let right_label_rect = egui::Rect::from_min_size(
+                        rect.min + Vec2::new(label_width + spectrogram_width, 0.0),
+                        Vec2::new(label_width, height),
+                    );
+
+                    // Draw spectrogram image, zoomed 2x on the center
+                    // Signal is 3s: 1s zeros + 1s note + 1s zeros
+                    // Show from u=0.25 to u=0.75 so the note takes 2/3 of display
+                    painter.image(
+                        preview.texture.id(),
+                        spectrogram_rect,
+                        egui::Rect::from_min_max(egui::pos2(0.25, 0.0), egui::pos2(0.75, 1.0)),
+                        Color32::WHITE,
+                    );
+
+                    let grid_color = ui.visuals().weak_text_color();
+                    let text_color = ui.visuals().weak_text_color();
+                    let font_id = egui::FontId::proportional(10.0);
+
+                    // Helper to convert frequency to y position (0 at bottom, 1 at top)
+                    let freq_to_y = |freq: f32| -> f32 {
+                        let max_freq = n as f32 * fundamental;
+                        if log_scale && freq > 0.0 && fundamental > 0.0 {
+                            // Log scale: map log(freq) to [0, 1]
+                            let log_min = fundamental.ln();
+                            let log_max = max_freq.ln();
+                            if log_max > log_min {
+                                (freq.ln() - log_min) / (log_max - log_min)
+                            } else {
+                                0.5
+                            }
+                        } else {
+                            freq / max_freq
+                        }
+                    };
+
+                    // Draw horizontal grid lines and frequency labels for each harmonic
+                    for k in 1..=n {
+                        let freq = k as f32 * fundamental;
+                        let y_frac = freq_to_y(freq);
+                        let y = spectrogram_rect.bottom() - y_frac * spectrogram_rect.height();
+
+                        // Format frequency label
+                        let freq_label = if freq >= 1000.0 {
+                            format!("{:.1}k", freq / 1000.0)
+                        } else {
+                            format!("{:.0}", freq)
+                        };
+
+                        // Measure text size for positioning
+                        let galley = painter.layout_no_wrap(
+                            freq_label.clone(),
+                            font_id.clone(),
+                            text_color,
+                        );
+                        let text_height = galley.size().y;
+
+                        // Draw horizontal line with gap for labels
+                        // Left segment (from spectrogram left edge to gap before left label area)
+                        // Actually, draw the line across spectrogram with gaps near the edges
+                        let gap_left = label_width * 0.1;
+                        let gap_right = label_width * 0.1;
+
+                        painter.line_segment(
+                            [
+                                egui::pos2(spectrogram_rect.left() + gap_left, y),
+                                egui::pos2(spectrogram_rect.right() - gap_right, y),
+                            ],
+                            egui::Stroke::new(1.0, grid_color),
+                        );
+
+                        // Alternate labels: odd harmonics on left, even on right
+                        if k % 2 == 1 {
+                            // Draw left label (right-aligned)
+                            let left_text_pos = egui::pos2(
+                                left_label_rect.right() - galley.size().x - 4.0,
+                                y - text_height / 2.0,
+                            );
+                            painter.galley(left_text_pos, galley, text_color);
+                        } else {
+                            // Draw right label (left-aligned)
+                            let right_text_pos = egui::pos2(
+                                right_label_rect.left() + 4.0,
+                                y - text_height / 2.0,
+                            );
+                            painter.galley(right_text_pos, galley, text_color);
+                        }
+                    }
                 } else {
                     ui.label("Select a sequence to preview its spectrum.");
                 }
@@ -1577,9 +1706,12 @@ impl GuiApp {
         &self,
         request: &SpectrogramRequest,
         background: Color32,
+        fundamental_freq: f32,
     ) -> Option<ColorImage> {
         let samples = self.render_preview_samples(request)?;
-        let (min_freq, max_freq) = self.spectrogram_freq_bounds();
+        // max_freq = n * fundamental, where n is the user-configurable multiplier
+        let max_freq = (self.spectrogram_freq_multiplier * fundamental_freq).max(100.0);
+        let min_freq = 0.0;
         Some(samples_to_color_image(
             &samples,
             self.sample_rate as f32,
@@ -1601,14 +1733,12 @@ impl GuiApp {
         } else {
             HarmonyParams::from_sequence(&request.sequence)
         };
-        let octave = interval_octave(&harmony_params.interval);
         let wave = if request.params.has_wave_override() {
             request.params.wave.wave
         } else {
             request.sequence.wave_type
         };
-        let note_interval = Interval::Tempered(0, octave);
-        let frequency = Freq(F0.as_hz() * note_interval.compute());
+        let frequency = Freq(interval_frequency(&harmony_params.interval) as f64);
         let duration = Time(1.0);
         let mut memory = [0.0; 10];
         let pad_samples = sample_count;
@@ -1655,10 +1785,6 @@ impl GuiApp {
         Some(samples)
     }
 
-    fn spectrogram_freq_bounds(&self) -> (f32, f32) {
-        (20.0, 20_000.0)
-    }
-
     fn cumulative_volume_for_path(&self, path: &[usize]) -> f64 {
         let mut cumulative = sanitize_volume(self.score.track_root.volume());
         let mut current = &self.score.track_root;
@@ -1694,10 +1820,13 @@ fn preview_note_volume(sequence: &Sequence, envelope: &EnvelopeParams) -> f64 {
     ((base + 0.5 * extras) / denominator) / normalization
 }
 
-fn interval_octave(interval: &Interval) -> i32 {
+fn interval_frequency(interval: &Interval) -> f32 {
+    let f0 = F0.as_hz();
     match interval {
-        Interval::Tempered(_, octave) => *octave,
-        Interval::RDTempered(_, _, octave) => *octave,
+        Interval::Tempered(degree, octave) => {
+            (f0 * (*degree as f64 / 12.0 + *octave as f64).exp2()) as f32
+        }
+        Interval::RDTempered(_, _, octave) => (f0 * (*octave as f64).exp2()) as f32,
     }
 }
 

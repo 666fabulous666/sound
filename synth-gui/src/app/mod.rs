@@ -95,6 +95,7 @@ pub struct GuiApp {
     spectrogram_render_requested: bool,
     show_spectrogram_panel: bool,
     spectrogram_log_freq: bool,
+    spectrogram_freq_multiplier: f32,
     show_new_score_confirm: bool,
     show_exit_confirm: bool,
     tempo_popup_open: bool,
@@ -119,6 +120,7 @@ pub struct SpectrogramPreview {
     pub params: ResolvedTrackParams,
     pub background: Color32,
     pub log_freq: bool,
+    pub fundamental_freq: f32,
 }
 
 use serde::Deserializer;
@@ -226,6 +228,7 @@ impl GuiApp {
             spectrogram_render_requested: false,
             show_spectrogram_panel: true,
             spectrogram_log_freq: false,
+            spectrogram_freq_multiplier: 16.0,
             show_new_score_confirm: false,
             show_exit_confirm: false,
             tempo_popup_open: false,
