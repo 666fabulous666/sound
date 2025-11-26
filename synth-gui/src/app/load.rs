@@ -66,7 +66,8 @@ impl GuiApp {
             .for_each_sequence_mut(|s| s.not_generate_until = None);
         self.score.generate_notes(self.now(), &mut self.rng);
         self.update_all_mix_from_tree(); // Apply mix based on tree structure
-                                             // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
-        self.score.delays = state.delays;
+                                         // self.selected = state.selected.filter(|&p| state.seqs.get(p).is_some());
+        self.score.delays = state.delays.clone();
+        self.score.track_root.delays = state.delays;
     }
 }

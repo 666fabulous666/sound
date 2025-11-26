@@ -9,7 +9,7 @@ use std::{
 use crate::{
     engine::{
         reverb::Reverb,
-        score::{note::NoteVariant, NotesGroup},
+        score::{note::NoteVariant, DelayTapSeconds, NotesGroup},
         waves::{generate_wave, generate_wave_with_phase},
     },
     recorder::Recorder,
@@ -29,7 +29,7 @@ pub fn stream(
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
     (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
-    delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
+    delays: Arc<ArcSwap<(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>)>>,
     recorder: Option<Arc<Recorder>>,
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
@@ -43,11 +43,16 @@ pub fn stream(
     let channels = config.channels;
     let stream = {
         let mut lp_memories: HashMap<NoteId, NoteMemory> = HashMap::new();
+        let mut track_reverbs: HashMap<
+            Token,
+            (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
+        > = HashMap::new();
         let mut last_cleanup = crate::time_freq::Time(0.0);
+        let sample_rate_hz = sample_rate.as_hz();
         let recorder = recorder.clone();
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
-            let delays = delays.load();
+            let global_delays = delays.load();
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
             let sample_step = 1.0.div_by(sample_rate);
@@ -56,11 +61,11 @@ pub fn stream(
                 (clock.load(std::sync::atomic::Ordering::Relaxed) as f64).div_by(sample_rate);
 
             for frame in data.chunks_mut(channels_usize) {
-                let mut dry_left = 0.0;
-                let mut dry_right = 0.0;
+                let mut mixed_left = 0.0;
+                let mut mixed_right = 0.0;
 
                 for (
-                    _token,
+                    token,
                     NotesGroup {
                         notes: notes_from_seq,
                         bend,
@@ -77,10 +82,14 @@ pub fn stream(
                         lp_order,
                         filter_type,
                         harmonics,
+                        delays: track_delays,
                         ..
                     },
                 ) in note_groups.iter()
                 {
+                    let mut track_left = 0.0;
+                    let mut track_right = 0.0;
+
                     for note in notes_from_seq.iter() {
                         let memory = lp_memories.entry(note.id).or_insert_with(|| NoteMemory {
                             start_time: note.time,
@@ -137,10 +146,21 @@ pub fn stream(
                                         sample_step,
                                     ),
                                 };
-                            dry_left += (1.0 - pan) * dry;
-                            dry_right += pan * dry;
+                            track_left += (1.0 - pan) * dry;
+                            track_right += pan * dry;
                         }
                     }
+
+                    let entry = track_reverbs.entry(*token).or_insert_with(|| {
+                        (
+                            Reverb::new(0.5, 0.5, sample_rate_hz),
+                            Reverb::new(0.5, 0.5, sample_rate_hz),
+                        )
+                    });
+                    let processed_left = entry.0.process(track_left, &track_delays.0);
+                    let processed_right = entry.1.process(track_right, &track_delays.1);
+                    mixed_left += processed_left;
+                    mixed_right += processed_right;
                 }
 
                 // Periodic cleanup of old low-pass filter memories to prevent unbounded growth
@@ -148,11 +168,12 @@ pub fn stream(
                 if (now - last_cleanup).as_secs() > CLEANUP_INTERVAL {
                     let cutoff_time = now - crate::NOTE_LINGER_TIME - Time(5.0);
                     lp_memories.retain(|_, state| state.start_time >= cutoff_time);
+                    track_reverbs.retain(|tk, _| note_groups.contains_key(tk));
                     last_cleanup = now;
                 }
 
-                let left = reverb_left.process(dry_left, &delays.0);
-                let right = reverb_right.process(dry_right, &delays.1);
+                let left = reverb_left.process(mixed_left, &global_delays.0);
+                let right = reverb_right.process(mixed_right, &global_delays.1);
 
                 if let Some(rec) = recorder.as_ref() {
                     rec.write_frame(left as f32, right as f32);

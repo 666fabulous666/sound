@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 use crate::{
     engine::score::{
         default_params::*,
+        sequence::Sequence,
         sequence::{
             default_interval_affinities, deserialize_interval_affinities, IntervalAffinity,
             ReplicatorStep,
         },
-        sequence::Sequence,
         time_quantum::TimeQuantum,
         track_node::{NodeKind, TrackNode},
         ChorusParams, HarmonicsParams, Interval, RdRythm, Rythm,
@@ -19,7 +19,7 @@ use crate::{
     DEFAULT_LOOP_LEN,
 };
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct BendParams {
     pub magnitude: f64,
     pub speed: f64,
@@ -32,7 +32,7 @@ impl Default for BendParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct VibratoParams {
     pub magnitude: f64,
     pub frequency: Freq,
@@ -48,7 +48,7 @@ impl Default for VibratoParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct EnvelopeParams {
     pub attack: f64,
     pub decay: f64,
@@ -77,7 +77,7 @@ impl EnvelopeParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct LowpassParams {
     pub envelope: (f64, f64),
     pub cutoff: TimeVarying,
@@ -113,7 +113,7 @@ impl Default for LowpassParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct PowerParams {
     pub power: TimeVarying,
 }
@@ -139,7 +139,7 @@ impl Default for PowerParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct NoiseParams {
     pub noise: TimeVarying,
 }
@@ -148,7 +148,7 @@ impl Default for NoiseParams {
     fn default() -> Self {
         Self {
             noise: TimeVarying {
-                base: 0.0,  // No noise by default
+                base: 0.0, // No noise by default
                 relaxation: crate::engine::time_varying::Relaxation {
                     start: 1.0,
                     end: 1.0,
@@ -164,7 +164,7 @@ impl Default for NoiseParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct WaveParams {
     pub wave: WaveType,
 }
@@ -177,7 +177,7 @@ impl Default for WaveParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct HarmonyParams {
     pub glide: bool,
     pub harmonise: bool,
@@ -236,7 +236,7 @@ impl Default for HarmonyParams {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct RhythmParams {
     pub time_quantum: TimeQuantum,
     pub t_min: Beat,

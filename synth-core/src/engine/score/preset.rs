@@ -9,14 +9,14 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     node_params::{
-        BendParams, EnvelopeParams, LowpassParams, NoiseParams, NodeOverrides,
-        PowerParams, VibratoParams, WaveParams,
+        BendParams, EnvelopeParams, LowpassParams, NodeOverrides, NoiseParams, PowerParams,
+        VibratoParams, WaveParams,
     },
     ChorusParams, HarmonicsParams,
 };
 
 /// Metadata for an instrument preset
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct PresetMetadata {
     /// Name of the preset (e.g., "Warm Pad", "Plucky Bass")
     pub name: String,
@@ -62,7 +62,7 @@ impl Default for PresetMetadata {
 /// This struct stores only the parameters that affect the timbre and character
 /// of the sound (wave type, envelope, effects), excluding musical parameters
 /// (rhythm, harmony, intervals) which are specific to the composition.
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct InstrumentPreset {
     /// Metadata about the preset
     pub metadata: PresetMetadata,
@@ -223,8 +223,13 @@ mod tests {
     #[test]
     fn test_preset_roundtrip_with_params() {
         let mut preset = InstrumentPreset::new("Test".to_string());
-        preset.wave = Some(WaveParams { wave: WaveType::Square });
-        preset.bend = Some(BendParams { magnitude: 0.5, speed: 2.0 });
+        preset.wave = Some(WaveParams {
+            wave: WaveType::Square,
+        });
+        preset.bend = Some(BendParams {
+            magnitude: 0.5,
+            speed: 2.0,
+        });
 
         let json = preset.to_json().unwrap();
         let loaded = InstrumentPreset::from_json(&json).unwrap();
@@ -234,8 +239,13 @@ mod tests {
     #[test]
     fn test_extract_from_overrides() {
         let mut overrides = NodeOverrides::default();
-        overrides.wave = Some(WaveParams { wave: WaveType::Sine });
-        overrides.bend = Some(BendParams { magnitude: 0.3, speed: 1.5 });
+        overrides.wave = Some(WaveParams {
+            wave: WaveType::Sine,
+        });
+        overrides.bend = Some(BendParams {
+            magnitude: 0.3,
+            speed: 1.5,
+        });
 
         let preset = InstrumentPreset::from_overrides("Test".to_string(), &overrides);
         assert_eq!(preset.wave, overrides.wave);
@@ -245,7 +255,9 @@ mod tests {
     #[test]
     fn test_apply_to_overrides() {
         let mut preset = InstrumentPreset::new("Test".to_string());
-        preset.wave = Some(WaveParams { wave: WaveType::Triangle });
+        preset.wave = Some(WaveParams {
+            wave: WaveType::Triangle,
+        });
         preset.vibrato = Some(VibratoParams {
             magnitude: 0.1,
             frequency: crate::time_freq::Freq(5.0),
@@ -261,7 +273,9 @@ mod tests {
     #[test]
     fn test_apply_preserves_harmony_rhythm() {
         let mut preset = InstrumentPreset::new("Test".to_string());
-        preset.wave = Some(WaveParams { wave: WaveType::Sawtooth });
+        preset.wave = Some(WaveParams {
+            wave: WaveType::Sawtooth,
+        });
 
         let mut overrides = NodeOverrides::default();
         // Set some harmony/rhythm params

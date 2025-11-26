@@ -1,6 +1,6 @@
 use crate::engine::score::{
     probability::Probability, time_quantum::TimeQuantum, ChorusParams, DetRythm, LowpassLfo,
-    LowpassRelaxation, RdRythm,
+    LowpassRelaxation, RdRythm, TrackDelays,
 };
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 use crate::{rescale_factor, DEFAULT_LOOP_LEN};
@@ -174,8 +174,45 @@ impl Default for RdRythm {
         }
     }
 }
-pub fn default_delays() -> (Vec<f64>, Vec<f64>) {
-    (vec![31.0, 63.0, 128.0], vec![33.0, 61.0, 124.0])
+pub fn default_delays() -> TrackDelays {
+    // Defaults converted from the previous millisecond values at 60 BPM (1s per beat).
+    // Using beats keeps the perceived delay length stable across tempo changes.
+    TrackDelays {
+        left: crate::engine::score::DelayChannel {
+            dry: Some(0.5),
+            taps: vec![
+                crate::engine::score::DelayTap {
+                    beat: 0.031,
+                    weight: 1.0,
+                },
+                crate::engine::score::DelayTap {
+                    beat: 0.063,
+                    weight: 1.0,
+                },
+                crate::engine::score::DelayTap {
+                    beat: 0.128,
+                    weight: 1.0,
+                },
+            ],
+        },
+        right: crate::engine::score::DelayChannel {
+            dry: Some(0.5),
+            taps: vec![
+                crate::engine::score::DelayTap {
+                    beat: 0.033,
+                    weight: 1.0,
+                },
+                crate::engine::score::DelayTap {
+                    beat: 0.061,
+                    weight: 1.0,
+                },
+                crate::engine::score::DelayTap {
+                    beat: 0.124,
+                    weight: 1.0,
+                },
+            ],
+        },
+    }
 }
 pub fn default_harmoniser() -> [u32; 7] {
     [10, 11, 11, 4, 3, 0, 8]

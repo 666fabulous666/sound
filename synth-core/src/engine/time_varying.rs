@@ -7,7 +7,7 @@ use crate::time_freq::{Freq, Time};
 /// This provides a unified way to control parameters that vary over time:
 /// - Relaxation: exponential transition from start to end value
 /// - LFO: sinusoidal modulation that can be synced to global clock or note time
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct TimeVarying {
     /// Base value (multiplied by relaxation factor)
     pub base: f64,
@@ -21,7 +21,7 @@ pub struct TimeVarying {
 ///
 /// The formula is: end + (start - end) * exp(-rate * normalized_time)
 /// where normalized_time is in [0, 1] representing the note duration.
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct Relaxation {
     /// Starting multiplier for the base value
     pub start: f64,
@@ -34,7 +34,7 @@ pub struct Relaxation {
 /// Low-frequency oscillator for sinusoidal modulation.
 ///
 /// Adds a sinusoidal component: magnitude * sin(2π * frequency * time)
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct Lfo {
     /// Amplitude of the oscillation
     pub magnitude: f64,

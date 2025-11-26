@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 use super::Interval;
 
 use crate::{
+    engine::score::NotesGroup,
     engine::score::{
         default_params::MAX_MELODIC_INTERVAL, sequence::IntervalAffinity, sequence::ReplicatorStep,
         HarmonicsParams,
     },
-    engine::score::NotesGroup,
     time_freq::{Beat, Time},
     NoteId, NoteIdGen, Token,
 };
@@ -73,7 +73,9 @@ impl Note {
                 let mut others = context
                     .values()
                     .flat_map(
-                        |NotesGroup { notes, tolerance, .. }| {
+                        |NotesGroup {
+                             notes, tolerance, ..
+                         }| {
                             notes
                                 .iter()
                                 .filter(|n| {
@@ -266,9 +268,7 @@ fn dist12(n1: i32, n2: i32) -> i32 {
 }
 
 fn interval_idx_clamped(n1: i32, n2: i32) -> usize {
-    (n1 - n2)
-        .abs()
-        .min((MAX_MELODIC_INTERVAL - 1) as i32) as usize
+    (n1 - n2).abs().min((MAX_MELODIC_INTERVAL - 1) as i32) as usize
 }
 
 fn affinity_for_interval(interval: usize, affinities: &[IntervalAffinity]) -> i32 {

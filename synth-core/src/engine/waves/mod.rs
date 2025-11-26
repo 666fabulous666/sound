@@ -33,7 +33,7 @@ impl ToString for FilterType {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum WaveType {
     Mute,
     Sine,
@@ -108,7 +108,12 @@ fn apply_filter(
 
             // Lowpass stage
             for i in 0..lp_order {
-                signal = lowpass_step_cutoff(signal, &mut memory[hp_order + i], cutoff_freq, sample_rate);
+                signal = lowpass_step_cutoff(
+                    signal,
+                    &mut memory[hp_order + i],
+                    cutoff_freq,
+                    sample_rate,
+                );
             }
             signal
         }

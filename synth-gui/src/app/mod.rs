@@ -16,7 +16,7 @@ use crate::{
             probability::Probability,
             sequence::Sequence,
             track_node::{AestheticLocks, GroupMode, MixContext, NodeKind, TrackNode},
-            NotesGroup, Score,
+            DelayTapSeconds, NotesGroup, Score, TrackDelays,
         },
         waves::WaveType,
     },
@@ -73,7 +73,7 @@ pub struct GuiApp {
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
-    shared_delays: Arc<ArcSwap<(Vec<f64>, Vec<f64>)>>,
+    shared_delays: Arc<ArcSwap<(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>)>>,
     tree_drag: Option<TreeDragState>,
     sequence_drag: Option<SequenceDragState>,
     #[cfg(target_arch = "wasm32")]
@@ -148,6 +148,7 @@ where
             hue: 0.0,
             or_weight: 1.0,
             overrides: node_params::NodeOverrides::default(),
+            delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
                 muted: false,
@@ -166,6 +167,7 @@ where
             hue: 0.0,
             or_weight: 1.0,
             overrides: node_params::NodeOverrides::default(),
+            delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: Token(0),
                 muted: false,
@@ -187,8 +189,8 @@ where
 pub struct GuiState {
     #[serde(deserialize_with = "deserialize_sequences_compat")]
     pub seqs: TrackNode,
-    #[serde(default = "default_delays")]
-    pub delays: (Vec<f64>, Vec<f64>),
+    #[serde(default = "default_delays", rename = "delays_beats")]
+    pub delays: TrackDelays,
     #[serde(default = "default_tempo_bpm")]
     pub tempo_bpm: f64,
 }
@@ -534,6 +536,7 @@ impl GuiApp {
                 hue: 0.0,
                 or_weight: 1.0,
                 overrides: node_params::NodeOverrides::default(),
+                delays: TrackDelays::default(),
                 kind: NodeKind::Group {
                     id: self.score.last_token.next(),
                     muted: false,
@@ -694,29 +697,38 @@ impl GuiApp {
             node: &TrackNode,
             notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
             mix: MixContext,
+            tempo: Tempo,
+            delays: TrackDelays,
         ) {
             let (next_mix, effective_pan) = mix.propagate(node);
+            let merged_delays = node.delays.merge_with_parent(&delays);
 
             match &node.kind {
                 NodeKind::Seq(seq) => {
                     if let Some(ng) = notes.get_mut(&seq.token) {
                         ng.volume = next_mix.volume;
                         ng.pan = effective_pan;
+                        ng.delays = merged_delays.to_seconds(tempo, 0.5, 0.5);
                     }
                 }
                 NodeKind::Group { children, .. } => {
                     for child in children {
-                        dfs(child, notes, next_mix);
+                        dfs(child, notes, next_mix, tempo, merged_delays.clone());
                     }
                 }
             }
         }
 
+        let tempo = self.score.tempo();
         dfs(
             &self.score.track_root,
             &mut self.score.notes,
             MixContext::default(),
+            tempo,
+            TrackDelays::default(),
         );
+        // Keep legacy `Score.delays` in sync with root for sharing with audio thread.
+        self.score.delays = self.score.track_root.delays.clone();
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -825,7 +837,11 @@ impl App for GuiApp {
             .shared_notes
             .store(Arc::new(self.score.notes.clone()));
         self.shared_delays
-            .store(Arc::new(self.score.delays.clone()));
+            .store(Arc::new(self.score.track_root.delays.to_seconds(
+                self.score.tempo(),
+                0.0,
+                0.0,
+            )));
     }
 }
 

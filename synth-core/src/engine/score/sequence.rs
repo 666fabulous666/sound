@@ -15,7 +15,7 @@ use crate::engine::score::time_quantum::TimeQuantum;
 use crate::engine::score::RdRythm;
 use crate::engine::score::{
     node_params::{HarmonyParams, ResolvedTrackParams, RhythmParams},
-    HarmonicsParams, LowpassLfo, LowpassRelaxation, NotesGroup,
+    DelayTapSeconds, HarmonicsParams, LowpassLfo, LowpassRelaxation, NotesGroup,
 };
 use crate::time_freq::{Beat, Freq, Tempo, Time};
 
@@ -32,7 +32,7 @@ use super::ChorusParams;
 
 use default_params::*;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct IntervalAffinity {
     pub interval: u8,
     pub affinity: i32,
@@ -47,7 +47,7 @@ impl Default for IntervalAffinity {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct ReplicatorStep {
     pub distance: u32,
     #[serde(
@@ -236,6 +236,7 @@ impl Sequence {
         rhythm: &RhythmParams,
         harmony: &HarmonyParams,
         wave: WaveType,
+        delays_seconds: &(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>),
     ) {
         // Volume is always 1.0 for note generation - actual volume is applied separately
         let volume = 1.0;
@@ -425,6 +426,7 @@ impl Sequence {
             ng.lp_order = params.lowpass.order;
             ng.filter_type = params.lowpass.filter_type;
             ng.harmonics = params.harmonics.clone();
+            ng.delays = delays_seconds.clone();
         } else {
             notes_buffer.insert(
                 self.token,
@@ -446,6 +448,7 @@ impl Sequence {
                     lowpass_enabled: params.lowpass.enabled,
                     lp_order: params.lowpass.order,
                     filter_type: params.lowpass.filter_type,
+                    delays: delays_seconds.clone(),
                 },
             );
         }
@@ -466,6 +469,7 @@ impl Sequence {
         rhythm: &RhythmParams,
         harmony: &HarmonyParams,
         wave: WaveType,
+        delays_seconds: &(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>),
     ) -> Option<Time> {
         let base = now + GENERATE_EARLY;
         let loop_len_time = tempo.beats_to_time(rhythm.loop_len);
@@ -488,6 +492,7 @@ impl Sequence {
                     rhythm,
                     harmony,
                     wave,
+                    delays_seconds,
                 );
                 true
             } else {

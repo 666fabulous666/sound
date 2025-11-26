@@ -9,10 +9,10 @@ use crate::{
         reverb::Reverb,
         score::{sequence::Sequence, track_node::TrackNode},
     },
-    layout_left, F0, TOOLBAR_ICON_SIZE,
+    F0, TOOLBAR_ICON_SIZE,
 };
 use cpal::traits::DeviceTrait;
-use egui::{Align2, Area, Frame, Id, Layout, Order, Pos2, Rect, RichText, Vec2};
+use egui::{Align2, Area, Frame, Id, Order, Pos2, Rect, RichText, Vec2};
 #[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
 use synth_core::stream::stream;
@@ -47,8 +47,6 @@ impl GuiApp {
                                     self.score.last_token.next(),
                                 ));
                                 self.new_node(seq);
-                                // TODO: reactivate
-                                // self.selected = Some(self.score.sequences.len() - 1);
                             }
                         }
 
@@ -110,39 +108,6 @@ impl GuiApp {
                             }
                         }
                     });
-                    if !self.show_start {
-                        ui.separator();
-                        ui.columns(2, |cols| {
-                            // Left Delays (normal)
-                            cols[0].vertical(|mut ui_left| {
-                                ui_left.label("Left Delays (ms)");
-                                Self::edit_vec(
-                                    &mut ui_left,
-                                    &mut self.score.delays.0,
-                                    0.0,
-                                    layout_left(),
-                                );
-                            });
-
-                            cols[1].vertical(|mut ui_right| {
-                                // Right Delays (normal)
-                                ui_right.horizontal(|ui_right| {
-                                    ui_right.with_layout(
-                                        Layout::right_to_left(egui::Align::Max),
-                                        |ui_right| {
-                                            ui_right.label("Right Delays (ms)");
-                                        },
-                                    )
-                                });
-                                Self::edit_vec(
-                                    &mut ui_right,
-                                    &mut self.score.delays.1,
-                                    0.0,
-                                    Layout::right_to_left(egui::Align::Max),
-                                );
-                            });
-                        });
-                    }
                 });
             });
         });
@@ -278,11 +243,9 @@ impl GuiApp {
                     ui.label("Consider saving first so no work is lost.");
                     ui.separator();
 
-                    // Handle keyboard shortcuts
                     let enter_pressed = ctx.input(|i| i.key_pressed(egui::Key::Enter));
                     let esc_pressed = ctx.input(|i| i.key_pressed(egui::Key::Escape));
 
-                    // Consume keys to prevent them from propagating to main UI
                     if esc_pressed {
                         ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
                     }
@@ -322,11 +285,9 @@ impl GuiApp {
                     ui.label("Save your work before leaving.");
                     ui.separator();
 
-                    // Handle keyboard shortcuts
                     let enter_pressed = ctx.input(|i| i.key_pressed(egui::Key::Enter));
                     let esc_pressed = ctx.input(|i| i.key_pressed(egui::Key::Escape));
 
-                    // Consume keys to prevent them from propagating to main UI
                     if esc_pressed {
                         ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape));
                     }
@@ -354,6 +315,12 @@ impl GuiApp {
     }
 
     fn start_stream(&mut self, clock: Arc<AtomicU64>) {
+        self.shared_delays
+            .store(Arc::new(self.score.track_root.delays.to_seconds(
+                self.score.tempo(),
+                0.5,
+                0.5,
+            )));
         let sample_rate = self
             .device
             .default_output_config()
@@ -366,8 +333,8 @@ impl GuiApp {
             clock,
             self.score.shared_notes.clone(),
             (
-                Reverb::new(0.5, 0.5, sample_rate),
-                Reverb::new(0.5, 0.5, sample_rate),
+                Reverb::new(1.0, 1.0, sample_rate),
+                Reverb::new(1.0, 1.0, sample_rate),
             ),
             self.shared_delays.clone(),
             #[cfg(not(target_arch = "wasm32"))]

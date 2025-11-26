@@ -44,22 +44,22 @@ use default_params::*;
 use rand::rngs::ThreadRng;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct RdRythm {
     pub amount: usize,
     pub length: usize,
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct DetRythm {
     pub generators: Vec<usize>,
 }
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum Rythm {
     Rd(RdRythm),
     Det(DetRythm),
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct LowpassRelaxation {
     pub start: f64,
     pub end: f64,
@@ -84,7 +84,7 @@ impl LowpassRelaxation {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct LowpassLfo {
     pub magnitude: f64,
     pub frequency: Freq,
@@ -111,7 +111,7 @@ impl LowpassLfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ChorusParams {
     pub voices: usize,
     pub delta: f64,
@@ -122,7 +122,7 @@ pub struct ChorusParams {
     pub time_dependency: Freq,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 pub struct HarmonicsParams {
     pub harmonics: usize,
     pub subharmonics: usize,
@@ -158,7 +158,101 @@ impl ChorusParams {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct DelayTap {
+    pub beat: f64,
+    #[serde(default = "default_weight")]
+    pub weight: f64,
+}
+
+const fn default_weight() -> f64 {
+    1.0
+}
+
+impl DelayTap {
+    fn key(&self) -> u64 {
+        self.beat.to_bits()
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct DelayTapSeconds {
+    pub seconds: f64,
+    pub weight: f64,
+}
+
+impl DelayTapSeconds {
+    pub fn steps(&self, sample_rate: f64) -> usize {
+        (self.seconds * sample_rate).round() as usize
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+pub struct DelayChannel {
+    #[serde(default)]
+    pub dry: Option<f64>,
+    #[serde(default)]
+    pub taps: Vec<DelayTap>,
+}
+
+impl Default for DelayChannel {
+    fn default() -> Self {
+        Self {
+            dry: Some(0.5),
+            taps: Vec::new(),
+        }
+    }
+}
+
+impl DelayChannel {
+    fn merge_with_parent(&self, parent: &DelayChannel) -> DelayChannel {
+        DelayChannel {
+            dry: self.dry.or(parent.dry),
+            taps: merge_taps(&parent.taps, &self.taps),
+        }
+    }
+
+    fn to_seconds(&self, seconds_per_beat: f64, fallback_dry: f64) -> Vec<DelayTapSeconds> {
+        let dry = self.dry.unwrap_or(fallback_dry).clamp(0.0, 1.0);
+        let merged = merge_taps(&[], &self.taps);
+        let total_weight: f64 = merged.iter().map(|t| t.weight.max(0.0)).sum();
+        let scale = if total_weight > 0.0 {
+            (1.0 - dry) / total_weight
+        } else {
+            0.0
+        };
+        merged
+            .into_iter()
+            .map(|t| {
+                let weight = (t.weight.max(0.0)) * scale;
+                DelayTapSeconds {
+                    seconds: (t.beat.max(0.0)) * seconds_per_beat,
+                    weight,
+                }
+            })
+            .collect()
+    }
+}
+
+fn merge_taps(parent: &[DelayTap], child: &[DelayTap]) -> Vec<DelayTap> {
+    use std::collections::BTreeMap;
+    let mut map: BTreeMap<u64, f64> = BTreeMap::new();
+
+    for tap in parent.iter().chain(child.iter()) {
+        let key = tap.key();
+        let entry = map.entry(key).or_insert(0.0);
+        *entry += tap.weight.max(0.0);
+    }
+
+    map.into_iter()
+        .map(|(bits, weight)| DelayTap {
+            beat: f64::from_bits(bits).max(0.0),
+            weight,
+        })
+        .collect()
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Interval {
     /// (degree, octave)
     Tempered(i32, i32),
@@ -172,6 +266,52 @@ impl Interval {
             Interval::Tempered(degree, octave) => (*degree as f64 / 12.0 + *octave as f64).exp2(),
             _ => unreachable!(),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct TrackDelays {
+    pub left: DelayChannel,
+    pub right: DelayChannel,
+}
+
+impl Default for TrackDelays {
+    fn default() -> Self {
+        Self {
+            left: DelayChannel::default(),
+            right: DelayChannel::default(),
+        }
+    }
+}
+
+impl TrackDelays {
+    pub fn to_seconds(
+        &self,
+        tempo: Tempo,
+        fallback_dry_left: f64,
+        fallback_dry_right: f64,
+    ) -> (Vec<DelayTapSeconds>, Vec<DelayTapSeconds>) {
+        let seconds_per_beat = tempo.seconds_per_beat();
+        (
+            self.left.to_seconds(seconds_per_beat, fallback_dry_left),
+            self.right.to_seconds(seconds_per_beat, fallback_dry_right),
+        )
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.left.taps.is_empty() && self.right.taps.is_empty()
+    }
+
+    pub fn merge_with_parent(&self, parent: &TrackDelays) -> TrackDelays {
+        TrackDelays {
+            left: self.left.merge_with_parent(&parent.left),
+            right: self.right.merge_with_parent(&parent.right),
+        }
+    }
+
+    pub fn normalise(&mut self) {
+        self.left.taps = merge_taps(&[], &self.left.taps);
+        self.right.taps = merge_taps(&[], &self.right.taps);
     }
 }
 
@@ -194,13 +334,14 @@ pub struct NotesGroup {
     pub vibrato: (f64, Freq),
     pub volume: f64,
     pub wave_type: WaveType,
+    pub delays: (Vec<DelayTapSeconds>, Vec<DelayTapSeconds>),
 }
 
 pub struct Score {
     pub notes: BTreeMap<Token, NotesGroup>,
     pub track_root: TrackNode,
     pub last_token: TokenGen,
-    pub delays: (Vec<f64>, Vec<f64>),
+    pub delays: TrackDelays,
     pub tempo: Tempo,
     pub shared_notes: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
     note_id_gen: NoteIdGen,
@@ -209,16 +350,18 @@ pub struct Score {
 impl Score {
     pub fn new() -> Self {
         let mut last_token = TokenGen(0);
+        let default_delays = default_delays();
         Self {
             notes: BTreeMap::new(),
             track_root: TrackNode::new_root(&mut last_token),
             last_token,
-            delays: default_delays(),
+            delays: default_delays.clone(),
             tempo: default_tempo(),
             shared_notes: Arc::new(ArcSwap::from_pointee(BTreeMap::new())),
             note_id_gen: NoteIdGen::default(),
             scheduler: PlaybackScheduler::default(),
         }
+        .init_root_delays(default_delays)
     }
     pub fn tempo(&self) -> Tempo {
         self.tempo
@@ -231,6 +374,12 @@ impl Score {
         }
         self.retime_notes(old, tempo, anchor_time);
         self.tempo = tempo;
+    }
+
+    fn init_root_delays(mut self, default_delays: TrackDelays) -> Self {
+        self.track_root.delays = default_delays.clone();
+        self.delays = default_delays;
+        self
     }
 
     pub fn draw_node_with(
@@ -249,6 +398,7 @@ impl Score {
             track_node::MixContext::default(),
             node_params::ResolvedTrackParams::default(),
             0,
+            TrackDelays::default(),
         );
         self.scheduler.tick(now);
     }
@@ -271,6 +421,7 @@ impl Score {
             self.track_root
                 .mix_context_for_path(&path[..path.len() - 1])
         };
+        let accumulated_delays = delays_for_path(&self.track_root, path);
         if let Some(node) = self.track_root.get_mut(path) {
             node.draw_node(
                 &mut self.notes,
@@ -282,6 +433,7 @@ impl Score {
                 mix,
                 inherited,
                 path.len(),
+                accumulated_delays,
             );
         }
     }
@@ -349,6 +501,10 @@ impl Score {
         }
 
         Some(product)
+    }
+
+    pub fn delays_for_path(&self, path: &[usize]) -> TrackDelays {
+        delays_for_path(&self.track_root, path)
     }
     /// Return a new path pointing to the next sibling. If `wrap` is false and we’re
     /// at the last sibling, returns `None`.
@@ -501,6 +657,7 @@ impl Score {
             hue: 0.0,
             or_weight: 1.0,
             overrides: node_params::NodeOverrides::default(),
+            delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
                 muted: false,
@@ -765,6 +922,7 @@ impl Score {
             track_node::MixContext::default(),
             node_params::ResolvedTrackParams::default(),
             0,
+            TrackDelays::default(),
         );
     }
 }
@@ -800,11 +958,47 @@ fn apply_params_to_notes_group(ng: &mut NotesGroup, params: &node_params::Resolv
     ng.lp_order = params.lowpass.order;
 }
 
+fn delays_for_path(root: &TrackNode, path: &[usize]) -> TrackDelays {
+    let mut delays = TrackDelays::default().merge_with_parent(&root.delays);
+    let mut node = root;
+    for &idx in path {
+        match &node.kind {
+            track_node::NodeKind::Group { children, .. } => {
+                if let Some(ch) = children.get(idx) {
+                    delays = ch.delays.merge_with_parent(&delays);
+                    node = ch;
+                } else {
+                    break;
+                }
+            }
+            track_node::NodeKind::Seq(_) => break,
+        }
+    }
+    delays
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::engine::score::node_params::BendParams;
     use crate::engine::score::sequence::Sequence;
+
+    #[test]
+    fn track_delays_default_empty_for_track_nodes() {
+        let mut gen = TokenGen::default();
+        let node = TrackNode::from_sequence(Sequence::new(gen.next()));
+        assert!(node.delays.is_empty(), "Track delays should start empty");
+    }
+
+    #[test]
+    fn default_delays_convert_with_tempo() {
+        let delays = default_params::default_delays();
+        let tempo = Tempo::new(120.0);
+        let seconds = delays.to_seconds(tempo, 0.5, 0.5);
+        // 0.031 beats at 120 BPM = 0.0155s
+        let first = seconds.0.first().map(|tap| tap.seconds).unwrap_or(0.0);
+        assert!((first - 0.0155).abs() < 1e-4);
+    }
 
     #[test]
     fn test_volume_chain_product_root() {
@@ -850,21 +1044,21 @@ mod tests {
 
         // Check that initial state is valid
         assert!(score.notes.is_empty(), "New score should have no notes");
-        assert_eq!(score.delays.0.len(), 3, "Should have 3 left delays");
-        assert_eq!(score.delays.1.len(), 3, "Should have 3 right delays");
+        assert_eq!(score.delays.left.taps.len(), 3, "Should have 3 left delays");
+        assert_eq!(
+            score.delays.right.taps.len(),
+            3,
+            "Should have 3 right delays"
+        );
 
-        // All delays should be positive and finite
-        for &delay in &score.delays.0 {
-            assert!(
-                delay.is_finite() && delay > 0.0,
-                "Delay should be positive and finite"
-            );
+        // All delays should be positive and finite with non-negative weights
+        for delay in &score.delays.left.taps {
+            assert!(delay.beat.is_finite() && delay.beat > 0.0);
+            assert!(delay.weight.is_finite() && delay.weight >= 0.0);
         }
-        for &delay in &score.delays.1 {
-            assert!(
-                delay.is_finite() && delay > 0.0,
-                "Delay should be positive and finite"
-            );
+        for delay in &score.delays.right.taps {
+            assert!(delay.beat.is_finite() && delay.beat > 0.0);
+            assert!(delay.weight.is_finite() && delay.weight >= 0.0);
         }
     }
 
