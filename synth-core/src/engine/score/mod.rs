@@ -367,6 +367,15 @@ impl Score {
         self.tempo
     }
 
+    /// Reset all playback state to allow regeneration from time 0.
+    /// Clears notes, scheduler states, and not_generate_until flags.
+    pub fn reset_playback(&mut self) {
+        self.notes.clear();
+        self.scheduler = PlaybackScheduler::default();
+        self.track_root
+            .for_each_sequence_mut(|s| s.not_generate_until = None);
+    }
+
     pub fn set_tempo(&mut self, tempo: Tempo, anchor_time: Time) {
         let old = self.tempo;
         if (old.beats_per_minute() - tempo.beats_per_minute()).abs() <= f64::EPSILON {
