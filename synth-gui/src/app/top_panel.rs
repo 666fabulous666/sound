@@ -7,7 +7,10 @@ use crate::{
     app::{GuiApp, PropertySection},
     engine::{
         reverb::Reverb,
-        score::{sequence::Sequence, track_node::{NodeKind, TrackNode}},
+        score::{
+            sequence::Sequence,
+            track_node::{NodeKind, TrackNode},
+        },
         waves::WaveType,
     },
     F0, TOOLBAR_ICON_SIZE,
@@ -115,6 +118,8 @@ impl GuiApp {
                         }
                     });
 
+                    ui.separator();
+
                     // Second row: Property section selector (only when a track is selected)
                     if !self.show_start {
                         self.draw_section_selector(ui);
@@ -138,7 +143,11 @@ impl GuiApp {
         let is_drum = match &node.kind {
             NodeKind::Seq(seq) => matches!(
                 seq.wave_type,
-                WaveType::HiHat | WaveType::Kick | WaveType::Snare | WaveType::Ride | WaveType::Darbuka
+                WaveType::HiHat
+                    | WaveType::Kick
+                    | WaveType::Snare
+                    | WaveType::Ride
+                    | WaveType::Darbuka
             ),
             NodeKind::Group { .. } => false,
         };
@@ -160,17 +169,13 @@ impl GuiApp {
                 }
 
                 let is_active = self.active_property_section == *section;
-                let button = egui::Button::new(
-                    RichText::new(section.label())
-                        .size(11.0)
-                        .strong()
-                )
-                .fill(if is_active {
-                    ui.visuals().selection.bg_fill
-                } else {
-                    ui.visuals().widgets.inactive.bg_fill
-                })
-                .min_size(Vec2::new(32.0, 20.0));
+                let button = egui::Button::new(RichText::new(section.label()).size(11.0).strong())
+                    .fill(if is_active {
+                        ui.visuals().selection.bg_fill
+                    } else {
+                        ui.visuals().widgets.inactive.bg_fill
+                    })
+                    .min_size(Vec2::new(32.0, 20.0));
 
                 if ui.add(button).on_hover_text(section.tooltip()).clicked() {
                     self.active_property_section = *section;
