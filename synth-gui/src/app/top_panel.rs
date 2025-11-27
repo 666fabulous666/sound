@@ -4,10 +4,11 @@ use std::sync::{
 };
 
 use crate::{
-    app::GuiApp,
+    app::{GuiApp, PropertySection},
     engine::{
         reverb::Reverb,
-        score::{sequence::Sequence, track_node::TrackNode},
+        score::{sequence::Sequence, track_node::{NodeKind, TrackNode}},
+        waves::WaveType,
     },
     F0, TOOLBAR_ICON_SIZE,
 };
@@ -113,11 +114,69 @@ impl GuiApp {
                             }
                         }
                     });
+
+                    // Second row: Property section selector (only when a track is selected)
+                    if !self.show_start {
+                        self.draw_section_selector(ui);
+                    }
                 });
             });
         });
         self.render_tempo_popup(ctx);
         self.show_confirmation_dialogs(ctx, save, exit);
+    }
+
+    fn draw_section_selector(&mut self, ui: &mut egui::Ui) {
+        let Some(sel) = &self.selected else {
+            return;
+        };
+        let Some(node) = self.score.track_root.get(sel) else {
+            return;
+        };
+
+        let is_group = node.is_group();
+        let is_drum = match &node.kind {
+            NodeKind::Seq(seq) => matches!(
+                seq.wave_type,
+                WaveType::HiHat | WaveType::Kick | WaveType::Snare | WaveType::Ride | WaveType::Darbuka
+            ),
+            NodeKind::Group { .. } => false,
+        };
+
+        let sections = if is_group {
+            PropertySection::group_sections()
+        } else {
+            PropertySection::sequence_sections()
+        };
+
+        ui.horizontal(|ui| {
+            ui.add_space(4.0);
+            for section in sections {
+                // Skip Chorus and Harmony for drum waves (sequences only)
+                if !is_group && is_drum {
+                    if matches!(section, PropertySection::Chorus | PropertySection::Harmony) {
+                        continue;
+                    }
+                }
+
+                let is_active = self.active_property_section == *section;
+                let button = egui::Button::new(
+                    RichText::new(section.label())
+                        .size(11.0)
+                        .strong()
+                )
+                .fill(if is_active {
+                    ui.visuals().selection.bg_fill
+                } else {
+                    ui.visuals().widgets.inactive.bg_fill
+                })
+                .min_size(Vec2::new(32.0, 20.0));
+
+                if ui.add(button).on_hover_text(section.tooltip()).clicked() {
+                    self.active_property_section = *section;
+                }
+            }
+        });
     }
 
     fn draw_tempo_control(&mut self, ui: &mut egui::Ui) {

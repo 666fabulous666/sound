@@ -7,6 +7,8 @@ mod start_page;
 mod timeline_panel;
 mod top_panel;
 
+pub use property_panel::PropertySection;
+
 use self::timeline_panel::{SequenceDragState, TreeDragState};
 use crate::{
     engine::{
@@ -110,6 +112,7 @@ pub struct GuiApp {
     record_error: Option<String>,
     spectrogram_previews: HashMap<Token, SpectrogramPreview>,
     preset_name_input: String,
+    pub active_property_section: PropertySection,
 }
 
 #[derive(Clone)]
@@ -246,6 +249,7 @@ impl GuiApp {
             record_error: None,
             spectrogram_previews: HashMap::new(),
             preset_name_input: String::new(),
+            active_property_section: PropertySection::default(),
         };
         app
     }

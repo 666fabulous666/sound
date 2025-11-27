@@ -18,117 +18,116 @@ pub fn show_rhythm_section(
     edit_vec_fn: &dyn Fn(&mut Ui, &mut Vec<usize>, usize),
     promote: Option<&mut dyn FnMut()>,
 ) {
-    ui.collapsing("Rythm", |ui| {
-        ui.horizontal(|ui| {
-            let mut numerator = seq.time_quantum.numerator();
-            let mut denominator = seq.time_quantum.denominator();
-            ui.label("Time quantum:").on_hover_text(TIME_QUANTUM_TEXT);
-            if ui
-                .add(egui::DragValue::new(&mut numerator).range(1..=128))
-                .changed()
-            {
-                seq.time_quantum
-                    .set_numerator(numerator)
-                    .expect("UI enforces valid numerator");
-                impact.require_regeneration();
-            };
-            ui.label("/");
-            if ui
-                .add(egui::DragValue::new(&mut denominator).range(1..=128))
-                .changed()
-            {
-                seq.time_quantum
-                    .set_denominator(denominator)
-                    .expect("UI enforces valid denominator");
-                impact.require_regeneration();
-            };
-        });
+    ui.heading("Rhythm");
+    ui.horizontal(|ui| {
+        let mut numerator = seq.time_quantum.numerator();
+        let mut denominator = seq.time_quantum.denominator();
+        ui.label("Time quantum:").on_hover_text(TIME_QUANTUM_TEXT);
+        if ui
+            .add(egui::DragValue::new(&mut numerator).range(1..=128))
+            .changed()
+        {
+            seq.time_quantum
+                .set_numerator(numerator)
+                .expect("UI enforces valid numerator");
+            impact.require_regeneration();
+        };
+        ui.label("/");
+        if ui
+            .add(egui::DragValue::new(&mut denominator).range(1..=128))
+            .changed()
+        {
+            seq.time_quantum
+                .set_denominator(denominator)
+                .expect("UI enforces valid denominator");
+            impact.require_regeneration();
+        };
+    });
 
-        ui.separator();
+    ui.separator();
 
-        let step = seq.time_quantum.beat_step();
-        let mut t_min = seq.t_min.as_beats();
-        let mut t_max = seq.t_max.as_beats();
+    let step = seq.time_quantum.beat_step();
+    let mut t_min = seq.t_min.as_beats();
+    let mut t_max = seq.t_max.as_beats();
 
-        egui::CollapsingHeader::new("Sequence position (beats)").show(ui, |ui| {
-            ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
-            ui.add(egui::Slider::new(&mut t_max, t_min..=seq.loop_len.as_beats()).text("t_max"));
+    egui::CollapsingHeader::new("Sequence position (beats)").show(ui, |ui| {
+        ui.add(egui::Slider::new(&mut t_min, 0.0..=t_max).text("t_min"));
+        ui.add(egui::Slider::new(&mut t_max, t_min..=seq.loop_len.as_beats()).text("t_max"));
 
-            t_max = t_max.clamp(t_min, seq.loop_len.as_beats());
+        t_max = t_max.clamp(t_min, seq.loop_len.as_beats());
 
-            if (t_min - seq.t_min.as_beats()).abs() > f64::EPSILON {
-                let quantized = step * ((Beat(t_min) / step).round());
-                seq.t_min = quantized;
-                impact.require_regeneration();
-            }
-            if (t_max - seq.t_max.as_beats()).abs() > f64::EPSILON {
-                let quantized = step * ((Beat(t_max) / step).round());
-                seq.t_max = quantized;
-                impact.require_regeneration();
-            }
-        });
-
-        ui.separator();
-
-        if rhythm::inclusion_section(ui, seq, |ui, gens, default| {
-            edit_vec_fn(ui, gens, default);
-        }) {
+        if (t_min - seq.t_min.as_beats()).abs() > f64::EPSILON {
+            let quantized = step * ((Beat(t_min) / step).round());
+            seq.t_min = quantized;
             impact.require_regeneration();
         }
-
-        ui.separator();
-
-        if rhythm::exclusion_section(ui, seq, |ui, gens, default| {
-            edit_vec_fn(ui, gens, default);
-        }) {
+        if (t_max - seq.t_max.as_beats()).abs() > f64::EPSILON {
+            let quantized = step * ((Beat(t_max) / step).round());
+            seq.t_max = quantized;
             impact.require_regeneration();
-        }
-
-        ui.separator();
-        ui.horizontal(|ui| {
-            let mut tmp_beat_offset = seq.beat_offset;
-            ui.label("Groove offset:").on_hover_text(GROOVE_OFFSET_TEXT);
-            if ui
-                .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
-                .changed()
-            {
-                seq.beat_offset = tmp_beat_offset;
-                impact.require_regeneration();
-            };
-        });
-        ui.horizontal(|ui| {
-            let mut loop_len = seq.loop_len.as_beats();
-            ui.label("Loop length (beats):")
-                .on_hover_text(LOOP_LENGTH_TEXT);
-            let loop_slider = ui.add(egui::DragValue::new(&mut loop_len).range(0.0..=512.0));
-            if loop_slider.changed() {
-                let loop_len = Beat(loop_len.max(0.0));
-                seq.loop_len = loop_len;
-                seq.t_max = seq.t_max.min(loop_len);
-                impact.require_regeneration();
-            };
-            let mut repeat = seq.repeat;
-            ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
-            let repeat_slider = ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
-            if repeat_slider.changed() {
-                seq.repeat = repeat;
-                impact.require_regeneration();
-            };
-        });
-        let tail_param = SliderParam::new("Tail multiplier", 1.0..=10.0)
-            .default(default_tail_multiplier())
-            .behavior(ParameterBehavior::StructuralImmediate)
-            .tooltip("Extends the final note duration for each window");
-        tail_param.draw(ui, &mut seq.tail_multiplier, impact);
-
-        if let Some(promote) = promote {
-            if ui
-                .small_button("Promote rhythm to parent override")
-                .on_hover_text("Copy this rhythm to the parent override and clear it here")
-                .clicked()
-            {
-                promote();
-            }
         }
     });
+
+    ui.separator();
+
+    if rhythm::inclusion_section(ui, seq, |ui, gens, default| {
+        edit_vec_fn(ui, gens, default);
+    }) {
+        impact.require_regeneration();
+    }
+
+    ui.separator();
+
+    if rhythm::exclusion_section(ui, seq, |ui, gens, default| {
+        edit_vec_fn(ui, gens, default);
+    }) {
+        impact.require_regeneration();
+    }
+
+    ui.separator();
+    ui.horizontal(|ui| {
+        let mut tmp_beat_offset = seq.beat_offset;
+        ui.label("Groove offset:").on_hover_text(GROOVE_OFFSET_TEXT);
+        if ui
+            .add(egui::DragValue::new(&mut tmp_beat_offset).range(0..=256))
+            .changed()
+        {
+            seq.beat_offset = tmp_beat_offset;
+            impact.require_regeneration();
+        };
+    });
+    ui.horizontal(|ui| {
+        let mut loop_len = seq.loop_len.as_beats();
+        ui.label("Loop length (beats):")
+            .on_hover_text(LOOP_LENGTH_TEXT);
+        let loop_slider = ui.add(egui::DragValue::new(&mut loop_len).range(0.0..=512.0));
+        if loop_slider.changed() {
+            let loop_len = Beat(loop_len.max(0.0));
+            seq.loop_len = loop_len;
+            seq.t_max = seq.t_max.min(loop_len);
+            impact.require_regeneration();
+        };
+        let mut repeat = seq.repeat;
+        ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
+        let repeat_slider = ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
+        if repeat_slider.changed() {
+            seq.repeat = repeat;
+            impact.require_regeneration();
+        };
+    });
+    let tail_param = SliderParam::new("Tail multiplier", 1.0..=10.0)
+        .default(default_tail_multiplier())
+        .behavior(ParameterBehavior::StructuralImmediate)
+        .tooltip("Extends the final note duration for each window");
+    tail_param.draw(ui, &mut seq.tail_multiplier, impact);
+
+    if let Some(promote) = promote {
+        if ui
+            .small_button("Promote rhythm to parent override")
+            .on_hover_text("Copy this rhythm to the parent override and clear it here")
+            .clicked()
+        {
+            promote();
+        }
+    }
 }

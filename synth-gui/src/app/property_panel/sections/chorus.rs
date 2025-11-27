@@ -17,20 +17,19 @@ pub fn show_chorus_section(
 ) -> bool {
     let mut changed = false;
     let defaults = ChorusParams::default();
-    let header = ui.collapsing("Chorus (Unison Detune)", |ui| {
-        if binding.is_locked() {
-            let mut preview = binding.resolved().clone();
-            ui.add_enabled_ui(false, |ui| {
-                draw_chorus_controls(ui, &mut preview, impact, &defaults, false);
-            });
-        } else if let Some(value) = binding.value_mut() {
-            changed |= draw_chorus_controls(ui, value, impact, &defaults, true);
-        }
-        if let Some(value) = promote_button(ui, binding, depth) {
-            *promote = Some(value);
-        }
-    });
-    header.header_response.on_hover_text(UNISSON_DETUNE_TEXT);
+    ui.heading("Chorus (Unison Detune)")
+        .on_hover_text(UNISSON_DETUNE_TEXT);
+    if binding.is_locked() {
+        let mut preview = binding.resolved().clone();
+        ui.add_enabled_ui(false, |ui| {
+            draw_chorus_controls(ui, &mut preview, impact, &defaults, false);
+        });
+    } else if let Some(value) = binding.value_mut() {
+        changed |= draw_chorus_controls(ui, value, impact, &defaults, true);
+    }
+    if let Some(value) = promote_button(ui, binding, depth) {
+        *promote = Some(value);
+    }
     changed
 }
 

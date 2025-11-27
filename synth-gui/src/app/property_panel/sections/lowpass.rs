@@ -14,19 +14,18 @@ pub fn show_lowpass_section(
     promote: &mut Option<LowpassParams>,
 ) -> bool {
     let mut changed = false;
-    ui.collapsing("Filter", |ui| {
-        if binding.is_locked() {
-            let mut preview = binding.resolved().clone();
-            ui.add_enabled_ui(false, |ui| {
-                draw_lowpass_controls(ui, &mut preview, impact, false);
-            });
-        } else if let Some(value) = binding.value_mut() {
-            changed |= draw_lowpass_controls(ui, value, impact, true);
-        }
-        if let Some(value) = promote_button(ui, binding, depth) {
-            *promote = Some(value);
-        }
-    });
+    ui.heading("Filter");
+    if binding.is_locked() {
+        let mut preview = binding.resolved().clone();
+        ui.add_enabled_ui(false, |ui| {
+            draw_lowpass_controls(ui, &mut preview, impact, false);
+        });
+    } else if let Some(value) = binding.value_mut() {
+        changed |= draw_lowpass_controls(ui, value, impact, true);
+    }
+    if let Some(value) = promote_button(ui, binding, depth) {
+        *promote = Some(value);
+    }
     changed
 }
 

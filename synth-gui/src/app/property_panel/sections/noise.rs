@@ -12,23 +12,21 @@ pub fn show_noise_section(
     promote: &mut Option<NoiseParams>,
 ) -> bool {
     let mut changed = false;
-    let header = ui.collapsing("Noise", |ui| {
-        if binding.is_locked() {
-            let mut preview = binding.resolved().clone();
-            ui.add_enabled_ui(false, |ui| {
-                draw_noise_controls(ui, &mut preview, impact, false);
-            });
-        } else if let Some(value) = binding.value_mut() {
-            changed |= draw_noise_controls(ui, value, impact, true);
-        }
-        if let Some(value) = promote_button(ui, binding, depth) {
-            *promote = Some(value);
-        }
-    });
-    header.header_response.on_hover_text(
+    ui.heading("Noise").on_hover_text(
         "Multiplies signal by (1.0 - alpha * random) where random ∈ [0, 1]. \
          Alpha is time-varying with relaxation and LFO modulation.",
     );
+    if binding.is_locked() {
+        let mut preview = binding.resolved().clone();
+        ui.add_enabled_ui(false, |ui| {
+            draw_noise_controls(ui, &mut preview, impact, false);
+        });
+    } else if let Some(value) = binding.value_mut() {
+        changed |= draw_noise_controls(ui, value, impact, true);
+    }
+    if let Some(value) = promote_button(ui, binding, depth) {
+        *promote = Some(value);
+    }
     changed
 }
 
