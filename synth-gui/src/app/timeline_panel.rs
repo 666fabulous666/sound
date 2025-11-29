@@ -577,16 +577,11 @@ impl GuiApp {
     fn finish_tree_drag(&mut self) {
         if let Some(state) = self.tree_drag.take() {
             if let Some(slot) = state.drop_slot {
-                eprintln!(
-                    "DND drop: source={:?}, target_parent={:?}, index={}, kind={:?}",
-                    state.source_path, slot.parent_path, slot.insert_index, slot.kind
-                );
                 if let Some(new_path) = self.score.move_node_to(
                     &state.source_path,
                     &slot.parent_path,
                     slot.insert_index,
                 ) {
-                    eprintln!("DND result: new_path={:?}", new_path);
                     self.selected = Some(new_path);
                 }
             }
