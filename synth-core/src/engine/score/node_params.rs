@@ -242,6 +242,8 @@ pub struct RhythmParams {
     pub t_min: Beat,
     pub t_max: Beat,
     pub loop_len: Beat,
+    #[serde(default)]
+    pub loop_offset: Beat,
     pub tail_multiplier: f64,
     pub inclusions: Rythm,
     pub exclusions: Rythm,
@@ -256,6 +258,7 @@ impl Default for RhythmParams {
             t_min: Beat(0.0),
             t_max: Beat(DEFAULT_LOOP_LEN.as_secs()),
             loop_len: default_loop_len(),
+            loop_offset: default_loop_offset(),
             tail_multiplier: default_tail_multiplier(),
             inclusions: Rythm::Rd(RdRythm::default()),
             exclusions: Rythm::Rd(RdRythm::default()),
@@ -326,6 +329,7 @@ impl RhythmParams {
             t_min: seq.t_min,
             t_max: seq.t_max,
             loop_len: seq.loop_len,
+            loop_offset: seq.loop_offset,
             tail_multiplier: seq.tail_multiplier,
             inclusions: seq.inclusions.clone(),
             exclusions: seq.exclusions.clone(),
@@ -339,6 +343,7 @@ impl RhythmParams {
         seq.t_min = self.t_min;
         seq.t_max = self.t_max;
         seq.loop_len = self.loop_len;
+        seq.loop_offset = self.loop_offset;
         seq.tail_multiplier = self.tail_multiplier;
         seq.inclusions = self.inclusions.clone();
         seq.exclusions = self.exclusions.clone();

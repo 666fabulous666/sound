@@ -165,6 +165,8 @@ pub struct Sequence {
     pub melody_order_affinity: i32,
     #[serde(default = "default_repeat")]
     pub repeat: usize,
+    #[serde(default = "default_loop_offset")]
+    pub loop_offset: Beat,
     #[serde(default = "default_accents")]
     pub accents: (f64, Vec<f64>),
     #[serde(default = "default_shuffle")]
@@ -203,6 +205,7 @@ impl Sequence {
             tail_multiplier: default_tail_multiplier(),
             tolerance: default_tolerance(),
             repeat: default_repeat(),
+            loop_offset: default_loop_offset(),
             accents: default_accents(),
             shuffle: default_shuffle(),
             harmonise: default_harmonise(),
@@ -473,7 +476,10 @@ impl Sequence {
     ) -> Option<Time> {
         let base = now + GENERATE_EARLY;
         let loop_len_time = tempo.beats_to_time(rhythm.loop_len);
-        let start = loop_len_time * (base / loop_len_time).floor();
+        let loop_offset_time = tempo.beats_to_time(rhythm.loop_offset);
+        // Adjust base for the offset, then calculate which loop iteration we're in
+        let adjusted_base = base - loop_offset_time;
+        let start = loop_offset_time + loop_len_time * (adjusted_base / loop_len_time).floor();
 
         if self
             .not_generate_until

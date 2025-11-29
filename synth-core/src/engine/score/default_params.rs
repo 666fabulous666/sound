@@ -122,6 +122,9 @@ pub fn default_delta_shift() -> f64 {
 pub fn default_loop_len() -> Beat {
     Beat(DEFAULT_LOOP_LEN.as_secs())
 }
+pub fn default_loop_offset() -> Beat {
+    Beat(0.0)
+}
 pub fn default_tail_multiplier() -> f64 {
     1.0
 }

@@ -287,10 +287,13 @@ impl GuiApp {
                         ui.visuals().panel_fill,
                     );
                     let loop_len = tempo.beats_to_time(seq.loop_len);
+                    let loop_offset_time = tempo.beats_to_time(seq.loop_offset);
                     let t_min_time = tempo.beats_to_time(seq.t_min);
                     let t_max_time = tempo.beats_to_time(seq.t_max);
                     let win_len = t_max_time - t_min_time;
-                    let start0 = (t_min_time - current_time).rem_euclid(loop_len) + playhead;
+                    // Account for loop_offset: shift the phase of when the loop appears
+                    let adjusted_current = current_time - loop_offset_time;
+                    let start0 = (t_min_time - adjusted_current).rem_euclid(loop_len) + playhead;
                     let visible_end = view_end + win_len;
 
                     if loop_len.as_secs() > f64::EPSILON {
@@ -438,11 +441,13 @@ impl GuiApp {
                     let bar_color = col.lerp_to_gamma(text_color, 0.5);
                     let rep_loop_len = tempo.beats_to_time(seq.loop_len * seq.repeat as f64);
                     let current = self.now();
+                    // Use adjusted_current for repeat markers to account for loop_offset
+                    let adjusted_current_for_repeat = current - loop_offset_time;
                     if rep_loop_len.as_secs() > 0.0 {
-                        let bar_pos = rep_loop_len + playhead - current.rem_euclid(rep_loop_len);
+                        let bar_pos = rep_loop_len + playhead - adjusted_current_for_repeat.rem_euclid(rep_loop_len);
                         (0..seq.repeat).for_each(|j| {
                             let pos = tempo.beats_to_time(seq.loop_len * j as f64) + playhead
-                                - current.rem_euclid(rep_loop_len);
+                                - adjusted_current_for_repeat.rem_euclid(rep_loop_len);
                             painter.text(
                                 egui::pos2(
                                     Self::t_to_x(rect, pos, view_start, view_span),

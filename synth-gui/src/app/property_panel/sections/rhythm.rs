@@ -2,12 +2,9 @@ use super::super::{
     helpers::{ParameterBehavior, SliderParam},
     ParameterImpact,
 };
-use crate::app::property_panel::hover_texts::{
-    GROOVE_OFFSET_TEXT, LOOP_LENGTH_TEXT, REPEAT_TEXT, TIME_QUANTUM_TEXT,
-};
+use crate::app::property_panel::hover_texts::{GROOVE_OFFSET_TEXT, TIME_QUANTUM_TEXT};
 use crate::app::property_panel::rhythm;
 use crate::engine::score::{default_params::default_tail_multiplier, sequence::Sequence};
-use crate::time_freq::Beat;
 use egui::Ui;
 use std::vec::Vec;
 
@@ -69,25 +66,6 @@ pub fn show_rhythm_section(
             .changed()
         {
             seq.beat_offset = tmp_beat_offset;
-            impact.require_regeneration();
-        };
-    });
-    ui.horizontal(|ui| {
-        let mut loop_len = seq.loop_len.as_beats();
-        ui.label("Loop length (beats):")
-            .on_hover_text(LOOP_LENGTH_TEXT);
-        let loop_slider = ui.add(egui::DragValue::new(&mut loop_len).range(0.0..=512.0));
-        if loop_slider.changed() {
-            let loop_len = Beat(loop_len.max(0.0));
-            seq.loop_len = loop_len;
-            seq.t_max = seq.t_max.min(loop_len);
-            impact.require_regeneration();
-        };
-        let mut repeat = seq.repeat;
-        ui.label("Repeat:").on_hover_text(REPEAT_TEXT);
-        let repeat_slider = ui.add(egui::DragValue::new(&mut repeat).range(1..=64));
-        if repeat_slider.changed() {
-            seq.repeat = repeat;
             impact.require_regeneration();
         };
     });

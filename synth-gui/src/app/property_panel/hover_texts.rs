@@ -108,6 +108,12 @@ pub const LOOP_LENGTH_TEXT: &str = concat!(
     "back to zero immediately, independent of\n",
     "the loop lengths of other sequences."
 );
+pub const LOOP_OFFSET_TEXT: &str = concat!(
+    "Offset for when this sequence's loop starts.\n",
+    "\n",
+    "Allows tracks to begin at different times,\n",
+    "creating polyrhythmic or phased patterns."
+);
 pub const REPEAT_TEXT: &str = "How many times the sequence will be repeated.";
 pub const TOLERENCE_TEXT: &str = concat!(
     "Tolerance defines how much to look\n",
