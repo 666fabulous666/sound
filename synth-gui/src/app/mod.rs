@@ -148,6 +148,7 @@ where
             proba: Probability::default(),
             volume: 1.0,
             muted: false,
+            solo: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -167,6 +168,7 @@ where
             proba: Probability::default(),
             volume: 1.0,
             muted: false,
+            solo: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -537,6 +539,7 @@ impl GuiApp {
                 proba: Probability::default(),
                 volume: 1.0,
                 muted: false,
+                solo: false,
                 pan: 0.5,
                 hue: 0.0,
                 or_weight: 1.0,
@@ -710,7 +713,7 @@ impl GuiApp {
             match &node.kind {
                 NodeKind::Seq(seq) => {
                     if let Some(ng) = notes.get_mut(&seq.token) {
-                        ng.volume = next_mix.volume;
+                        ng.volume = next_mix.effective_volume();
                         ng.pan = effective_pan;
                         ng.delays = merged_delays.to_seconds(tempo, 0.5, 0.5);
                     }
@@ -724,10 +727,11 @@ impl GuiApp {
         }
 
         let tempo = self.score.tempo();
+        let solo_active = self.score.track_root.has_any_solo();
         dfs(
             &self.score.track_root,
             &mut self.score.notes,
-            MixContext::default(),
+            MixContext::default().with_solo_active(solo_active),
             tempo,
             TrackDelays::default(),
         );

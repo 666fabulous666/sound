@@ -61,6 +61,10 @@ pub struct MixContext {
     pub volume: f64,
     pub pan: Option<f64>,
     pub proba: Probability,
+    /// True if any track in the tree has solo enabled.
+    pub solo_active: bool,
+    /// True if this node or any ancestor has solo enabled (children of solo tracks play).
+    pub in_solo_chain: bool,
 }
 
 impl Default for MixContext {
@@ -69,13 +73,26 @@ impl Default for MixContext {
             volume: 1.0,
             pan: None,
             proba: Probability::certainty(),
+            solo_active: false,
+            in_solo_chain: false,
         }
     }
 }
 
 impl MixContext {
+    pub fn with_solo_active(mut self, solo_active: bool) -> Self {
+        self.solo_active = solo_active;
+        self
+    }
+
     pub fn propagate(&self, node: &TrackNode) -> (MixContext, f64) {
+        // Determine if we're in a solo chain (this node or ancestor is solo)
+        let in_solo_chain = self.in_solo_chain || node.solo;
+
+        // Don't apply solo zeroing here - just multiply volumes normally.
+        // Solo zeroing is applied only at the sequence level when setting NotesGroup volume.
         let volume = sanitize_volume(self.volume * node.volume());
+
         let proba = self.proba.mul(node.proba);
         let pan_lock_here =
             matches!(node.kind, NodeKind::Group { ref aesthetic, .. } if aesthetic.lock_pan);
@@ -93,9 +110,21 @@ impl MixContext {
                 volume,
                 pan: next_pan,
                 proba,
+                solo_active: self.solo_active,
+                in_solo_chain,
             },
             effective_pan,
         )
+    }
+
+    /// Returns the effective volume for a sequence, considering solo mode.
+    /// Call this when setting the actual volume on a NotesGroup.
+    pub fn effective_volume(&self) -> f64 {
+        if self.solo_active && !self.in_solo_chain {
+            0.0
+        } else {
+            self.volume
+        }
     }
 }
 
@@ -131,6 +160,8 @@ pub struct TrackNode {
     pub volume: f64, // mix gain multiplier (>= 0.0)
     #[serde(default)]
     pub muted: bool, // when true, effective volume is 0
+    #[serde(default)]
+    pub solo: bool, // when true and any track is solo, only solo tracks produce sound
     #[serde(default = "default_pan", alias = "spacial")]
     pub pan: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
     #[serde(default = "default_hue")]
@@ -174,6 +205,7 @@ impl TrackNode {
             proba: Probability::default(),
             volume: 1.0,
             muted: false,
+            solo: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -197,6 +229,7 @@ impl TrackNode {
             proba: Probability::default(),
             volume: 1.0,
             muted: false,
+            solo: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -468,6 +501,25 @@ impl TrackNode {
 
     pub fn is_mute(&self) -> bool {
         self.muted
+    }
+
+    pub fn toggle_solo(&mut self) {
+        self.solo = !self.solo;
+    }
+
+    pub fn is_solo(&self) -> bool {
+        self.solo
+    }
+
+    /// Check if any node in the tree has solo enabled.
+    pub fn has_any_solo(&self) -> bool {
+        if self.solo {
+            return true;
+        }
+        match &self.kind {
+            NodeKind::Seq(_) => false,
+            NodeKind::Group { children, .. } => children.iter().any(|ch| ch.has_any_solo()),
+        }
     }
     /// Recursively draw all sequences under this node.
     /// Volume is NOT computed here - notes are generated at 1.0 and volume is applied separately.

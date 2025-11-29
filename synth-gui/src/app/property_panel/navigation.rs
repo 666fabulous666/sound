@@ -1,7 +1,7 @@
 use super::Action;
 use crate::engine::score::track_node::TrackNode;
 use crate::shortcuts::{
-    shortcut, CLONE, DELETE, FIRST_CHILD, MUTE, PARENT, SELECT_DOWN, SELECT_UP,
+    shortcut, CLONE, DELETE, FIRST_CHILD, MUTE, PARENT, SELECT_DOWN, SELECT_UP, SOLO,
 };
 use egui::Modifiers;
 
@@ -99,6 +99,20 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
                     *action = Action::Mute;
                 }
 
+                // Solo / Unsolo
+                let solo_label = if track_node_mut.is_solo() {
+                    "Unsolo"
+                } else {
+                    "Solo"
+                };
+                if ui
+                    .button(solo_label)
+                    .on_hover_text(shortcut(SOLO))
+                    .clicked()
+                {
+                    *action = Action::Solo;
+                }
+
                 // Delete
                 if ui
                     .button("Delete")
@@ -166,10 +180,11 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
 
     // Keyboard handling
     if !ui.ctx().wants_keyboard_input() {
-        let (mods, mute, delete, clone, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
+        let (mods, mute, solo, delete, clone, sel_up, sel_down, sel_par, sel_ch) = ui.input(|i| {
             (
                 i.modifiers,
                 i.key_pressed(MUTE),
+                i.key_pressed(SOLO),
                 i.key_pressed(DELETE),
                 i.key_pressed(CLONE),
                 i.key_pressed(SELECT_UP),
@@ -184,6 +199,9 @@ pub fn navigation(ui: &mut egui::Ui, action: &mut Action, track_node_mut: &mut T
 
         if mute {
             *action = Action::Mute;
+        }
+        if solo {
+            *action = Action::Solo;
         }
         if delete {
             *action = Action::Delete;

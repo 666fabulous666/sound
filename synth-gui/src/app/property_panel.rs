@@ -145,6 +145,7 @@ use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
 pub enum Action {
     None,
     Mute,
+    Solo,
     Delete,
     Clone,
     Parent,
@@ -177,6 +178,7 @@ impl Action {
             Action::GroupAbove => ("Group above", self),
             Action::GroupBelow => ("Group below", self),
             Action::Mute => ("Mute", self),
+            Action::Solo => ("Solo", self),
         }
     }
 }
@@ -1582,6 +1584,16 @@ impl GuiApp {
                                     .as_mut()
                                     .map(|track_node| {
                                         track_node.toggle_mute();
+                                        impact.require_mix_update();
+                                    });
+                            }
+                            Action::Solo => {
+                                self.score
+                                    .track_root
+                                    .get_mut(&sel)
+                                    .as_mut()
+                                    .map(|track_node| {
+                                        track_node.toggle_solo();
                                         impact.require_mix_update();
                                     });
                             }

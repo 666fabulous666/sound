@@ -254,7 +254,7 @@ impl GuiApp {
                         );
 
                         if is_selected && !collapsed {
-                            highlight_group(text_color, &painter, encompass_rect, node.muted);
+                            highlight_group(text_color, &painter, encompass_rect, node.muted, node.solo);
                         }
 
                         painter.rect_filled(
@@ -328,6 +328,22 @@ impl GuiApp {
                                     egui::Stroke::new(1.0, egui::Color32::BLACK),
                                     egui::StrokeKind::Middle,
                                 );
+
+                                // Muted indicator: gray stripes
+                                if node.muted {
+                                    draw_stripes(&painter, block_rect, egui::Color32::GRAY.gamma_multiply(0.6));
+                                }
+
+                                // Solo indicator: golden border
+                                if node.solo {
+                                    painter.rect_stroke(
+                                        block_rect,
+                                        4.0,
+                                        egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 200, 50)),
+                                        egui::StrokeKind::Inside,
+                                    );
+                                }
+
                                 self.sequence_drag_handles(
                                     ui, ctx, &painter, lane, &seq, block_rect, n,
                                 );
@@ -1087,29 +1103,15 @@ fn highlight_if_selected(
     };
     col
 }
-fn highlight_group(
-    color: egui::Color32,
-    painter: &egui::Painter,
-    encompass_rect: egui::Rect,
-    muted: bool,
-) {
-    // Base fill
-    let rounding = 10.0;
-    painter.rect_filled(encompass_rect, rounding, color.gamma_multiply(0.35));
-
-    if !muted {
-        return;
-    }
-
-    // Stripe params
-    let stripe_base = egui::Color32::GRAY.gamma_multiply(0.5);
+/// Draw diagonal stripes on a rectangle (used for muted/solo indicators)
+fn draw_stripes(painter: &egui::Painter, rect: egui::Rect, stripe_color: egui::Color32) {
     let spacing = 8.0; // distance between stripes
     let thickness = 1.5; // visual thickness of each stripe
 
-    let top_left = encompass_rect.left_top();
-    let bottom_right = encompass_rect.right_bottom();
-    let width = encompass_rect.width();
-    let height = encompass_rect.height();
+    let top_left = rect.left_top();
+    let bottom_right = rect.right_bottom();
+    let width = rect.width();
+    let height = rect.height();
 
     // Cover entire rect diagonally
     let diag_len = width + height;
@@ -1117,7 +1119,7 @@ fn highlight_group(
 
     // Alpha ramp: 0→1 over [0..0.25], 1 over [0.25..0.75], 1→0 over [0.75..1]
     let stripe_alpha = |x: f32| -> f32 {
-        let t = ((x - encompass_rect.left()) / width).clamp(0.0, 1.0);
+        let t = ((x - rect.left()) / width).clamp(0.0, 1.0);
         if t < 0.25 {
             (t / 0.25).clamp(0.0, 1.0)
         } else if t > 0.75 {
@@ -1149,7 +1151,7 @@ fn highlight_group(
         }
 
         // Quick reject
-        if !encompass_rect.intersects(egui::Rect::from_two_pos(start, end)) {
+        if !rect.intersects(egui::Rect::from_two_pos(start, end)) {
             continue;
         }
 
@@ -1173,10 +1175,10 @@ fn highlight_group(
         let a2 = stripe_alpha(v2.x);
         let a3 = stripe_alpha(v3.x);
 
-        let c0 = stripe_base.gamma_multiply(a0);
-        let c1 = stripe_base.gamma_multiply(a1);
-        let c2 = stripe_base.gamma_multiply(a2);
-        let c3 = stripe_base.gamma_multiply(a3);
+        let c0 = stripe_color.gamma_multiply(a0);
+        let c1 = stripe_color.gamma_multiply(a1);
+        let c2 = stripe_color.gamma_multiply(a2);
+        let c3 = stripe_color.gamma_multiply(a3);
 
         let idx = mesh.vertices.len() as u32;
         mesh.vertices.extend_from_slice(&[
@@ -1207,6 +1209,34 @@ fn highlight_group(
 
     painter.add(egui::Shape::mesh(mesh));
 }
+
+fn highlight_group(
+    color: egui::Color32,
+    painter: &egui::Painter,
+    encompass_rect: egui::Rect,
+    muted: bool,
+    solo: bool,
+) {
+    // Base fill
+    let rounding = 10.0;
+    painter.rect_filled(encompass_rect, rounding, color.gamma_multiply(0.35));
+
+    if muted {
+        // Gray stripes for muted
+        draw_stripes(painter, encompass_rect, egui::Color32::GRAY.gamma_multiply(0.5));
+    }
+
+    if solo {
+        // Golden border for solo
+        painter.rect_stroke(
+            encompass_rect,
+            rounding,
+            egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 200, 50)),
+            egui::StrokeKind::Inside,
+        );
+    }
+}
+
 fn highlight_glow_smooth(col: egui::Color32, painter: &egui::Painter, track_rect: egui::Rect) {
     use egui::epaint::{Mesh, Vertex};
 

@@ -10,6 +10,7 @@ pub const WRAP: Key = Key::W;
 pub const GROUP: Key = Key::G;
 pub const COLLAPSE: Key = Key::C;
 pub const MUTE: Key = Key::M;
+pub const SOLO: Key = Key::S;
 
 pub fn shortcut(key: Key) -> String {
     format!("Shortcut: {}", key.symbol_or_name())
