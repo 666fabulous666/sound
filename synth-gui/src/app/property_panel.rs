@@ -23,6 +23,7 @@ pub enum PropertySection {
     Power,
     Noise,
     Rhythm,
+    Position,
     Harmony,
     Accents,
 }
@@ -42,6 +43,7 @@ impl PropertySection {
             PropertySection::Power,
             PropertySection::Noise,
             PropertySection::Rhythm,
+            PropertySection::Position,
             PropertySection::Harmony,
             PropertySection::Accents,
         ]
@@ -61,6 +63,7 @@ impl PropertySection {
             PropertySection::Noise,
             PropertySection::Wave,
             PropertySection::Rhythm,
+            PropertySection::Position,
             PropertySection::Harmony,
         ]
     }
@@ -79,6 +82,7 @@ impl PropertySection {
             PropertySection::Power => "Power",
             PropertySection::Noise => "Noise",
             PropertySection::Rhythm => "Rhythm",
+            PropertySection::Position => "Position",
             PropertySection::Harmony => "Harmony",
             PropertySection::Accents => "Accents",
         }
@@ -98,6 +102,7 @@ impl PropertySection {
             PropertySection::Power => "Power factor distortion",
             PropertySection::Noise => "Noise / random signal attenuation",
             PropertySection::Rhythm => "Rhythm generators and timing",
+            PropertySection::Position => "Sequence position within the loop",
             PropertySection::Harmony => "Harmonic intervals and following",
             PropertySection::Accents => "Accent patterns across the bar",
         }
@@ -110,7 +115,7 @@ use helpers::{ParameterBehavior, SliderParam};
 use preset_section::preset_section;
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, power,
+    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, position, power,
     rhythm as rhythm_section, vibrato,
 };
 
@@ -290,6 +295,27 @@ fn draw_rhythm_override_controls(
     let before = params.clone();
     ui.add_enabled_ui(editable, |ui| {
         rhythm_section::show_rhythm_section(ui, &mut temp_seq, impact, edit_vec_fn, None);
+    });
+    let after = RhythmParams::from_sequence(&temp_seq);
+    if editable && after != before {
+        *params = after;
+        true
+    } else {
+        false
+    }
+}
+
+fn draw_position_override_controls(
+    ui: &mut egui::Ui,
+    params: &mut RhythmParams,
+    impact: &mut ParameterImpact,
+    editable: bool,
+) -> bool {
+    let mut temp_seq = Sequence::new(Token(0));
+    params.apply_to_sequence(&mut temp_seq);
+    let before = params.clone();
+    ui.add_enabled_ui(editable, |ui| {
+        position::show_position_section(ui, &mut temp_seq, impact);
     });
     let after = RhythmParams::from_sequence(&temp_seq);
     if editable && after != before {
@@ -826,6 +852,32 @@ impl GuiApp {
                                     }
                                 }
 
+                                // Position section - only when active
+                                if self.active_property_section == PropertySection::Position {
+                                    let rhythm_locked = rhythm_resolution.locked_for_depth(depth);
+                                    if rhythm_locked {
+                                        // Position is part of rhythm override, show as read-only
+                                        let mut preview = seq_mut.clone();
+                                        rhythm_resolution
+                                            .value
+                                            .clone()
+                                            .apply_to_sequence(&mut preview);
+                                        ui.add_enabled_ui(false, |ui| {
+                                            position::show_position_section(
+                                                ui,
+                                                &mut preview,
+                                                &mut impact,
+                                            );
+                                        });
+                                    } else {
+                                        position::show_position_section(
+                                            ui,
+                                            seq_mut,
+                                            &mut impact,
+                                        );
+                                    }
+                                }
+
                                 // Harmony section - only when active and not drum
                                 if self.active_property_section == PropertySection::Harmony && !is_drum {
                                     let harmony_locked = harmony_resolution.locked_for_depth(depth);
@@ -1324,6 +1376,42 @@ impl GuiApp {
                                         overrides.rhythm = None;
                                     }
                                     group_overrides_dirty |= rhythm_dirty || rhythm_distributed;
+                                }
+
+                                // Position override section (uses rhythm override for position data)
+                                if self.active_property_section == PropertySection::Position {
+                                    ui.separator();
+                                    ui.heading("Position Override");
+                                    let (position_dirty, distribute_position) = {
+                                        let mut rhythm_binding = OverrideBinding::new(
+                                            rhythm_resolution.clone(),
+                                            &mut overrides.rhythm,
+                                            depth,
+                                        );
+                                        group_override_section(
+                                            ui,
+                                            "Position",
+                                            "Override sequence position (t_min/t_max) for descendants",
+                                            &mut rhythm_binding,
+                                            &mut impact,
+                                            |ui, value, impact, editable| {
+                                                draw_position_override_controls(
+                                                    ui,
+                                                    value,
+                                                    impact,
+                                                    editable,
+                                                )
+                                            },
+                                        )
+                                    };
+                                    let position_distributed = distribute_position.is_some();
+                                    if let Some(value) = distribute_position {
+                                        for child in children.iter_mut() {
+                                            child.overrides.rhythm = Some(value.clone());
+                                        }
+                                        overrides.rhythm = None;
+                                    }
+                                    group_overrides_dirty |= position_dirty || position_distributed;
                                 }
 
                                 // Harmony override section

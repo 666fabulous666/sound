@@ -7,6 +7,7 @@ pub mod harmony;
 pub mod lowpass;
 pub mod mix;
 pub mod noise;
+pub mod position;
 pub mod power;
 pub mod rhythm;
 pub mod vibrato;
