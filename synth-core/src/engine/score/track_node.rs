@@ -111,7 +111,6 @@ fn sanitize_volume(value: f64) -> f64 {
 pub enum NodeKind {
     Group {
         id: Token,
-        muted: bool,
         collapsed: bool,
         children: Vec<TrackNode>,
         #[serde(default)]
@@ -130,6 +129,8 @@ pub struct TrackNode {
     #[serde(default = "default_proba")]
     pub proba: Probability,
     pub volume: f64, // mix gain multiplier (>= 0.0)
+    #[serde(default)]
+    pub muted: bool, // when true, effective volume is 0
     #[serde(default = "default_pan", alias = "spacial")]
     pub pan: f64, // pan 0.0..=1.0 (0 = L, 0.5 = C, 1 = R)
     #[serde(default = "default_hue")]
@@ -172,6 +173,7 @@ impl TrackNode {
             name: name.into(),
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -179,7 +181,6 @@ impl TrackNode {
             delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: gen.next(),
-                muted: false,
                 collapsed: false,
                 children: Vec::new(),
                 not_generate_until: None,
@@ -195,6 +196,7 @@ impl TrackNode {
             name: String::new(),
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -294,12 +296,24 @@ impl TrackNode {
         &mut self.name
     }
 
+    /// Returns the effective volume (0.0 if muted, otherwise the stored volume).
     pub fn volume(&self) -> f64 {
-        self.volume
+        if self.muted {
+            0.0
+        } else {
+            self.volume
+        }
     }
 
+    /// Returns a mutable reference to the stored volume value.
+    /// Note: This is the stored value, not the effective volume.
     pub fn volume_mut(&mut self) -> &mut f64 {
         &mut self.volume
+    }
+
+    /// Returns the stored volume value, ignoring mute state.
+    pub fn volume_raw(&self) -> f64 {
+        self.volume
     }
 
     pub fn pan(&self) -> f64 {
@@ -449,17 +463,11 @@ impl TrackNode {
     }
 
     pub fn toggle_mute(&mut self) {
-        match &mut self.kind {
-            NodeKind::Group { ref mut muted, .. } => *muted ^= true,
-            NodeKind::Seq(sequence) => sequence.mute ^= true,
-        }
+        self.muted = !self.muted;
     }
 
     pub fn is_mute(&self) -> bool {
-        match &self.kind {
-            NodeKind::Group { muted, .. } => *muted,
-            NodeKind::Seq(sequence) => sequence.mute,
-        }
+        self.muted
     }
     /// Recursively draw all sequences under this node.
     /// Volume is NOT computed here - notes are generated at 1.0 and volume is applied separately.
@@ -522,14 +530,11 @@ impl TrackNode {
             }
             NodeKind::Group {
                 children,
-                muted,
                 not_generate_until,
                 mode,
                 ..
             } => {
-                if *muted {
-                    return; // Don't generate anything if muted
-                }
+                // Muted nodes will have 0 volume via MixContext propagation
                 if not_generate_until.map_or(true, |until| now >= until) {
                     if rng.gen_bool(current_mix.proba.as_f64()) {
                         match mode {
@@ -980,9 +985,7 @@ fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> Strin
                 // let _ = write!(s, " wave={}", seq.wave_type.to_string());
             }
         }
-        NodeKind::Group {
-            children, muted, ..
-        } => {
+        NodeKind::Group { children, .. } => {
             // Use a box emoji unless ascii_only
             if !opts.ascii_only {
                 s.push_str("📦 ");
@@ -994,7 +997,7 @@ fn node_label(node: &TrackNode, path: &[usize], opts: TreePrintOptions) -> Strin
             if opts.show_details {
                 let _ = write!(s, " ({})", children.len());
                 // small status hints
-                if *muted {
+                if node.muted {
                     s.push_str(" [muted]");
                 }
                 if (node.volume - 1.0).abs() > f64::EPSILON {

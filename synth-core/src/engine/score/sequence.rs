@@ -147,8 +147,6 @@ pub struct Sequence {
     pub beat_offset: i32,
     #[serde(default = "default_glide")]
     pub glide: bool,
-    #[serde(default = "default_mute")]
-    pub mute: bool,
     #[serde(default = "default_loop_len")]
     pub loop_len: Beat,
     #[serde(default = "default_tail_multiplier")]
@@ -198,7 +196,6 @@ impl Sequence {
             wave_type: WaveType::Sine,
             note_variant: NoteVariant::default(),
             harmonics: HarmonicsParams::default(),
-            mute: default_mute(),
             token,
             not_generate_until: None,
             loop_len: default_loop_len(),

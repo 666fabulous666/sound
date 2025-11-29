@@ -1582,7 +1582,7 @@ impl GuiApp {
                                     .as_mut()
                                     .map(|track_node| {
                                         track_node.toggle_mute();
-                                        impact.require_regeneration();
+                                        impact.require_mix_update();
                                     });
                             }
                         }

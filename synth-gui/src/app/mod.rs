@@ -147,6 +147,7 @@ where
             name: "Root".into(),
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -154,7 +155,6 @@ where
             delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: Token(0), // placeholder if Group needs an id
-                muted: false,
                 collapsed: false,
                 children,
                 not_generate_until: None,
@@ -166,6 +166,7 @@ where
             name: "Root".into(),
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -173,7 +174,6 @@ where
             delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: Token(0),
-                muted: false,
                 collapsed: false,
                 children: seqs.into_iter().map(TrackNode::from_sequence).collect(),
                 not_generate_until: None,
@@ -536,6 +536,7 @@ impl GuiApp {
                 name: String::new(),
                 proba: Probability::default(),
                 volume: 1.0,
+                muted: false,
                 pan: 0.5,
                 hue: 0.0,
                 or_weight: 1.0,
@@ -543,7 +544,6 @@ impl GuiApp {
                 delays: TrackDelays::default(),
                 kind: NodeKind::Group {
                     id: self.score.last_token.next(),
-                    muted: false,
                     collapsed: false,
                     children: vec![node],
                     not_generate_until: None,

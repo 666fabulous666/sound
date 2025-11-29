@@ -234,9 +234,7 @@ impl GuiApp {
                 .unwrap_or(false);
 
             match node.kind {
-                NodeKind::Group {
-                    collapsed, muted, ..
-                } => {
+                NodeKind::Group { collapsed, .. } => {
                     let col = highlight_if_selected(
                         &painter,
                         lane_gap,
@@ -256,7 +254,7 @@ impl GuiApp {
                         );
 
                         if is_selected && !collapsed {
-                            highlight_group(text_color, &painter, encompass_rect, muted);
+                            highlight_group(text_color, &painter, encompass_rect, node.muted);
                         }
 
                         painter.rect_filled(

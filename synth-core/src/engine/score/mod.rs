@@ -662,6 +662,7 @@ impl Score {
             name,
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -669,7 +670,6 @@ impl Score {
             delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
-                muted: false,
                 collapsed: false,
                 children: vec![node],
                 not_generate_until: None,
