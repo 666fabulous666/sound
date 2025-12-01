@@ -4,7 +4,7 @@ pub mod chorus;
 pub mod envelope;
 pub mod harmonics;
 pub mod harmony;
-pub mod lowpass;
+pub mod filter;
 pub mod mix;
 pub mod noise;
 pub mod position;

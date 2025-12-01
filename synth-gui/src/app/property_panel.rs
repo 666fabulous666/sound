@@ -15,7 +15,7 @@ pub enum PropertySection {
     Mix,
     Wave,
     Envelope,
-    Lowpass,
+    Filter,
     Bend,
     Vibrato,
     Harmonics,
@@ -26,6 +26,7 @@ pub enum PropertySection {
     Position,
     Harmony,
     Accents,
+    Presets,
 }
 
 impl PropertySection {
@@ -35,7 +36,7 @@ impl PropertySection {
             PropertySection::Mix,
             PropertySection::Wave,
             PropertySection::Envelope,
-            PropertySection::Lowpass,
+            PropertySection::Filter,
             PropertySection::Bend,
             PropertySection::Vibrato,
             PropertySection::Harmonics,
@@ -46,6 +47,7 @@ impl PropertySection {
             PropertySection::Position,
             PropertySection::Harmony,
             PropertySection::Accents,
+            PropertySection::Presets,
         ]
     }
 
@@ -54,7 +56,7 @@ impl PropertySection {
         &[
             PropertySection::Mix,
             PropertySection::Envelope,
-            PropertySection::Lowpass,
+            PropertySection::Filter,
             PropertySection::Bend,
             PropertySection::Vibrato,
             PropertySection::Harmonics,
@@ -65,6 +67,7 @@ impl PropertySection {
             PropertySection::Rhythm,
             PropertySection::Position,
             PropertySection::Harmony,
+            PropertySection::Presets,
         ]
     }
 
@@ -74,7 +77,7 @@ impl PropertySection {
             PropertySection::Mix => "Mix",
             PropertySection::Wave => "Wave",
             PropertySection::Envelope => "Envelope",
-            PropertySection::Lowpass => "Lowpass",
+            PropertySection::Filter => "Filter",
             PropertySection::Bend => "Bend",
             PropertySection::Vibrato => "Vibrato",
             PropertySection::Harmonics => "Harmonics",
@@ -85,6 +88,7 @@ impl PropertySection {
             PropertySection::Position => "Position",
             PropertySection::Harmony => "Harmony",
             PropertySection::Accents => "Accents",
+            PropertySection::Presets => "Presets",
         }
     }
 
@@ -94,7 +98,7 @@ impl PropertySection {
             PropertySection::Mix => "Volume and stereo panning",
             PropertySection::Wave => "Waveform selection",
             PropertySection::Envelope => "Attack and decay envelope",
-            PropertySection::Lowpass => "Lowpass filter settings",
+            PropertySection::Filter => "Filter settings (lowpass, highpass, bandpass)",
             PropertySection::Bend => "Pitch bend parameters",
             PropertySection::Vibrato => "Vibrato magnitude and frequency",
             PropertySection::Harmonics => "Harmonic overtones",
@@ -105,6 +109,7 @@ impl PropertySection {
             PropertySection::Position => "Sequence position within the loop",
             PropertySection::Harmony => "Harmonic intervals and following",
             PropertySection::Accents => "Accent patterns across the bar",
+            PropertySection::Presets => "Load and save instrument presets",
         }
     }
 }
@@ -112,10 +117,9 @@ impl PropertySection {
 use super::colormap::color_from_value;
 use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
 use helpers::{ParameterBehavior, SliderParam};
-use preset_section::preset_section;
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, position, power,
+    accents, bend, chorus, envelope, filter, harmonics, harmony, mix, noise, position, power,
     rhythm as rhythm_section, vibrato,
 };
 
@@ -129,6 +133,7 @@ use crate::{
             ResolvedTrackParams, RhythmParams, VibratoParams, WaveParams,
         },
         note::NoteVariant,
+        preset::InstrumentPreset,
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
@@ -137,6 +142,7 @@ use crate::{
     layout_left,
     shortcuts::*,
     time_freq::{Freq, Time},
+    PRESET_DEFAULTS,
     Token, F0,
 };
 use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
@@ -242,7 +248,7 @@ fn promote_button<T: Clone>(
 
 fn group_override_section<T: Clone>(
     ui: &mut egui::Ui,
-    title: &str,
+    _title: &str,
     tooltip: &str,
     binding: &mut OverrideBinding<T>,
     impact: &mut ParameterImpact,
@@ -250,38 +256,36 @@ fn group_override_section<T: Clone>(
 ) -> (bool, Option<T>) {
     let mut changed = false;
     let mut distribute_value = None;
-    ui.collapsing(title, |ui| {
-        let mut active = binding.is_active_here();
-        ui.vertical(|ui| {
-            let response = ui
-                .add_enabled_ui(!binding.is_locked(), |ui| {
-                    ui.checkbox(&mut active, "Override for children")
-                })
-                .inner;
-            let response = response.on_hover_text(tooltip);
-            if response.changed() {
-                changed |= binding.set_override(active);
+    let mut active = binding.is_active_here();
+    ui.vertical(|ui| {
+        let response = ui
+            .add_enabled_ui(!binding.is_locked(), |ui| {
+                ui.checkbox(&mut active, "Override for children")
+            })
+            .inner;
+        let response = response.on_hover_text(tooltip);
+        if response.changed() {
+            changed |= binding.set_override(active);
+        }
+        if binding.is_active_here() && !binding.is_locked() {
+            if ui
+                .small_button("Distribute to children")
+                .on_hover_text("Copy this override value into every child, enable the override on those children, and remove it here.")
+                .clicked()
+            {
+                distribute_value = Some(binding.resolved().clone());
             }
-            if binding.is_active_here() && !binding.is_locked() {
-                if ui
-                    .small_button("Distribute to children")
-                    .on_hover_text("Copy this override value into every child, enable the override on those children, and remove it here.")
-                    .clicked()
-                {
-                    distribute_value = Some(binding.resolved().clone());
-                }
-            }
-        });
-
-        if binding.is_locked() || !binding.is_active_here() {
-            let mut preview = binding.resolved().clone();
-            ui.add_enabled_ui(false, |ui| {
-                render_controls(ui, &mut preview, impact, false);
-            });
-        } else if let Some(value) = binding.value_mut() {
-            changed |= render_controls(ui, value, impact, true);
         }
     });
+
+    if binding.is_locked() || !binding.is_active_here() {
+        let mut preview = binding.resolved().clone();
+        ui.add_enabled_ui(false, |ui| {
+            render_controls(ui, &mut preview, impact, false);
+        });
+    } else if let Some(value) = binding.value_mut() {
+        changed |= render_controls(ui, value, impact, true);
+    }
     (changed, distribute_value)
 }
 
@@ -463,9 +467,7 @@ impl GuiApp {
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
                     let mut promotion_request: Option<PromotionKind> = None;
-
-                    // Show preset section early and store the action
-                    let preset_action = preset_section(ui, &mut self.preset_name_input);
+                    let mut preset_action = preset_section::PresetAction::default();
 
                     if let Some(sel) = self.selected.clone() {
                         let depth = sel.len();
@@ -671,15 +673,15 @@ impl GuiApp {
                                     }
                                 }
 
-                                // Lowpass section - only when active
-                                if self.active_property_section == PropertySection::Lowpass {
+                                // Filter section - only when active
+                                if self.active_property_section == PropertySection::Filter {
                                     let mut lowpass_binding = OverrideBinding::new(
                                         lowpass_resolution.clone(),
                                         &mut overrides.lowpass,
                                         depth,
                                     );
                                     let mut lp_promote = None;
-                                    overrides_dirty |= lowpass::show_lowpass_section(
+                                    overrides_dirty |= filter::show_filter_section(
                                         ui,
                                         &mut lowpass_binding,
                                         &mut impact,
@@ -929,6 +931,12 @@ impl GuiApp {
                                     );
                                 }
 
+                                // Presets section - only when active
+                                if self.active_property_section == PropertySection::Presets {
+                                    preset_action =
+                                        preset_section::preset_section(ui, &mut self.preset_name_input);
+                                }
+
                                 if overrides_dirty {
                                     needs_override_refresh = true;
                                 }
@@ -1044,10 +1052,10 @@ impl GuiApp {
                                     group_overrides_dirty |= envelope_dirty || envelope_distributed;
                                 }
 
-                                // Lowpass override section
-                                if self.active_property_section == PropertySection::Lowpass {
+                                // Filter override section
+                                if self.active_property_section == PropertySection::Filter {
                                     ui.separator();
-                                    ui.heading("Lowpass Override");
+                                    ui.heading("Filter Override");
                                     let (lowpass_dirty, distribute_lowpass) = {
                                         let mut lowpass_binding = OverrideBinding::new(
                                             lowpass_resolution.clone(),
@@ -1056,12 +1064,12 @@ impl GuiApp {
                                         );
                                         group_override_section(
                                             ui,
-                                            "Lowpass",
-                                            "Apply lowpass filter settings to all children",
+                                            "Filter",
+                                            "Apply filter settings to all children",
                                             &mut lowpass_binding,
                                             &mut impact,
                                             |ui, value, impact, editable| {
-                                                lowpass::draw_lowpass_controls(
+                                                filter::draw_filter_controls(
                                                     ui, value, impact, editable,
                                                 )
                                             },
@@ -1449,6 +1457,12 @@ impl GuiApp {
                                     group_overrides_dirty |= harmony_dirty || harmony_distributed;
                                 }
 
+                                // Presets section - only when active (for groups)
+                                if self.active_property_section == PropertySection::Presets {
+                                    preset_action =
+                                        preset_section::preset_section(ui, &mut self.preset_name_input);
+                                }
+
                                 if group_overrides_dirty {
                                     needs_override_refresh = true;
                                 }
@@ -1471,6 +1485,15 @@ impl GuiApp {
                     }
                     if preset_action.load {
                         self.load_preset(ctx);
+                    }
+                    if let Some(builtin_idx) = preset_action.apply_builtin {
+                        if let Some(path) = self.selected.clone() {
+                            if let Some((_name, json)) = PRESET_DEFAULTS.get(builtin_idx) {
+                                if let Ok(preset) = InstrumentPreset::from_json(json) {
+                                    self.apply_preset(preset, &path);
+                                }
+                            }
+                        }
                     }
 
                     if let Some(mut sel) = self.selected.clone() {

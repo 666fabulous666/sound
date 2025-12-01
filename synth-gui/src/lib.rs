@@ -41,6 +41,9 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
     ),
 ];
 
+// Built-in instrument presets (auto-generated from assets/presets/*.json)
+include!(concat!(env!("OUT_DIR"), "/preset_defaults.rs"));
+
 /// Helper for left-aligned egui layout
 pub fn layout_left() -> egui::Layout {
     egui::Layout::left_to_right(egui::Align::Min)
