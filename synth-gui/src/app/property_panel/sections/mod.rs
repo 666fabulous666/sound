@@ -1,10 +1,11 @@
 pub mod accents;
 pub mod bend;
 pub mod chorus;
+pub mod delay;
 pub mod envelope;
+pub mod filter;
 pub mod harmonics;
 pub mod harmony;
-pub mod filter;
 pub mod mix;
 pub mod noise;
 pub mod position;

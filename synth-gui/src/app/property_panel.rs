@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub enum PropertySection {
     #[default]
     Mix,
+    Delay,
     Wave,
     Envelope,
     Filter,
@@ -34,6 +35,7 @@ impl PropertySection {
     pub fn sequence_sections() -> &'static [PropertySection] {
         &[
             PropertySection::Mix,
+            PropertySection::Delay,
             PropertySection::Wave,
             PropertySection::Envelope,
             PropertySection::Filter,
@@ -55,6 +57,7 @@ impl PropertySection {
     pub fn group_sections() -> &'static [PropertySection] {
         &[
             PropertySection::Mix,
+            PropertySection::Delay,
             PropertySection::Envelope,
             PropertySection::Filter,
             PropertySection::Bend,
@@ -75,6 +78,7 @@ impl PropertySection {
     pub fn label(&self) -> &'static str {
         match self {
             PropertySection::Mix => "Mix",
+            PropertySection::Delay => "Delay",
             PropertySection::Wave => "Wave",
             PropertySection::Envelope => "Envelope",
             PropertySection::Filter => "Filter",
@@ -96,6 +100,7 @@ impl PropertySection {
     pub fn tooltip(&self) -> &'static str {
         match self {
             PropertySection::Mix => "Volume and stereo panning",
+            PropertySection::Delay => "Delay / echo effect per channel",
             PropertySection::Wave => "Waveform selection",
             PropertySection::Envelope => "Attack and decay envelope",
             PropertySection::Filter => "Filter settings (lowpass, highpass, bandpass)",
@@ -119,8 +124,8 @@ use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, 
 use helpers::{ParameterBehavior, SliderParam};
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, filter, harmonics, harmony, mix, noise, position, power,
-    rhythm as rhythm_section, vibrato,
+    accents, bend, chorus, delay, envelope, filter, harmonics, harmony, mix, noise, position,
+    power, rhythm as rhythm_section, vibrato,
 };
 
 use crate::{
@@ -562,6 +567,11 @@ impl GuiApp {
                                 weight_param.draw(ui, &mut track_node_mut.or_weight, &mut impact);
                             }
 
+                            // Delay section - only when active
+                            if self.active_property_section == PropertySection::Delay {
+                                delay::show_delay_section(ui, track_node_mut, &mut impact);
+                            }
+
                             ui.separator();
 
                             // === TYPE-SPECIFIC SECTION ===
@@ -944,16 +954,24 @@ impl GuiApp {
                                 if impact.needs_regeneration() || impact.needs_mix_update() {
                                     self.spectrogram_render_requested = true;
                                 }
-                            } else if let (
-                                NodeKind::Group {
-                                    collapsed,
-                                    mode,
-                                    children,
-                                    ..
-                                },
-                                overrides,
-                            ) = (&mut track_node_mut.kind, &mut track_node_mut.overrides)
-                            {
+                            } else if track_node_mut.is_group() {
+                                // Delay section for groups (before destructuring to avoid borrow conflicts)
+                                if self.active_property_section == PropertySection::Delay {
+                                    delay::show_delay_section(ui, track_node_mut, &mut impact);
+                                }
+
+                                let (
+                                    NodeKind::Group {
+                                        collapsed,
+                                        mode,
+                                        children,
+                                        ..
+                                    },
+                                    overrides,
+                                ) = (&mut track_node_mut.kind, &mut track_node_mut.overrides)
+                                else {
+                                    unreachable!()
+                                };
                                 let mut group_overrides_dirty = false;
 
                                 // Mix section for groups - group mode, child weights, collapse
