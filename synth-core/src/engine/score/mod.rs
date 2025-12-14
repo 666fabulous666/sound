@@ -397,6 +397,7 @@ impl Score {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
     ) {
+        let solo_active = node.has_any_solo();
         node.draw_node(
             &mut self.notes,
             &mut self.scheduler,
@@ -404,7 +405,7 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
-            track_node::MixContext::default(),
+            track_node::MixContext::default().with_solo_active(solo_active),
             node_params::ResolvedTrackParams::default(),
             0,
             TrackDelays::default(),
@@ -418,6 +419,7 @@ impl Score {
         rng: &mut rand::rngs::ThreadRng,
         now: Time,
     ) {
+        let solo_active = self.track_root.has_any_solo();
         let inherited = if path.is_empty() {
             node_params::ResolvedTrackParams::default()
         } else {
@@ -425,10 +427,11 @@ impl Score {
                 .resolved_params_for_path(&path[..path.len() - 1])
         };
         let mix = if path.is_empty() {
-            track_node::MixContext::default()
+            track_node::MixContext::default().with_solo_active(solo_active)
         } else {
             self.track_root
                 .mix_context_for_path(&path[..path.len() - 1])
+                .with_solo_active(solo_active)
         };
         let accumulated_delays = delays_for_path(&self.track_root, path);
         if let Some(node) = self.track_root.get_mut(path) {
@@ -662,6 +665,8 @@ impl Score {
             name,
             proba: Probability::default(),
             volume: 1.0,
+            muted: false,
+            solo: false,
             pan: 0.5,
             hue: 0.0,
             or_weight: 1.0,
@@ -669,7 +674,6 @@ impl Score {
             delays: TrackDelays::default(),
             kind: NodeKind::Group {
                 id: self.last_token.next(), // or Token(0) if you don't need unique ids
-                muted: false,
                 collapsed: false,
                 children: vec![node],
                 not_generate_until: None,
@@ -921,6 +925,7 @@ impl Score {
     }
 
     pub fn generate_notes(&mut self, now: Time, rng: &mut ThreadRng) {
+        let solo_active = self.track_root.has_any_solo();
         self.track_root.draw_node(
             &mut self.notes,
             &mut self.scheduler,
@@ -928,7 +933,7 @@ impl Score {
             now,
             self.tempo,
             &mut self.note_id_gen,
-            track_node::MixContext::default(),
+            track_node::MixContext::default().with_solo_active(solo_active),
             node_params::ResolvedTrackParams::default(),
             0,
             TrackDelays::default(),

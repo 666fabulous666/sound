@@ -105,9 +105,6 @@ pub fn default_volume() -> f64 {
 pub fn default_glide() -> bool {
     false
 }
-pub fn default_mute() -> bool {
-    false
-}
 pub fn default_normalization() -> f64 {
     let (attack, decay) = default_attack_decay();
     rescale_factor(1.0 / attack, 1.0 / decay)
@@ -121,6 +118,9 @@ pub fn default_delta_shift() -> f64 {
 }
 pub fn default_loop_len() -> Beat {
     Beat(DEFAULT_LOOP_LEN.as_secs())
+}
+pub fn default_loop_offset() -> Beat {
+    Beat(0.0)
 }
 pub fn default_tail_multiplier() -> f64 {
     1.0

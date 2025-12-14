@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "name": "pipe",
+    "version": 1
+  },
+  "bend": {
+    "magnitude": 0.001,
+    "speed": 16.0
+  },
+  "vibrato": {
+    "magnitude": 0.0001,
+    "frequency": 7.0
+  },
+  "chorus": {
+    "voices": 1,
+    "delta": 0.02,
+    "delta_shift": 0.0,
+    "sym": 0.5,
+    "asym": 0.0,
+    "time_dependency": 0.0
+  },
+  "envelope": {
+    "attack": 4.0,
+    "decay": 3.5,
+    "normalization": 0.6906393700830601
+  },
+  "lowpass": {
+    "envelope": [
+      4.0,
+      0.3333
+    ],
+    "cutoff": {
+      "base": 16.0,
+      "relaxation": {
+        "start": 0.025,
+        "end": 0.55,
+        "rate": 3.5
+      },
+      "lfo": {
+        "magnitude": 3.1,
+        "frequency": 4.5,
+        "sync_with_clock": false
+      }
+    },
+    "enabled": true,
+    "order": 4,
+    "filter_type": "Lowpass"
+  },
+  "power": {
+    "power": {
+      "base": 1.0,
+      "relaxation": {
+        "start": 0.4,
+        "end": 1.2,
+        "rate": 6.2
+      },
+      "lfo": {
+        "magnitude": 0.8,
+        "frequency": 4.5,
+        "sync_with_clock": false
+      }
+    }
+  },
+  "noise": {
+    "noise": {
+      "base": 0.5,
+      "relaxation": {
+        "start": 1.65,
+        "end": 0.58,
+        "rate": 14.2
+      },
+      "lfo": {
+        "magnitude": 0.0,
+        "frequency": 0.5,
+        "sync_with_clock": false
+      }
+    }
+  },
+  "harmonics": {
+    "harmonics": 5,
+    "subharmonics": 0,
+    "attenuation": 0.25
+  }
+}

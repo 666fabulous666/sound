@@ -23,6 +23,14 @@ pub const MAX_FPS: f64 = 120.0;
 const TREE_DEPTH_WIDTH: f32 = 10.0;
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
     (
+        "The Piper",
+        include_str!("../assets/pipe, banjo, tabla and bass2.json"),
+    ),
+    (
+        "Aquareggae",
+        include_str!("../assets/reggae.json"),
+    ),
+    (
         "Happy Melancholia",
         include_str!("../assets/Happy Melancholia.json"),
     ),

@@ -5,7 +5,7 @@ use crate::engine::waves::FilterType;
 use crate::time_freq::Freq;
 use egui::Ui;
 
-pub fn show_lowpass_section(
+pub fn show_filter_section(
     ui: &mut Ui,
     binding: &mut OverrideBinding<LowpassParams>,
     impact: &mut ParameterImpact,
@@ -18,10 +18,10 @@ pub fn show_lowpass_section(
     if binding.is_locked() {
         let mut preview = binding.resolved().clone();
         ui.add_enabled_ui(false, |ui| {
-            draw_lowpass_controls(ui, &mut preview, impact, false);
+            draw_filter_controls(ui, &mut preview, impact, false);
         });
     } else if let Some(value) = binding.value_mut() {
-        changed |= draw_lowpass_controls(ui, value, impact, true);
+        changed |= draw_filter_controls(ui, value, impact, true);
     }
     if let Some(value) = promote_button(ui, binding, depth) {
         *promote = Some(value);
@@ -29,7 +29,7 @@ pub fn show_lowpass_section(
     changed
 }
 
-pub fn draw_lowpass_controls(
+pub fn draw_filter_controls(
     ui: &mut Ui,
     value: &mut LowpassParams,
     impact: &mut ParameterImpact,

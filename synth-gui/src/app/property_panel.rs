@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 pub enum PropertySection {
     #[default]
     Mix,
+    Delay,
     Wave,
     Envelope,
-    Lowpass,
+    Filter,
     Bend,
     Vibrato,
     Harmonics,
@@ -23,8 +24,10 @@ pub enum PropertySection {
     Power,
     Noise,
     Rhythm,
+    Position,
     Harmony,
     Accents,
+    Presets,
 }
 
 impl PropertySection {
@@ -32,9 +35,10 @@ impl PropertySection {
     pub fn sequence_sections() -> &'static [PropertySection] {
         &[
             PropertySection::Mix,
+            PropertySection::Delay,
             PropertySection::Wave,
             PropertySection::Envelope,
-            PropertySection::Lowpass,
+            PropertySection::Filter,
             PropertySection::Bend,
             PropertySection::Vibrato,
             PropertySection::Harmonics,
@@ -42,8 +46,10 @@ impl PropertySection {
             PropertySection::Power,
             PropertySection::Noise,
             PropertySection::Rhythm,
+            PropertySection::Position,
             PropertySection::Harmony,
             PropertySection::Accents,
+            PropertySection::Presets,
         ]
     }
 
@@ -51,8 +57,9 @@ impl PropertySection {
     pub fn group_sections() -> &'static [PropertySection] {
         &[
             PropertySection::Mix,
+            PropertySection::Delay,
             PropertySection::Envelope,
-            PropertySection::Lowpass,
+            PropertySection::Filter,
             PropertySection::Bend,
             PropertySection::Vibrato,
             PropertySection::Harmonics,
@@ -61,7 +68,9 @@ impl PropertySection {
             PropertySection::Noise,
             PropertySection::Wave,
             PropertySection::Rhythm,
+            PropertySection::Position,
             PropertySection::Harmony,
+            PropertySection::Presets,
         ]
     }
 
@@ -69,9 +78,10 @@ impl PropertySection {
     pub fn label(&self) -> &'static str {
         match self {
             PropertySection::Mix => "Mix",
+            PropertySection::Delay => "Delay",
             PropertySection::Wave => "Wave",
             PropertySection::Envelope => "Envelope",
-            PropertySection::Lowpass => "Lowpass",
+            PropertySection::Filter => "Filter",
             PropertySection::Bend => "Bend",
             PropertySection::Vibrato => "Vibrato",
             PropertySection::Harmonics => "Harmonics",
@@ -79,8 +89,10 @@ impl PropertySection {
             PropertySection::Power => "Power",
             PropertySection::Noise => "Noise",
             PropertySection::Rhythm => "Rhythm",
+            PropertySection::Position => "Position",
             PropertySection::Harmony => "Harmony",
             PropertySection::Accents => "Accents",
+            PropertySection::Presets => "Presets",
         }
     }
 
@@ -88,9 +100,10 @@ impl PropertySection {
     pub fn tooltip(&self) -> &'static str {
         match self {
             PropertySection::Mix => "Volume and stereo panning",
+            PropertySection::Delay => "Delay / echo effect per channel",
             PropertySection::Wave => "Waveform selection",
             PropertySection::Envelope => "Attack and decay envelope",
-            PropertySection::Lowpass => "Lowpass filter settings",
+            PropertySection::Filter => "Filter settings (lowpass, highpass, bandpass)",
             PropertySection::Bend => "Pitch bend parameters",
             PropertySection::Vibrato => "Vibrato magnitude and frequency",
             PropertySection::Harmonics => "Harmonic overtones",
@@ -98,8 +111,10 @@ impl PropertySection {
             PropertySection::Power => "Power factor distortion",
             PropertySection::Noise => "Noise / random signal attenuation",
             PropertySection::Rhythm => "Rhythm generators and timing",
+            PropertySection::Position => "Sequence position within the loop",
             PropertySection::Harmony => "Harmonic intervals and following",
             PropertySection::Accents => "Accent patterns across the bar",
+            PropertySection::Presets => "Load and save instrument presets",
         }
     }
 }
@@ -107,11 +122,10 @@ impl PropertySection {
 use super::colormap::color_from_value;
 use egui::{Color32, ColorImage, RichText, ScrollArea, TextEdit, TextureOptions, Vec2};
 use helpers::{ParameterBehavior, SliderParam};
-use preset_section::preset_section;
 use rustfft::{num_complex::Complex32, FftPlanner};
 use sections::{
-    accents, bend, chorus, envelope, harmonics, harmony, lowpass, mix, noise, power,
-    rhythm as rhythm_section, vibrato,
+    accents, bend, chorus, delay, envelope, filter, harmonics, harmony, mix, noise, position,
+    power, rhythm as rhythm_section, vibrato,
 };
 
 use crate::{
@@ -124,6 +138,7 @@ use crate::{
             ResolvedTrackParams, RhythmParams, VibratoParams, WaveParams,
         },
         note::NoteVariant,
+        preset::InstrumentPreset,
         sequence::Sequence,
         track_node::{GroupMode, NodeKind},
         ChorusParams, Interval, NotesGroup,
@@ -132,6 +147,7 @@ use crate::{
     layout_left,
     shortcuts::*,
     time_freq::{Freq, Time},
+    PRESET_DEFAULTS,
     Token, F0,
 };
 use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
@@ -140,6 +156,7 @@ use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
 pub enum Action {
     None,
     Mute,
+    Solo,
     Delete,
     Clone,
     Parent,
@@ -172,6 +189,7 @@ impl Action {
             Action::GroupAbove => ("Group above", self),
             Action::GroupBelow => ("Group below", self),
             Action::Mute => ("Mute", self),
+            Action::Solo => ("Solo", self),
         }
     }
 }
@@ -235,7 +253,7 @@ fn promote_button<T: Clone>(
 
 fn group_override_section<T: Clone>(
     ui: &mut egui::Ui,
-    title: &str,
+    _title: &str,
     tooltip: &str,
     binding: &mut OverrideBinding<T>,
     impact: &mut ParameterImpact,
@@ -243,38 +261,36 @@ fn group_override_section<T: Clone>(
 ) -> (bool, Option<T>) {
     let mut changed = false;
     let mut distribute_value = None;
-    ui.collapsing(title, |ui| {
-        let mut active = binding.is_active_here();
-        ui.vertical(|ui| {
-            let response = ui
-                .add_enabled_ui(!binding.is_locked(), |ui| {
-                    ui.checkbox(&mut active, "Override for children")
-                })
-                .inner;
-            let response = response.on_hover_text(tooltip);
-            if response.changed() {
-                changed |= binding.set_override(active);
+    let mut active = binding.is_active_here();
+    ui.vertical(|ui| {
+        let response = ui
+            .add_enabled_ui(!binding.is_locked(), |ui| {
+                ui.checkbox(&mut active, "Override for children")
+            })
+            .inner;
+        let response = response.on_hover_text(tooltip);
+        if response.changed() {
+            changed |= binding.set_override(active);
+        }
+        if binding.is_active_here() && !binding.is_locked() {
+            if ui
+                .small_button("Distribute to children")
+                .on_hover_text("Copy this override value into every child, enable the override on those children, and remove it here.")
+                .clicked()
+            {
+                distribute_value = Some(binding.resolved().clone());
             }
-            if binding.is_active_here() && !binding.is_locked() {
-                if ui
-                    .small_button("Distribute to children")
-                    .on_hover_text("Copy this override value into every child, enable the override on those children, and remove it here.")
-                    .clicked()
-                {
-                    distribute_value = Some(binding.resolved().clone());
-                }
-            }
-        });
-
-        if binding.is_locked() || !binding.is_active_here() {
-            let mut preview = binding.resolved().clone();
-            ui.add_enabled_ui(false, |ui| {
-                render_controls(ui, &mut preview, impact, false);
-            });
-        } else if let Some(value) = binding.value_mut() {
-            changed |= render_controls(ui, value, impact, true);
         }
     });
+
+    if binding.is_locked() || !binding.is_active_here() {
+        let mut preview = binding.resolved().clone();
+        ui.add_enabled_ui(false, |ui| {
+            render_controls(ui, &mut preview, impact, false);
+        });
+    } else if let Some(value) = binding.value_mut() {
+        changed |= render_controls(ui, value, impact, true);
+    }
     (changed, distribute_value)
 }
 
@@ -290,6 +306,27 @@ fn draw_rhythm_override_controls(
     let before = params.clone();
     ui.add_enabled_ui(editable, |ui| {
         rhythm_section::show_rhythm_section(ui, &mut temp_seq, impact, edit_vec_fn, None);
+    });
+    let after = RhythmParams::from_sequence(&temp_seq);
+    if editable && after != before {
+        *params = after;
+        true
+    } else {
+        false
+    }
+}
+
+fn draw_position_override_controls(
+    ui: &mut egui::Ui,
+    params: &mut RhythmParams,
+    impact: &mut ParameterImpact,
+    editable: bool,
+) -> bool {
+    let mut temp_seq = Sequence::new(Token(0));
+    params.apply_to_sequence(&mut temp_seq);
+    let before = params.clone();
+    ui.add_enabled_ui(editable, |ui| {
+        position::show_position_section(ui, &mut temp_seq, impact);
     });
     let after = RhythmParams::from_sequence(&temp_seq);
     if editable && after != before {
@@ -435,9 +472,7 @@ impl GuiApp {
                     let mut action = Action::None;
                     let mut impact = ParameterImpact::default();
                     let mut promotion_request: Option<PromotionKind> = None;
-
-                    // Show preset section early and store the action
-                    let preset_action = preset_section(ui, &mut self.preset_name_input);
+                    let mut preset_action = preset_section::PresetAction::default();
 
                     if let Some(sel) = self.selected.clone() {
                         let depth = sel.len();
@@ -530,6 +565,11 @@ impl GuiApp {
                                     .behavior(ParameterBehavior::StructuralImmediate)
                                     .tooltip("Used when the parent group operates in OR mode");
                                 weight_param.draw(ui, &mut track_node_mut.or_weight, &mut impact);
+                            }
+
+                            // Delay section - only when active
+                            if self.active_property_section == PropertySection::Delay {
+                                delay::show_delay_section(ui, track_node_mut, &mut impact);
                             }
 
                             ui.separator();
@@ -643,15 +683,15 @@ impl GuiApp {
                                     }
                                 }
 
-                                // Lowpass section - only when active
-                                if self.active_property_section == PropertySection::Lowpass {
+                                // Filter section - only when active
+                                if self.active_property_section == PropertySection::Filter {
                                     let mut lowpass_binding = OverrideBinding::new(
                                         lowpass_resolution.clone(),
                                         &mut overrides.lowpass,
                                         depth,
                                     );
                                     let mut lp_promote = None;
-                                    overrides_dirty |= lowpass::show_lowpass_section(
+                                    overrides_dirty |= filter::show_filter_section(
                                         ui,
                                         &mut lowpass_binding,
                                         &mut impact,
@@ -826,6 +866,32 @@ impl GuiApp {
                                     }
                                 }
 
+                                // Position section - only when active
+                                if self.active_property_section == PropertySection::Position {
+                                    let rhythm_locked = rhythm_resolution.locked_for_depth(depth);
+                                    if rhythm_locked {
+                                        // Position is part of rhythm override, show as read-only
+                                        let mut preview = seq_mut.clone();
+                                        rhythm_resolution
+                                            .value
+                                            .clone()
+                                            .apply_to_sequence(&mut preview);
+                                        ui.add_enabled_ui(false, |ui| {
+                                            position::show_position_section(
+                                                ui,
+                                                &mut preview,
+                                                &mut impact,
+                                            );
+                                        });
+                                    } else {
+                                        position::show_position_section(
+                                            ui,
+                                            seq_mut,
+                                            &mut impact,
+                                        );
+                                    }
+                                }
+
                                 // Harmony section - only when active and not drum
                                 if self.active_property_section == PropertySection::Harmony && !is_drum {
                                     let harmony_locked = harmony_resolution.locked_for_depth(depth);
@@ -875,6 +941,12 @@ impl GuiApp {
                                     );
                                 }
 
+                                // Presets section - only when active
+                                if self.active_property_section == PropertySection::Presets {
+                                    preset_action =
+                                        preset_section::preset_section(ui, &mut self.preset_name_input);
+                                }
+
                                 if overrides_dirty {
                                     needs_override_refresh = true;
                                 }
@@ -882,16 +954,24 @@ impl GuiApp {
                                 if impact.needs_regeneration() || impact.needs_mix_update() {
                                     self.spectrogram_render_requested = true;
                                 }
-                            } else if let (
-                                NodeKind::Group {
-                                    collapsed,
-                                    mode,
-                                    children,
-                                    ..
-                                },
-                                overrides,
-                            ) = (&mut track_node_mut.kind, &mut track_node_mut.overrides)
-                            {
+                            } else if track_node_mut.is_group() {
+                                // Delay section for groups (before destructuring to avoid borrow conflicts)
+                                if self.active_property_section == PropertySection::Delay {
+                                    delay::show_delay_section(ui, track_node_mut, &mut impact);
+                                }
+
+                                let (
+                                    NodeKind::Group {
+                                        collapsed,
+                                        mode,
+                                        children,
+                                        ..
+                                    },
+                                    overrides,
+                                ) = (&mut track_node_mut.kind, &mut track_node_mut.overrides)
+                                else {
+                                    unreachable!()
+                                };
                                 let mut group_overrides_dirty = false;
 
                                 // Mix section for groups - group mode, child weights, collapse
@@ -990,10 +1070,10 @@ impl GuiApp {
                                     group_overrides_dirty |= envelope_dirty || envelope_distributed;
                                 }
 
-                                // Lowpass override section
-                                if self.active_property_section == PropertySection::Lowpass {
+                                // Filter override section
+                                if self.active_property_section == PropertySection::Filter {
                                     ui.separator();
-                                    ui.heading("Lowpass Override");
+                                    ui.heading("Filter Override");
                                     let (lowpass_dirty, distribute_lowpass) = {
                                         let mut lowpass_binding = OverrideBinding::new(
                                             lowpass_resolution.clone(),
@@ -1002,12 +1082,12 @@ impl GuiApp {
                                         );
                                         group_override_section(
                                             ui,
-                                            "Lowpass",
-                                            "Apply lowpass filter settings to all children",
+                                            "Filter",
+                                            "Apply filter settings to all children",
                                             &mut lowpass_binding,
                                             &mut impact,
                                             |ui, value, impact, editable| {
-                                                lowpass::draw_lowpass_controls(
+                                                filter::draw_filter_controls(
                                                     ui, value, impact, editable,
                                                 )
                                             },
@@ -1326,6 +1406,42 @@ impl GuiApp {
                                     group_overrides_dirty |= rhythm_dirty || rhythm_distributed;
                                 }
 
+                                // Position override section (uses rhythm override for position data)
+                                if self.active_property_section == PropertySection::Position {
+                                    ui.separator();
+                                    ui.heading("Position Override");
+                                    let (position_dirty, distribute_position) = {
+                                        let mut rhythm_binding = OverrideBinding::new(
+                                            rhythm_resolution.clone(),
+                                            &mut overrides.rhythm,
+                                            depth,
+                                        );
+                                        group_override_section(
+                                            ui,
+                                            "Position",
+                                            "Override sequence position (t_min/t_max) for descendants",
+                                            &mut rhythm_binding,
+                                            &mut impact,
+                                            |ui, value, impact, editable| {
+                                                draw_position_override_controls(
+                                                    ui,
+                                                    value,
+                                                    impact,
+                                                    editable,
+                                                )
+                                            },
+                                        )
+                                    };
+                                    let position_distributed = distribute_position.is_some();
+                                    if let Some(value) = distribute_position {
+                                        for child in children.iter_mut() {
+                                            child.overrides.rhythm = Some(value.clone());
+                                        }
+                                        overrides.rhythm = None;
+                                    }
+                                    group_overrides_dirty |= position_dirty || position_distributed;
+                                }
+
                                 // Harmony override section
                                 if self.active_property_section == PropertySection::Harmony {
                                     ui.separator();
@@ -1359,6 +1475,12 @@ impl GuiApp {
                                     group_overrides_dirty |= harmony_dirty || harmony_distributed;
                                 }
 
+                                // Presets section - only when active (for groups)
+                                if self.active_property_section == PropertySection::Presets {
+                                    preset_action =
+                                        preset_section::preset_section(ui, &mut self.preset_name_input);
+                                }
+
                                 if group_overrides_dirty {
                                     needs_override_refresh = true;
                                 }
@@ -1381,6 +1503,15 @@ impl GuiApp {
                     }
                     if preset_action.load {
                         self.load_preset(ctx);
+                    }
+                    if let Some(builtin_idx) = preset_action.apply_builtin {
+                        if let Some(path) = self.selected.clone() {
+                            if let Some((_name, json)) = PRESET_DEFAULTS.get(builtin_idx) {
+                                if let Ok(preset) = InstrumentPreset::from_json(json) {
+                                    self.apply_preset(preset, &path);
+                                }
+                            }
+                        }
                     }
 
                     if let Some(mut sel) = self.selected.clone() {
@@ -1494,7 +1625,17 @@ impl GuiApp {
                                     .as_mut()
                                     .map(|track_node| {
                                         track_node.toggle_mute();
-                                        impact.require_regeneration();
+                                        impact.require_mix_update();
+                                    });
+                            }
+                            Action::Solo => {
+                                self.score
+                                    .track_root
+                                    .get_mut(&sel)
+                                    .as_mut()
+                                    .map(|track_node| {
+                                        track_node.toggle_solo();
+                                        impact.require_mix_update();
                                     });
                             }
                         }

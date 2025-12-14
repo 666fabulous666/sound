@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "name": "Violin",
+    "version": 1
+  },
+  "bend": {
+    "magnitude": -0.0015,
+    "speed": 70.0
+  },
+  "vibrato": {
+    "magnitude": 0.00022,
+    "frequency": 5.5
+  },
+  "chorus": {
+    "voices": 3,
+    "delta": 0.0015,
+    "delta_shift": -0.44,
+    "sym": -0.3,
+    "asym": 0.65,
+    "time_dependency": -3.0
+  },
+  "envelope": {
+    "attack": 0.5,
+    "decay": 1.0,
+    "normalization": 0.14814814814814814
+  },
+  "lowpass": {
+    "envelope": [
+      4.0,
+      0.3333
+    ],
+    "cutoff": {
+      "base": 9.0,
+      "relaxation": {
+        "start": 4.0,
+        "end": 1.2,
+        "rate": 8.1
+      },
+      "lfo": {
+        "magnitude": 1.3,
+        "frequency": 5.0,
+        "sync_with_clock": false
+      }
+    },
+    "enabled": true,
+    "order": 4,
+    "filter_type": "Lowpass"
+  },
+  "power": {
+    "power": {
+      "base": 0.01,
+      "relaxation": {
+        "start": 10.0,
+        "end": 0.6000000000000001,
+        "rate": 10.3
+      },
+      "lfo": {
+        "magnitude": 2.4,
+        "frequency": 2.9,
+        "sync_with_clock": false
+      }
+    }
+  },
+  "noise": {
+    "noise": {
+      "base": 0.53,
+      "relaxation": {
+        "start": 1.0,
+        "end": 0.0,
+        "rate": 5.0
+      },
+      "lfo": {
+        "magnitude": 0.0,
+        "frequency": 0.5,
+        "sync_with_clock": false
+      }
+    }
+  },
+  "harmonics": {
+    "harmonics": 4,
+    "subharmonics": 0,
+    "attenuation": 0.26
+  }
+}

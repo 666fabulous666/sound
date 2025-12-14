@@ -21,6 +21,11 @@ pub const TOOLBAR_ICON_SIZE: f32 = 64.0;
 /// Default preset grooves included with the application
 pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
     (
+        "The Piper",
+        include_str!("../../assets/pipe, banjo, tabla and bass2.json"),
+    ),
+    ("Aquareggae", include_str!("../../assets/reggae.json")),
+    (
         "Happy Melancholia",
         include_str!("../../assets/Happy Melancholia.json"),
     ),
@@ -40,6 +45,9 @@ pub const GROOVE_DEFAULTS: &[(&str, &str)] = &[
         include_str!("../../assets/SpinsOfBirds.json"),
     ),
 ];
+
+// Built-in instrument presets (auto-generated from assets/presets/*.json)
+include!(concat!(env!("OUT_DIR"), "/preset_defaults.rs"));
 
 /// Helper for left-aligned egui layout
 pub fn layout_left() -> egui::Layout {
