@@ -4,6 +4,7 @@ port = 8080               # pick any open port
 open = false
 
 [build]
+target = "synth-gui/index.html"
 dist = "docs"
 public_url = "/sound/"
 release = true

@@ -3,13 +3,12 @@
   <head>
     <base href="/sound/" />
     <meta charset="utf-8" />
-    <!-- viewport-fit=cover is important for iOS safe areas -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>synth (web)</title>
     
 <script type="module">
-import init, * as bindings from '/sound/synth-431f09b15d16b333.js';
-const wasm = await init({ module_or_path: '/sound/synth-431f09b15d16b333_bg.wasm' });
+import init, * as bindings from '/sound/synth-gui-36d53f79a18dec46.js';
+const wasm = await init({ module_or_path: '/sound/synth-gui-36d53f79a18dec46_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -19,61 +18,30 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
     <link rel="icon" href="data:,">
-    <!-- <style> -->
-      <!-- /* Prevent any scrolling / bounce and make the page background solid */ -->
-      <!-- html, body { -->
-        <!-- margin: 0; -->
-        <!-- padding: 0; -->
-        <!-- background: #0e1116; -->
-        <!-- color: #e5e7eb; -->
-        <!-- overflow: hidden; -->
-        <!-- /* Use fixed + inset to lock to visual viewport across browsers */ -->
-        <!-- position: fixed; -->
-        <!-- inset: 0; -->
-      <!-- } -->
-
-      <!-- /* Stretch canvas to full visual viewport, respecting safe areas (iOS) */ -->
-      <!-- canvas#the_canvas_id { -->
-        <!-- position: fixed; -->
-        <!-- /* Safe-area insets avoid being drawn under the tab/URL bars / notches */ -->
-        <!-- top: env(safe-area-inset-top); -->
-        <!-- left: env(safe-area-inset-left); -->
-        <!-- /* Subtract insets from width/height */ -->
-        <!-- width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right)); -->
-        <!-- height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); -->
-        <!-- display: block; -->
-      <!-- } -->
-
-      <!-- /* Optional: reduce rubber-banding effects where supported */ -->
-      <!-- body { overscroll-behavior: none; } -->
-    <!-- </style> -->
-    
     <style>
       html, body {
         margin: 0;
         padding: 0;
         height: 100%;
-        overflow: hidden;           /* avoid page scrollbars */
-        background: #000;           /* or your theme bg */
+        overflow: hidden;
+        background: #000;
       }
 
-      /* The parent that wraps the eframe canvas (adjust the selector to yours) */
       #egui_canvas_container {
         width: 100vw;
-        height: 100vh;              /* ensure the canvas gets full viewport */
-        position: fixed;            /* prevents accidental layout shrink */
+        height: 100vh;
+        position: fixed;
         inset: 0;
       }
 
-      /* The actual <canvas> injected by eframe */
       canvas {
         display: block;
-        width: 100% !important;     /* make it fill the parent */
+        width: 100% !important;
         height: 100% !important;
-        touch-action: none;         /* better pointer behavior on mobile */
+        touch-action: none;
       }
     </style>
-  <link rel="modulepreload" href="/sound/synth-431f09b15d16b333.js" crossorigin="anonymous" integrity="sha384-a2WboMZEmQLTnC3xMd4St5+uDmCLBa5ZjjZoT/H3GRL+mclfYdkESveT/no8QQSu"><link rel="preload" href="/sound/synth-431f09b15d16b333_bg.wasm" crossorigin="anonymous" integrity="sha384-1tejHwcwnVIFd+craDdqwn2GmuO35SrXjcFOYJUCQcNLAOC5mQfWodlor3oHPNgq" as="fetch" type="application/wasm"></head>
+  <link rel="modulepreload" href="/sound/synth-gui-36d53f79a18dec46.js" crossorigin="anonymous" integrity="sha384-uDX6hCx22EuVq0ulX3UM7/yI47HkUHinOXi1tvMW4vOupIX1xGHreD1w3+QNra/+"><link rel="preload" href="/sound/synth-gui-36d53f79a18dec46_bg.wasm" crossorigin="anonymous" integrity="sha384-L5f1a0ehFHfhkydq7RdoInL/OTtN6niHClKkPYIFPB04ssM1XxBZC4gcKxjmudQn" as="fetch" type="application/wasm"></head>
   <body>
     <canvas id="the_canvas_id"></canvas>
   </body>
