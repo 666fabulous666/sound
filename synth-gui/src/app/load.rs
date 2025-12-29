@@ -1,5 +1,4 @@
 use crate::app::GuiApp;
-use std::sync::Arc;
 use synth_core::session::SessionState;
 
 impl GuiApp {
@@ -48,8 +47,5 @@ impl GuiApp {
         self.score
             .apply_session_state(&state, self.now(), &mut self.rng);
         self.score.publish_shared_notes();
-        self.shared_delays.store(Arc::new(
-            self.score.root_delays_seconds(0.0, 0.0),
-        ));
     }
 }

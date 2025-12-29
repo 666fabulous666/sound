@@ -9,7 +9,7 @@ use std::{
 use crate::{
     engine::{
         reverb::Reverb,
-        score::{note::NoteVariant, DelayTapSeconds, NotesGroup},
+        score::{note::NoteVariant, NotesGroup},
         waves::{generate_wave, generate_wave_with_phase},
     },
     recorder::Recorder,
@@ -28,8 +28,6 @@ pub fn stream(
     device: &cpal::Device,
     clock: Arc<AtomicU64>,
     note_queue: Arc<ArcSwap<BTreeMap<Token, NotesGroup>>>,
-    (mut reverb_left, mut reverb_right): (Reverb<REVERB_BUFFER_LEN>, Reverb<REVERB_BUFFER_LEN>),
-    delays: Arc<ArcSwap<(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>)>>,
     recorder: Option<Arc<Recorder>>,
 ) -> cpal::Stream {
     let config = device.default_output_config().unwrap();
@@ -52,7 +50,6 @@ pub fn stream(
         let recorder = recorder.clone();
         let callback = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
             let note_groups = note_queue.load();
-            let global_delays = delays.load();
             let channels_usize = channels as usize;
             let frames = data.len() / channels_usize;
             let sample_step = 1.0.div_by(sample_rate);
@@ -172,8 +169,8 @@ pub fn stream(
                     last_cleanup = now;
                 }
 
-                let left = reverb_left.process(mixed_left, &global_delays.0);
-                let right = reverb_right.process(mixed_right, &global_delays.1);
+                let left = mixed_left;
+                let right = mixed_right;
 
                 if let Some(rec) = recorder.as_ref() {
                     rec.write_frame(left as f32, right as f32);

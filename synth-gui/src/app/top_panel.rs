@@ -6,7 +6,6 @@ use std::sync::{
 use crate::{
     app::{GuiApp, PropertySection},
     engine::{
-        reverb::Reverb,
         score::{
             sequence::Sequence,
             track_node::{NodeKind, TrackNode},
@@ -15,7 +14,6 @@ use crate::{
     },
     F0, TOOLBAR_ICON_SIZE,
 };
-use cpal::traits::DeviceTrait;
 use egui::{Align2, Area, Frame, Id, Order, Pos2, Rect, RichText, Vec2};
 #[cfg(not(target_arch = "wasm32"))]
 use log::{error, info};
@@ -99,9 +97,6 @@ impl GuiApp {
                             self.score.reset_playback();
                             self.score.advance(self.now(), &mut self.rng);
                             self.score.publish_shared_notes();
-                            self.shared_delays.store(Arc::new(
-                                self.score.root_delays_seconds(0.0, 0.0),
-                            ));
                         }
                         ui.label(format!("{elapsed:.1}s"));
                         if !self.show_start {
@@ -385,28 +380,11 @@ impl GuiApp {
     }
 
     fn start_stream(&mut self, clock: Arc<AtomicU64>) {
-        self.shared_delays
-            .store(Arc::new(self.score.track_root.delays.to_seconds(
-                self.score.tempo(),
-                0.5,
-                0.5,
-            )));
-        let sample_rate = self
-            .device
-            .default_output_config()
-            .expect("Can't find default output config")
-            .sample_rate()
-            .0 as f64;
         self.stream = Some(stream(
             F0,
             &self.device,
             clock,
             self.score.shared_notes.clone(),
-            (
-                Reverb::new(1.0, 1.0, sample_rate),
-                Reverb::new(1.0, 1.0, sample_rate),
-            ),
-            self.shared_delays.clone(),
             #[cfg(not(target_arch = "wasm32"))]
             Some(self.recorder.clone()),
             #[cfg(target_arch = "wasm32")]

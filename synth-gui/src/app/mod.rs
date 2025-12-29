@@ -16,7 +16,7 @@ use crate::{
             node_params::ResolvedTrackParams,
             sequence::Sequence,
             track_node::{NodeKind, TrackNode},
-            DelayTapSeconds, Score,
+            Score,
         },
         waves::WaveType,
     },
@@ -26,7 +26,6 @@ use crate::{
     time_freq::{Tempo, Time},
     Token, GROOVE_DEFAULTS, NOTE_LINGER_TIME,
 };
-use arc_swap::ArcSwap;
 use cpal::Stream;
 use cpal::{traits::DeviceTrait, Device};
 use eframe::{egui, App, CreationContext};
@@ -73,7 +72,6 @@ pub struct GuiApp {
     stream: Option<Stream>,
     device: Device,
     sample_rate: f64,
-    shared_delays: Arc<ArcSwap<(Vec<DelayTapSeconds>, Vec<DelayTapSeconds>)>>,
     tree_drag: Option<TreeDragState>,
     sequence_drag: Option<SequenceDragState>,
     #[cfg(target_arch = "wasm32")]
@@ -123,16 +121,11 @@ pub struct SpectrogramPreview {
     pub log_freq: bool,
     pub fundamental_freq: f32,
 }
-
-
-use serde::Deserializer;
-
 impl GuiApp {
     pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
         let app = Self {
             selected: None,
             stream: None,
-            shared_delays: Arc::new(ArcSwap::from_pointee((Vec::new(), Vec::new()))),
             clock: Arc::new(AtomicU64::new(0)),
             rng: thread_rng(),
             sample_rate: device.default_output_config().unwrap().sample_rate().0 as f64,
@@ -695,8 +688,6 @@ impl App for GuiApp {
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
         self.score.advance(self.now(), &mut self.rng);
         self.score.publish_shared_notes();
-        self.shared_delays
-            .store(Arc::new(self.score.root_delays_seconds(0.0, 0.0)));
     }
 }
 

@@ -955,11 +955,6 @@ impl GuiApp {
                                     self.spectrogram_render_requested = true;
                                 }
                             } else if track_node_mut.is_group() {
-                                // Delay section for groups (before destructuring to avoid borrow conflicts)
-                                if self.active_property_section == PropertySection::Delay {
-                                    delay::show_delay_section(ui, track_node_mut, &mut impact);
-                                }
-
                                 let (
                                     NodeKind::Group {
                                         collapsed,
