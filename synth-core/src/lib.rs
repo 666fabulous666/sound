@@ -7,6 +7,7 @@ pub mod engine;
 pub mod error;
 pub mod recorder;
 pub mod stream;
+pub mod session;
 pub mod time_freq;
 
 use crate::time_freq::{Freq, Time};

@@ -8,14 +8,12 @@ use std::time::Duration;
 use synth_core::{
     engine::{
         reverb::Reverb,
-        score::{
-            track_node::{NodeKind, TrackNode},
-            Score, TrackDelays,
-        },
+        score::Score,
     },
+    session::SessionState,
     recorder::Recorder,
     stream::stream,
-    Token, TokenGen, F0, REVERB_BUFFER_LEN,
+    F0, REVERB_BUFFER_LEN,
 };
 
 /// Command-line JSON player for Quantum Harmonics' Oscillator
@@ -39,16 +37,6 @@ struct Args {
     record: Option<PathBuf>,
 }
 
-#[derive(serde::Deserialize)]
-struct ScoreState {
-    seqs: TrackNode,
-    #[serde(
-        default = "synth_core::engine::score::default_params::default_delays",
-        rename = "delays_beats"
-    )]
-    delays: TrackDelays,
-}
-
 /// Precompute audio and play from buffer
 fn precompute_and_play(
     mut score: Score,
@@ -69,7 +57,7 @@ fn precompute_and_play(
         let now = Time(t as f64 * 0.5);
         score.generate_notes(now, &mut rng);
     }
-    update_volumes_from_tree(&mut score);
+    score.update_mix_from_tree();
 
     println!("Rendering {} samples...", total_samples);
 
@@ -161,57 +149,6 @@ fn precompute_and_play(
     Ok(())
 }
 
-/// Update all note volumes based on the tree structure
-fn update_volumes_from_tree(score: &mut Score) {
-    // Collect all (token, path) pairs for all sequences in the tree
-    let seq_paths: Vec<(Token, Vec<usize>)> = {
-        let mut out = Vec::new();
-
-        fn collect_recursive(
-            node: &TrackNode,
-            current_path: &mut Vec<usize>,
-            out: &mut Vec<(Token, Vec<usize>)>,
-        ) {
-            match &node.kind {
-                NodeKind::Seq(seq) => {
-                    out.push((seq.token, current_path.clone()));
-                }
-                NodeKind::Group { children, .. } => {
-                    for (i, child) in children.iter().enumerate() {
-                        current_path.push(i);
-                        collect_recursive(child, current_path, out);
-                        current_path.pop();
-                    }
-                }
-            }
-        }
-
-        let mut path = Vec::new();
-        collect_recursive(&score.track_root, &mut path, &mut out);
-        out
-    };
-
-    // Compute volume for each token as the product from root
-    let tempo = score.tempo();
-    let volume_updates: Vec<(Token, f64, TrackDelays)> = seq_paths
-        .iter()
-        .filter_map(|(token, path)| {
-            score.volume_chain_product(path).map(|volume| {
-                let delays = score.delays_for_path(path);
-                (*token, volume, delays)
-            })
-        })
-        .collect();
-
-    // Apply volumes to NotesGroup entries
-    for (token, ng) in score.notes.iter_mut() {
-        if let Some((_, volume, delays)) = volume_updates.iter().find(|(tk, _, _)| *tk == *token) {
-            ng.volume = *volume;
-            ng.delays = delays.to_seconds(tempo, 0.5, 0.5);
-        }
-    }
-}
-
 fn main() -> Result<()> {
     env_logger::init();
 
@@ -221,7 +158,7 @@ fn main() -> Result<()> {
     let json_content = std::fs::read_to_string(&args.file)
         .with_context(|| format!("Failed to read file: {:?}", args.file))?;
 
-    let state: ScoreState =
+    let state: SessionState =
         serde_json::from_str(&json_content).with_context(|| "Failed to parse JSON file")?;
 
     println!("Loaded: {:?}", args.file);
@@ -234,27 +171,10 @@ fn main() -> Result<()> {
 
     println!("Using audio device: {}", device.name().unwrap_or_default());
 
-    // Create score
+    // Create score and apply session state
     let mut score = Score::new();
-    score.track_root = state.seqs;
-    score.delays = state.delays.clone();
-    score.track_root.delays = state.delays;
-
-    // Initialize token generator based on existing tokens
-    score.last_token = TokenGen(
-        score
-            .track_root
-            .sequences()
-            .map(|s| s.token)
-            .max()
-            .unwrap_or(Token(0))
-            .saturating_add(1),
-    );
-
-    // Reset all sequence pause states (they may have been paused in the editor)
-    score
-        .track_root
-        .for_each_sequence_mut(|s| s.not_generate_until = None);
+    let mut rng = rand::thread_rng();
+    score.apply_session_state(&state, synth_core::time_freq::Time(0.0), &mut rng);
 
     // Get sample rate
     let config = device
@@ -275,7 +195,7 @@ fn main() -> Result<()> {
 
     // Use Score's built-in shared_notes and create shared_delays (like GUI)
     let shared_delays = Arc::new(arc_swap::ArcSwap::from_pointee(
-        score.track_root.delays.to_seconds(score.tempo(), 0.0, 0.0),
+        score.root_delays_seconds(0.0, 0.0),
     ));
 
     let recorder = if let Some(path) = &args.record {
@@ -303,11 +223,9 @@ fn main() -> Result<()> {
 
     println!("Playing... (Press Ctrl+C to stop)");
 
-    // Generate initial notes ahead of time (with GENERATE_EARLY lookahead)
-    let mut rng = rand::thread_rng();
-    score.generate_notes(synth_core::time_freq::Time(0.0), &mut rng);
-    update_volumes_from_tree(&mut score);
-    score.shared_notes.store(Arc::new(score.notes.clone()));
+    score.advance(synth_core::time_freq::Time(0.0), &mut rng);
+    score.publish_shared_notes();
+    shared_delays.store(Arc::new(score.root_delays_seconds(0.0, 0.0)));
 
     // Spawn background thread to continuously regenerate notes
     let clock_clone = clock.clone();
@@ -329,22 +247,9 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            // Regenerate notes at current time (internally adds GENERATE_EARLY lookahead)
-            score.generate_notes(now, &mut rng);
-
-            // Update volumes based on tree structure
-            update_volumes_from_tree(&mut score);
-
-            // Remove old notes
-            score.retain_notes(now);
-
-            // Update shared reference atomically
-            score.shared_notes.store(Arc::new(score.notes.clone()));
-            shared_delays.store(Arc::new(score.track_root.delays.to_seconds(
-                score.tempo(),
-                0.0,
-                0.0,
-            )));
+            score.advance(now, &mut rng);
+            score.publish_shared_notes();
+            shared_delays.store(Arc::new(score.root_delays_seconds(0.0, 0.0)));
 
             last_gen_time = now;
         }

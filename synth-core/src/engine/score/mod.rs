@@ -450,6 +450,137 @@ impl Score {
         }
     }
 
+    /// Replace the root with `node`, drawing it into the current notes buffer.
+    /// Ensures the root is always a Group by wrapping a lone Sequence if needed.
+    pub fn replace_root_with(
+        &mut self,
+        mut node: TrackNode,
+        rng: &mut rand::rngs::ThreadRng,
+        now: Time,
+    ) {
+        self.draw_node_with(&mut node, rng, now);
+        self.track_root = match &node.kind {
+            NodeKind::Group { .. } => node,
+            NodeKind::Seq(_) => TrackNode {
+                name: String::new(),
+                proba: Probability::default(),
+                volume: 1.0,
+                muted: false,
+                solo: false,
+                pan: 0.5,
+                hue: 0.0,
+                or_weight: 1.0,
+                overrides: node_params::NodeOverrides::default(),
+                delays: TrackDelays::default(),
+                kind: NodeKind::Group {
+                    id: self.last_token.next(),
+                    collapsed: false,
+                    children: vec![node],
+                    not_generate_until: None,
+                    mode: GroupMode::And,
+                    aesthetic: AestheticLocks::default(),
+                },
+            },
+        };
+    }
+
+    /// Update mix information (volume, pan, delays) for all `NotesGroup` entries based on the tree.
+    pub fn update_mix_from_tree(&mut self) {
+        fn dfs(
+            node: &TrackNode,
+            notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
+            mix: track_node::MixContext,
+            tempo: Tempo,
+            delays: TrackDelays,
+        ) {
+            let (next_mix, effective_pan) = mix.propagate(node);
+            let merged_delays = node.delays.merge_with_parent(&delays);
+
+            match &node.kind {
+                NodeKind::Seq(seq) => {
+                    if let Some(ng) = notes.get_mut(&seq.token) {
+                        ng.volume = next_mix.effective_volume();
+                        ng.pan = effective_pan;
+                        ng.delays = merged_delays.to_seconds(tempo, 0.5, 0.5);
+                    }
+                }
+                NodeKind::Group { children, .. } => {
+                    for child in children {
+                        dfs(child, notes, next_mix, tempo, merged_delays.clone());
+                    }
+                }
+            }
+        }
+
+        let tempo = self.tempo;
+        let solo_active = self.track_root.has_any_solo();
+        dfs(
+            &self.track_root,
+            &mut self.notes,
+            track_node::MixContext::default().with_solo_active(solo_active),
+            tempo,
+            TrackDelays::default(),
+        );
+        // Keep legacy `Score.delays` in sync with root for sharing with audio thread.
+        self.delays = self.track_root.delays.clone();
+    }
+
+    /// Convert root delay taps into seconds for audio playback.
+    pub fn root_delays_seconds(
+        &self,
+        fallback_left: f64,
+        fallback_right: f64,
+    ) -> (Vec<DelayTapSeconds>, Vec<DelayTapSeconds>) {
+        self.track_root
+            .delays
+            .to_seconds(self.tempo, fallback_left, fallback_right)
+    }
+
+    /// Publish notes into the shared ArcSwap for audio playback.
+    pub fn publish_shared_notes(&self) {
+        self.shared_notes.store(Arc::new(self.notes.clone()));
+    }
+
+    /// Advance generation, update mix, and drop stale notes for the given time.
+    pub fn advance(&mut self, now: Time, rng: &mut ThreadRng) {
+        self.generate_notes(now, rng);
+        self.update_mix_from_tree();
+        self.retain_notes(now);
+    }
+
+    /// Apply a session state to this score, reinitializing playback-related state.
+    pub fn apply_session_state(
+        &mut self,
+        state: &crate::session::SessionState,
+        now: Time,
+        rng: &mut ThreadRng,
+    ) {
+        self.reset_playback();
+        self.set_tempo(Tempo::new(state.tempo_bpm), Time(0.0));
+
+        let mut root = state.seqs.clone();
+        root.migrate_legacy_overrides();
+        self.replace_root_with(root, rng, now);
+
+        self.last_token = TokenGen(
+            self.track_root
+                .sequences()
+                .map(|s| s.token)
+                .max()
+                .unwrap_or(Token(0))
+                .saturating_add(1),
+        );
+
+        self.track_root
+            .for_each_sequence_mut(|s| s.not_generate_until = None);
+
+        self.delays = state.delays.clone();
+        self.track_root.delays = state.delays.clone();
+
+        self.generate_notes(now, rng);
+        self.update_mix_from_tree();
+    }
+
     fn retime_notes(&mut self, old: Tempo, new: Tempo, anchor_time: Time) {
         let beat_anchor = old.time_to_beats(anchor_time);
         for notes_group in self.notes.values_mut() {

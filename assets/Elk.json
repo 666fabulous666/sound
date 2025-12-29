@@ -1,0 +1,2157 @@
+{
+  "seqs": {
+    "name": "Root",
+    "proba": 1.0,
+    "volume": 1.0,
+    "muted": false,
+    "solo": false,
+    "pan": 0.5,
+    "hue": 0.0,
+    "or_weight": 1.0,
+    "overrides": {},
+    "delays": {
+      "left": {
+        "dry": 0.5,
+        "taps": [
+          {
+            "beat": 0.031,
+            "weight": 1.0
+          },
+          {
+            "beat": 0.063,
+            "weight": 1.0
+          },
+          {
+            "beat": 0.128,
+            "weight": 1.0
+          }
+        ]
+      },
+      "right": {
+        "dry": 0.5,
+        "taps": [
+          {
+            "beat": 0.033,
+            "weight": 1.0
+          },
+          {
+            "beat": 0.061,
+            "weight": 1.0
+          },
+          {
+            "beat": 0.124,
+            "weight": 1.0
+          }
+        ]
+      }
+    },
+    "Group": {
+      "id": 1,
+      "collapsed": false,
+      "children": [
+        {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {
+            "bend": {
+              "magnitude": 0.0,
+              "speed": 32.0
+            },
+            "vibrato": {
+              "magnitude": 0.0,
+              "frequency": 12.0
+            },
+            "chorus": {
+              "voices": 1,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "envelope": {
+              "attack": 4.0,
+              "decay": 0.3333,
+              "normalization": 0.4142069808095242
+            },
+            "lowpass": {
+              "envelope": [
+                4.0,
+                0.3333
+              ],
+              "cutoff": {
+                "base": 4.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 1.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              },
+              "enabled": false,
+              "order": 1,
+              "filter_type": "Lowpass"
+            },
+            "power": {
+              "power": {
+                "base": 1.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 0.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              }
+            }
+          },
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 4.0,
+            "inclusions": {
+              "Det": {
+                "generators": [
+                  12
+                ]
+              }
+            },
+            "exclusions": {
+              "Det": {
+                "generators": []
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Mute",
+            "harmonics": {
+              "harmonics": 0,
+              "subharmonics": 0,
+              "attenuation": 0.5
+            },
+            "time_quantum": [
+              1,
+              12
+            ],
+            "harmoniser": [
+              10,
+              11,
+              11,
+              4,
+              3,
+              0,
+              8
+            ],
+            "skip_harmonised": 0,
+            "melodiser": [],
+            "replicator": false,
+            "replicator_steps": [
+              {
+                "distance": 1,
+                "affinities": []
+              }
+            ],
+            "beat_offset": 0,
+            "glide": false,
+            "loop_len": 4.0,
+            "tail_multiplier": 3.0,
+            "arpegio": 0.0,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "melodise": false,
+            "melody_order_affinity": 0,
+            "repeat": 1,
+            "loop_offset": 0.0,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "chord": 1,
+            "random_chord": false,
+            "reverse_prob": 0.0,
+            "shuffle_prob": 0.0,
+            "not_generate_until": 111.0,
+            "token": 2
+          }
+        },
+        {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {
+            "bend": {
+              "magnitude": 0.0,
+              "speed": 32.0
+            },
+            "vibrato": {
+              "magnitude": 0.0,
+              "frequency": 12.0
+            },
+            "chorus": {
+              "voices": 1,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "envelope": {
+              "attack": 4.0,
+              "decay": 0.3333,
+              "normalization": 0.4142069808095242
+            },
+            "lowpass": {
+              "envelope": [
+                4.0,
+                0.3333
+              ],
+              "cutoff": {
+                "base": 4.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 1.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              },
+              "enabled": false,
+              "order": 1,
+              "filter_type": "Lowpass"
+            },
+            "power": {
+              "power": {
+                "base": 1.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 0.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              }
+            }
+          },
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 4.0,
+            "inclusions": {
+              "Det": {
+                "generators": [
+                  6
+                ]
+              }
+            },
+            "exclusions": {
+              "Det": {
+                "generators": []
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Mute",
+            "harmonics": {
+              "harmonics": 0,
+              "subharmonics": 0,
+              "attenuation": 0.5
+            },
+            "time_quantum": [
+              1,
+              12
+            ],
+            "harmoniser": [
+              10,
+              11,
+              11,
+              4,
+              3,
+              0,
+              8
+            ],
+            "skip_harmonised": 0,
+            "melodiser": [],
+            "replicator": false,
+            "replicator_steps": [
+              {
+                "distance": 1,
+                "affinities": []
+              }
+            ],
+            "beat_offset": 0,
+            "glide": false,
+            "loop_len": 4.0,
+            "tail_multiplier": 3.0,
+            "arpegio": 0.0,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "melodise": false,
+            "melody_order_affinity": 0,
+            "repeat": 1,
+            "loop_offset": 0.0,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "chord": 1,
+            "random_chord": false,
+            "reverse_prob": 0.0,
+            "shuffle_prob": 0.0,
+            "not_generate_until": 111.0,
+            "token": 3
+          }
+        },
+        {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {
+            "bend": {
+              "magnitude": 0.0,
+              "speed": 32.0
+            },
+            "vibrato": {
+              "magnitude": 0.0,
+              "frequency": 12.0
+            },
+            "chorus": {
+              "voices": 1,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "envelope": {
+              "attack": 4.0,
+              "decay": 0.3333,
+              "normalization": 0.4142069808095242
+            },
+            "lowpass": {
+              "envelope": [
+                4.0,
+                0.3333
+              ],
+              "cutoff": {
+                "base": 4.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 1.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              },
+              "enabled": false,
+              "order": 1,
+              "filter_type": "Lowpass"
+            },
+            "power": {
+              "power": {
+                "base": 1.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 0.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              }
+            }
+          },
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 4.0,
+            "inclusions": {
+              "Det": {
+                "generators": [
+                  3
+                ]
+              }
+            },
+            "exclusions": {
+              "Det": {
+                "generators": []
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Mute",
+            "harmonics": {
+              "harmonics": 0,
+              "subharmonics": 0,
+              "attenuation": 0.5
+            },
+            "time_quantum": [
+              1,
+              12
+            ],
+            "harmoniser": [
+              10,
+              11,
+              11,
+              4,
+              3,
+              0,
+              8
+            ],
+            "skip_harmonised": 0,
+            "melodiser": [],
+            "replicator": false,
+            "replicator_steps": [
+              {
+                "distance": 1,
+                "affinities": []
+              }
+            ],
+            "beat_offset": 0,
+            "glide": false,
+            "loop_len": 4.0,
+            "tail_multiplier": 3.0,
+            "arpegio": 0.0,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "melodise": false,
+            "melody_order_affinity": 0,
+            "repeat": 1,
+            "loop_offset": 0.0,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "chord": 1,
+            "random_chord": false,
+            "reverse_prob": 0.0,
+            "shuffle_prob": 0.0,
+            "not_generate_until": 111.0,
+            "token": 4
+          }
+        },
+        {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {
+            "bend": {
+              "magnitude": 0.0,
+              "speed": 32.0
+            },
+            "vibrato": {
+              "magnitude": 0.0,
+              "frequency": 12.0
+            },
+            "chorus": {
+              "voices": 1,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "envelope": {
+              "attack": 4.0,
+              "decay": 0.3333,
+              "normalization": 0.4142069808095242
+            },
+            "lowpass": {
+              "envelope": [
+                4.0,
+                0.3333
+              ],
+              "cutoff": {
+                "base": 4.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 1.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              },
+              "enabled": false,
+              "order": 1,
+              "filter_type": "Lowpass"
+            },
+            "power": {
+              "power": {
+                "base": 1.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 0.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              }
+            }
+          },
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 4.0,
+            "inclusions": {
+              "Det": {
+                "generators": [
+                  2
+                ]
+              }
+            },
+            "exclusions": {
+              "Det": {
+                "generators": []
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Mute",
+            "harmonics": {
+              "harmonics": 0,
+              "subharmonics": 0,
+              "attenuation": 0.5
+            },
+            "time_quantum": [
+              1,
+              12
+            ],
+            "harmoniser": [
+              10,
+              11,
+              11,
+              4,
+              3,
+              0,
+              8
+            ],
+            "skip_harmonised": 0,
+            "melodiser": [],
+            "replicator": false,
+            "replicator_steps": [
+              {
+                "distance": 1,
+                "affinities": []
+              }
+            ],
+            "beat_offset": 0,
+            "glide": false,
+            "loop_len": 4.0,
+            "tail_multiplier": 3.0,
+            "arpegio": 0.0,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "melodise": false,
+            "melody_order_affinity": 0,
+            "repeat": 1,
+            "loop_offset": 0.0,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "chord": 1,
+            "random_chord": false,
+            "reverse_prob": 0.0,
+            "shuffle_prob": 0.0,
+            "not_generate_until": 111.0,
+            "token": 5
+          }
+        },
+        {
+          "name": "",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {
+            "bend": {
+              "magnitude": 0.0,
+              "speed": 32.0
+            },
+            "vibrato": {
+              "magnitude": 0.0,
+              "frequency": 12.0
+            },
+            "chorus": {
+              "voices": 1,
+              "delta": 0.02,
+              "delta_shift": 0.0,
+              "sym": 0.5,
+              "asym": 0.0,
+              "time_dependency": 0.0
+            },
+            "envelope": {
+              "attack": 4.0,
+              "decay": 0.3333,
+              "normalization": 0.4142069808095242
+            },
+            "lowpass": {
+              "envelope": [
+                4.0,
+                0.3333
+              ],
+              "cutoff": {
+                "base": 4.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 1.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              },
+              "enabled": false,
+              "order": 1,
+              "filter_type": "Lowpass"
+            },
+            "power": {
+              "power": {
+                "base": 1.0,
+                "relaxation": {
+                  "start": 1.0,
+                  "end": 1.0,
+                  "rate": 0.0
+                },
+                "lfo": {
+                  "magnitude": 0.0,
+                  "frequency": 0.5,
+                  "sync_with_clock": false
+                }
+              }
+            }
+          },
+          "Seq": {
+            "t_min": 0.0,
+            "t_max": 4.0,
+            "inclusions": {
+              "Det": {
+                "generators": [
+                  1
+                ]
+              }
+            },
+            "exclusions": {
+              "Det": {
+                "generators": []
+              }
+            },
+            "interval": {
+              "RDTempered": [
+                4,
+                [
+                  0,
+                  7
+                ],
+                0
+              ]
+            },
+            "wave_type": "Mute",
+            "harmonics": {
+              "harmonics": 0,
+              "subharmonics": 0,
+              "attenuation": 0.5
+            },
+            "time_quantum": [
+              1,
+              12
+            ],
+            "harmoniser": [
+              10,
+              11,
+              11,
+              4,
+              3,
+              0,
+              8
+            ],
+            "skip_harmonised": 0,
+            "melodiser": [],
+            "replicator": false,
+            "replicator_steps": [
+              {
+                "distance": 1,
+                "affinities": []
+              }
+            ],
+            "beat_offset": 0,
+            "glide": false,
+            "loop_len": 4.0,
+            "tail_multiplier": 3.0,
+            "arpegio": 0.0,
+            "tolerance": [
+              1.0,
+              0.0
+            ],
+            "harmonise": false,
+            "melodise": false,
+            "melody_order_affinity": 0,
+            "repeat": 1,
+            "loop_offset": 0.0,
+            "accents": [
+              1.0,
+              [
+                0.5,
+                1.2,
+                2.5,
+                3.0
+              ]
+            ],
+            "shuffle": false,
+            "chord": 1,
+            "random_chord": false,
+            "reverse_prob": 0.0,
+            "shuffle_prob": 0.0,
+            "not_generate_until": 111.0,
+            "token": 6
+          }
+        },
+        {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {},
+          "Group": {
+            "id": 8,
+            "collapsed": false,
+            "children": [
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        2
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      0
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    2.0,
+                    1.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 2,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 111.0,
+                  "token": 13
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        3
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      0
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    2.0,
+                    1.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 3,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 99.0,
+                  "token": 9
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        4
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      0
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    2.0,
+                    1.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 4,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 107.0,
+                  "token": 10
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        6
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      0
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    2.0,
+                    1.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 6,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 1.0,
+                  "not_generate_until": 109.0,
+                  "token": 11
+                }
+              }
+            ],
+            "not_generate_until": null,
+            "mode": "Or",
+            "aesthetic": {
+              "lock_volume": false,
+              "lock_pan": false,
+              "lock_hue": false
+            }
+          }
+        },
+        {
+          "name": "Group",
+          "proba": 1.0,
+          "volume": 1.0,
+          "muted": false,
+          "solo": false,
+          "pan": 0.5,
+          "hue": 0.0,
+          "or_weight": 1.0,
+          "overrides": {},
+          "Group": {
+            "id": 8,
+            "collapsed": false,
+            "children": [
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        2
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      -1
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    1.0,
+                    0.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 2,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 111.0,
+                  "token": 14
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        3
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      -1
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    1.0,
+                    0.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 3,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 81.0,
+                  "token": 15
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        4
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      -1
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    1.0,
+                    0.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 4,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 0.0,
+                  "not_generate_until": 107.0,
+                  "token": 16
+                }
+              },
+              {
+                "name": "",
+                "proba": 1.0,
+                "volume": 1.0,
+                "muted": false,
+                "solo": false,
+                "pan": 0.5,
+                "hue": 0.0,
+                "or_weight": 1.0,
+                "overrides": {
+                  "bend": {
+                    "magnitude": 0.0,
+                    "speed": 32.0
+                  },
+                  "vibrato": {
+                    "magnitude": 0.0,
+                    "frequency": 12.0
+                  },
+                  "chorus": {
+                    "voices": 1,
+                    "delta": 0.02,
+                    "delta_shift": 0.0,
+                    "sym": 0.5,
+                    "asym": 0.0,
+                    "time_dependency": 0.0
+                  },
+                  "envelope": {
+                    "attack": 4.0,
+                    "decay": 0.3333,
+                    "normalization": 0.4142069808095242
+                  },
+                  "lowpass": {
+                    "envelope": [
+                      4.0,
+                      0.3333
+                    ],
+                    "cutoff": {
+                      "base": 4.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 1.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    },
+                    "enabled": false,
+                    "order": 1,
+                    "filter_type": "Lowpass"
+                  },
+                  "power": {
+                    "power": {
+                      "base": 1.0,
+                      "relaxation": {
+                        "start": 1.0,
+                        "end": 1.0,
+                        "rate": 0.0
+                      },
+                      "lfo": {
+                        "magnitude": 0.0,
+                        "frequency": 0.5,
+                        "sync_with_clock": false
+                      }
+                    }
+                  }
+                },
+                "Seq": {
+                  "t_min": 0.0,
+                  "t_max": 1.0,
+                  "inclusions": {
+                    "Det": {
+                      "generators": [
+                        6
+                      ]
+                    }
+                  },
+                  "exclusions": {
+                    "Det": {
+                      "generators": []
+                    }
+                  },
+                  "interval": {
+                    "RDTempered": [
+                      2,
+                      [
+                        -7,
+                        0,
+                        7
+                      ],
+                      -1
+                    ]
+                  },
+                  "wave_type": "Sine",
+                  "harmonics": {
+                    "harmonics": 0,
+                    "subharmonics": 0,
+                    "attenuation": 0.5
+                  },
+                  "time_quantum": [
+                    1,
+                    12
+                  ],
+                  "harmoniser": [
+                    10,
+                    11,
+                    11,
+                    4,
+                    3,
+                    0,
+                    8
+                  ],
+                  "skip_harmonised": 0,
+                  "melodiser": [],
+                  "replicator": false,
+                  "replicator_steps": [
+                    {
+                      "distance": 1,
+                      "affinities": []
+                    }
+                  ],
+                  "beat_offset": 0,
+                  "glide": false,
+                  "loop_len": 1.0,
+                  "tail_multiplier": 1.0,
+                  "arpegio": 1.0,
+                  "tolerance": [
+                    1.0,
+                    0.0
+                  ],
+                  "harmonise": true,
+                  "melodise": false,
+                  "melody_order_affinity": 0,
+                  "repeat": 1,
+                  "loop_offset": 0.0,
+                  "accents": [
+                    1.0,
+                    [
+                      0.5,
+                      1.2,
+                      2.5,
+                      3.0
+                    ]
+                  ],
+                  "shuffle": false,
+                  "chord": 6,
+                  "random_chord": false,
+                  "reverse_prob": 0.0,
+                  "shuffle_prob": 1.0,
+                  "not_generate_until": 101.0,
+                  "token": 17
+                }
+              }
+            ],
+            "not_generate_until": null,
+            "mode": "Or",
+            "aesthetic": {
+              "lock_volume": false,
+              "lock_pan": false,
+              "lock_hue": false
+            }
+          }
+        }
+      ],
+      "not_generate_until": null,
+      "mode": "And",
+      "aesthetic": {
+        "lock_volume": false,
+        "lock_pan": false,
+        "lock_hue": false
+      }
+    }
+  },
+  "delays_beats": {
+    "left": {
+      "dry": 0.5,
+      "taps": [
+        {
+          "beat": 0.031,
+          "weight": 1.0
+        },
+        {
+          "beat": 0.063,
+          "weight": 1.0
+        },
+        {
+          "beat": 0.128,
+          "weight": 1.0
+        }
+      ]
+    },
+    "right": {
+      "dry": 0.5,
+      "taps": [
+        {
+          "beat": 0.033,
+          "weight": 1.0
+        },
+        {
+          "beat": 0.061,
+          "weight": 1.0
+        },
+        {
+          "beat": 0.124,
+          "weight": 1.0
+        }
+      ]
+    }
+  },
+  "tempo_bpm": 30.0
+}

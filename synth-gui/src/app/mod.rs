@@ -13,15 +13,14 @@ use self::timeline_panel::{SequenceDragState, TreeDragState};
 use crate::{
     engine::{
         score::{
-            default_params::{default_delays, default_tempo},
-            node_params::{self, ResolvedTrackParams},
-            probability::Probability,
+            node_params::ResolvedTrackParams,
             sequence::Sequence,
-            track_node::{AestheticLocks, GroupMode, MixContext, NodeKind, TrackNode},
-            DelayTapSeconds, NotesGroup, Score, TrackDelays,
+            track_node::{NodeKind, TrackNode},
+            DelayTapSeconds, Score,
         },
         waves::WaveType,
     },
+    session::SessionState,
     shortcuts::*,
     texts::README_MD,
     time_freq::{Tempo, Time},
@@ -37,7 +36,6 @@ use instant::Duration;
 #[cfg(target_arch = "wasm32")]
 use instant::Instant;
 use rand::{rngs::ThreadRng, thread_rng};
-use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     ops::DerefMut,
@@ -126,83 +124,8 @@ pub struct SpectrogramPreview {
     pub fundamental_freq: f32,
 }
 
+
 use serde::Deserializer;
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum SequencesCompat {
-    Root(TrackNode),       // new format: a single root node
-    Nodes(Vec<TrackNode>), // old format: Vec<TrackNode>
-    Seqs(Vec<Sequence>),   // optional: very old format: Vec<Sequence>
-}
-
-fn deserialize_sequences_compat<'de, D>(de: D) -> Result<TrackNode, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let compat = SequencesCompat::deserialize(de)?;
-    Ok(match compat {
-        SequencesCompat::Root(root) => root,
-        SequencesCompat::Nodes(children) => TrackNode {
-            name: "Root".into(),
-            proba: Probability::default(),
-            volume: 1.0,
-            muted: false,
-            solo: false,
-            pan: 0.5,
-            hue: 0.0,
-            or_weight: 1.0,
-            overrides: node_params::NodeOverrides::default(),
-            delays: TrackDelays::default(),
-            kind: NodeKind::Group {
-                id: Token(0), // placeholder if Group needs an id
-                collapsed: false,
-                children,
-                not_generate_until: None,
-                mode: GroupMode::And,
-                aesthetic: AestheticLocks::default(),
-            },
-        },
-        SequencesCompat::Seqs(seqs) => TrackNode {
-            name: "Root".into(),
-            proba: Probability::default(),
-            volume: 1.0,
-            muted: false,
-            solo: false,
-            pan: 0.5,
-            hue: 0.0,
-            or_weight: 1.0,
-            overrides: node_params::NodeOverrides::default(),
-            delays: TrackDelays::default(),
-            kind: NodeKind::Group {
-                id: Token(0),
-                collapsed: false,
-                children: seqs.into_iter().map(TrackNode::from_sequence).collect(),
-                not_generate_until: None,
-                mode: GroupMode::And,
-                aesthetic: AestheticLocks::default(),
-            },
-        },
-    })
-    .map(|mut root| {
-        root.migrate_legacy_overrides();
-        root
-    })
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct GuiState {
-    #[serde(deserialize_with = "deserialize_sequences_compat")]
-    pub seqs: TrackNode,
-    #[serde(default = "default_delays", rename = "delays_beats")]
-    pub delays: TrackDelays,
-    #[serde(default = "default_tempo_bpm")]
-    pub tempo_bpm: f64,
-}
-
-fn default_tempo_bpm() -> f64 {
-    default_tempo().beats_per_minute()
-}
 
 impl GuiApp {
     pub fn new(_cc: &CreationContext<'_>, device: Device) -> Self {
@@ -464,7 +387,7 @@ impl GuiApp {
                         .clicked()
                     {
                         let (_name, json) = GROOVE_DEFAULTS[self.default_pick_idx];
-                        match serde_json::from_str::<GuiState>(json) {
+                        match serde_json::from_str::<SessionState>(json) {
                             Ok(state) => {
                                 self.apply_loaded_state(state);
                                 self.show_default_picker = false;
@@ -526,35 +449,9 @@ impl GuiApp {
     /// Replace the root with `node`.
     /// - Draws `node` first (recursively).
     /// - Ensures the root remains a `Group` by wrapping a lone `Seq` if needed.
-    pub fn replace_root_with(&mut self, mut node: TrackNode) {
+    pub fn replace_root_with(&mut self, node: TrackNode) {
         let now = self.now();
-        // Draw the (possibly nested) node into current notes
-        self.score.draw_node_with(&mut node, &mut self.rng, now);
-
-        // Keep invariant: root is a Group
-        self.score.track_root = match &node.kind {
-            NodeKind::Group { .. } => node,
-            NodeKind::Seq(_) => TrackNode {
-                name: String::new(),
-                proba: Probability::default(),
-                volume: 1.0,
-                muted: false,
-                solo: false,
-                pan: 0.5,
-                hue: 0.0,
-                or_weight: 1.0,
-                overrides: node_params::NodeOverrides::default(),
-                delays: TrackDelays::default(),
-                kind: NodeKind::Group {
-                    id: self.score.last_token.next(),
-                    collapsed: false,
-                    children: vec![node],
-                    not_generate_until: None,
-                    mode: GroupMode::And,
-                    aesthetic: AestheticLocks::default(),
-                },
-            },
-        };
+        self.score.replace_root_with(node, &mut self.rng, now);
     }
 
     fn set_tempo_bpm(&mut self, bpm: f64) {
@@ -697,54 +594,12 @@ impl GuiApp {
         self.score.notes.remove(&tk);
     }
 
-    /// Update mix information (volume and pan) for all `NotesGroup` entries based on the tree.
-    /// Volume remains multiplicative down the tree; pan follows the first ancestor that overrides.
-    fn update_all_mix_from_tree(&mut self) {
-        fn dfs(
-            node: &TrackNode,
-            notes: &mut std::collections::BTreeMap<Token, NotesGroup>,
-            mix: MixContext,
-            tempo: Tempo,
-            delays: TrackDelays,
-        ) {
-            let (next_mix, effective_pan) = mix.propagate(node);
-            let merged_delays = node.delays.merge_with_parent(&delays);
-
-            match &node.kind {
-                NodeKind::Seq(seq) => {
-                    if let Some(ng) = notes.get_mut(&seq.token) {
-                        ng.volume = next_mix.effective_volume();
-                        ng.pan = effective_pan;
-                        ng.delays = merged_delays.to_seconds(tempo, 0.5, 0.5);
-                    }
-                }
-                NodeKind::Group { children, .. } => {
-                    for child in children {
-                        dfs(child, notes, next_mix, tempo, merged_delays.clone());
-                    }
-                }
-            }
-        }
-
-        let tempo = self.score.tempo();
-        let solo_active = self.score.track_root.has_any_solo();
-        dfs(
-            &self.score.track_root,
-            &mut self.score.notes,
-            MixContext::default().with_solo_active(solo_active),
-            tempo,
-            TrackDelays::default(),
-        );
-        // Keep legacy `Score.delays` in sync with root for sharing with audio thread.
-        self.score.delays = self.score.track_root.delays.clone();
-    }
-
     #[cfg(target_arch = "wasm32")]
     fn poll_loaded_state(&mut self) {
         let state = {
             let mut slot = self.pending_loaded_bytes.borrow_mut();
             slot.take()
-                .and_then(|bytes| serde_json::from_slice::<crate::app::GuiState>(&bytes).ok())
+                .and_then(|bytes| serde_json::from_slice::<SessionState>(&bytes).ok())
         };
         if let Some(state) = state {
             self.apply_loaded_state(state);
@@ -838,18 +693,10 @@ impl App for GuiApp {
         }
         self.timeline_panel(ctx);
         ctx.request_repaint_after(Duration::from_millis((1000.0 / self.min_fps) as _));
-        self.score.generate_notes(self.now(), &mut self.rng);
-        self.update_all_mix_from_tree(); // Apply mix based on tree structure
-        self.score.retain_notes(self.now());
-        self.score
-            .shared_notes
-            .store(Arc::new(self.score.notes.clone()));
+        self.score.advance(self.now(), &mut self.rng);
+        self.score.publish_shared_notes();
         self.shared_delays
-            .store(Arc::new(self.score.track_root.delays.to_seconds(
-                self.score.tempo(),
-                0.0,
-                0.0,
-            )));
+            .store(Arc::new(self.score.root_delays_seconds(0.0, 0.0)));
     }
 }
 

@@ -1,9 +1,9 @@
-use super::GuiState;
+use synth_core::session::SessionState;
 
 /// Manages undo/redo state snapshots for score editing.
 pub struct UndoStack {
-    undo_stack: Vec<GuiState>,
-    redo_stack: Vec<GuiState>,
+    undo_stack: Vec<SessionState>,
+    redo_stack: Vec<SessionState>,
     max_entries: usize,
 }
 
@@ -18,7 +18,7 @@ impl UndoStack {
 
     /// Push current state to undo stack before making a change.
     /// Clears the redo stack since we're branching history.
-    pub fn push(&mut self, state: GuiState) {
+    pub fn push(&mut self, state: SessionState) {
         self.redo_stack.clear();
         self.undo_stack.push(state);
 
@@ -29,7 +29,7 @@ impl UndoStack {
     }
 
     /// Undo: push current state to redo, return previous state from undo stack.
-    pub fn undo(&mut self, current: GuiState) -> Option<GuiState> {
+    pub fn undo(&mut self, current: SessionState) -> Option<SessionState> {
         self.undo_stack.pop().map(|prev| {
             self.redo_stack.push(current);
             prev
@@ -37,7 +37,7 @@ impl UndoStack {
     }
 
     /// Redo: push current state to undo, return next state from redo stack.
-    pub fn redo(&mut self, current: GuiState) -> Option<GuiState> {
+    pub fn redo(&mut self, current: SessionState) -> Option<SessionState> {
         self.redo_stack.pop().map(|next| {
             self.undo_stack.push(current);
             next

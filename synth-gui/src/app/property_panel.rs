@@ -1764,14 +1764,14 @@ impl GuiApp {
                                     .shared_notes
                                     .store(Arc::new(self.score.notes.clone()));
                                 self.spectrogram_render_requested = true;
-                                self.update_all_mix_from_tree();
+                                self.score.update_mix_from_tree();
                             }
                         }
                     }
                     // Apply deferred volume change (after mutable borrow is dropped)
                     // This updates NotesGroup mix for ALL sequences using chain products from root
                     if impact.needs_mix_update() {
-                        self.update_all_mix_from_tree();
+                        self.score.update_mix_from_tree();
                     }
 
                     if impact.needs_regeneration() {

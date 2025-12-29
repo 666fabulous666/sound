@@ -97,10 +97,11 @@ impl GuiApp {
                         if toolbar_icon_button(ui, "🕛", "Reset elapsed time").clicked() {
                             self.clock.store(0, Ordering::Relaxed);
                             self.score.reset_playback();
-                            self.score.generate_notes(self.now(), &mut self.rng);
-                            self.score
-                                .shared_notes
-                                .store(Arc::new(self.score.notes.clone()));
+                            self.score.advance(self.now(), &mut self.rng);
+                            self.score.publish_shared_notes();
+                            self.shared_delays.store(Arc::new(
+                                self.score.root_delays_seconds(0.0, 0.0),
+                            ));
                         }
                         ui.label(format!("{elapsed:.1}s"));
                         if !self.show_start {

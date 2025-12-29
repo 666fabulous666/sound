@@ -1,4 +1,5 @@
 use crate::app::GuiApp;
+use synth_core::session::SessionState;
 
 impl GuiApp {
     #[cfg(not(target_arch = "wasm32"))]
@@ -10,8 +11,7 @@ impl GuiApp {
             .add_filter("JSON", &["json"])
             .save_file()
         {
-            use crate::app::GuiState;
-            let state = GuiState {
+            let state = SessionState {
                 seqs: self.score.track_root.clone(),
                 delays: self.score.delays.clone(),
                 tempo_bpm: self.score.tempo().beats_per_minute(),
@@ -33,7 +33,7 @@ impl GuiApp {
         use wasm_bindgen_futures::spawn_local;
 
         // Build the state the same way as native
-        let state = crate::app::GuiState {
+        let state = SessionState {
             seqs: self.score.track_root.clone(),
             delays: self.score.delays.clone(),
             tempo_bpm: self.score.tempo().beats_per_minute(),
